@@ -1,0 +1,66 @@
+# ============================================
+# .dockerignore - Docker 빌드 컨텍스트 제외 파일 (모노레포 루트)
+# ============================================
+# 작동원리:
+# 빌드 컨텍스트가 모노레포 루트(/)일 때 적용됩니다.
+# apps/api/.dockerignore는 빌드 컨텍스트가 루트이면 무시되므로
+# 이 파일이 실제로 사용됩니다.
+# ============================================
+
+# 의존성 디렉토리 (컨테이너 내에서 새로 설치)
+node_modules
+**/node_modules
+
+# 빌드 결과물 (컨테이너 내에서 새로 빌드)
+dist
+**/dist
+
+# Git 관련 (이미지에 불필요)
+.git
+.gitignore
+
+# 환경 변수 (보안: 이미지에 포함하면 안 됨)
+.env
+.env.*
+!.env.example
+
+# IDE 및 에디터 설정
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS 생성 파일
+.DS_Store
+Thumbs.db
+
+# Docker 자체 파일 (재귀 방지)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 테스트 및 문서 (프로덕션에 불필요)
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+**/test
+**/coverage
+*.md
+docs
+
+# 불필요한 앱들 (api만 빌드)
+apps/web
+apps/native
+apps/extension
+apps/scraper
+
+# 불필요한 패키지들
+packages/ui
+
+
+# 기타
+.claude
+.serena
+*.log
+npm-debug.log*
+.turbo

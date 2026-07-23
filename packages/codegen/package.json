@@ -1,0 +1,49 @@
+{
+  "name": "@workspace/codegen",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./identifiers": "./src/identifiers.ts",
+    "./schemaToType": "./src/schemaToType.ts",
+    "./clientSnippets": "./src/clientSnippets.ts",
+    "./querySnippets": "./src/querySnippets.ts",
+    "./validationSnippets": "./src/validationSnippets.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@workspace/types": "*"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.14",
+    "@types/node": "^20.3.1",
+    "@workspace/typescript-config": "*",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "5.9.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "module": "commonjs",
+            "moduleResolution": "node",
+            "esModuleInterop": true
+          }
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@workspace/types$": "<rootDir>/../types/src/index.ts"
+    }
+  }
+}

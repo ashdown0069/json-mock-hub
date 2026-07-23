@@ -1,0 +1,28 @@
+# ============================================
+# Docker Compose - apps/api 프로덕션 배포용
+# ============================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: jsonmockhub-api:latest
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    expose:
+      - "8001"
+    environment:
+      - NODE_ENV=production
+      - PORT=${PORT:-8001}
+      - MONGODB_URI=${MONGODB_URI}
+      - REDIS_URL=${REDIS_URL}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+      - CORS_ORIGIN_URL=${CORS_ORIGIN_URL}
+      - MOCK_BASE_DOMAIN=${MOCK_BASE_DOMAIN}

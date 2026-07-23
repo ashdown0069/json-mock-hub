@@ -1,0 +1,38 @@
+{
+  "name": "nearbybook-monorepo",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "npm@10.8.2",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@commitlint/config-workspace-scopes": "^20.0.0",
+    "@workspace/eslint-config": "*",
+    "@workspace/typescript-config": "*",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "shadcn": "^4.12.0",
+    "turbo": "^2.8.17",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "overrides": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "name": "@workspace/mockgen",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generateData": "./src/generateData.ts",
+    "./convertSchema": "./src/convertSchema.ts",
+    "./fakerMethods": "./src/fakerMethods.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.5.0",
+    "@workspace/types": "*"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.14",
+    "@types/node": "^20.3.1",
+    "@workspace/typescript-config": "*",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "5.9.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.(ts|js)$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "module": "commonjs",
+            "moduleResolution": "node",
+            "esModuleInterop": true
+          }
+        }
+      ]
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!@faker-js/faker)"
+    ],
+    "moduleNameMapper": {
+      "^@workspace/types$": "<rootDir>/../types/src/index.ts"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+// 타입별로 선택 가능한 faker 모듈/메서드 카탈로그 (SchemaEditor 셀렉트 옵션 데이터)
+export const FAKER_BY_TYPE: Record<string, Record<string, string[]>> = {
+  string: {
+    person: [
+      "fullName",
+      "firstName",
+      "lastName",
+      "jobTitle",
+      "prefix",
+      "suffix",
+      "sex",
+      "gender",
+    ],
+    internet: ["email", "password", "username", "url", "ipv4", "ipv6", "mac"],
+    location: ["city", "country", "streetAddress", "zipCode", "timeZone"],
+    lorem: [
+      "word",
+      "words",
+      "sentence",
+      "sentences",
+      "paragraph",
+      "paragraphs",
+      "text",
+    ],
+    phone: ["number", "imei"],
+    finance: [
+      "accountNumber",
+      "currencyCode",
+      "creditCardNumber",
+      "bitcoinAddress",
+    ],
+    commerce: ["productName", "department", "productDescription"],
+    company: ["name", "catchPhrase", "buzzPhrase"],
+    system: ["fileName", "ext", "mimeType", "semver", "networkInterface"],
+    vehicle: ["vehicle", "manufacturer", "model", "vrm", "vin"],
+    animal: ["dog", "cat", "snake", "bear", "lion", "bird"],
+    color: ["human", "hex", "rgb", "hsl", "space"],
+    word: [
+      "adjective",
+      "adverb",
+      "conjunction",
+      "interjection",
+      "noun",
+      "preposition",
+      "verb",
+    ],
+    string: [
+      "alpha",
+      "alphanumeric",
+      "binary",
+      "hexadecimal",
+      "numeric",
+      "sample",
+    ],
+  },
+  number: {
+    location: ["latitude", "longitude"],
+    finance: ["amount"],
+    commerce: ["price"],
+    number: ["int", "float", "binary", "octal", "hex"],
+  },
+  boolean: {
+    datatype: ["boolean"],
+  },
+  date: {
+    date: ["past", "future", "recent", "soon", "anytime", "birthdate"],
+  },
+  uuid: {
+    string: ["uuid"],
+  },
+}
