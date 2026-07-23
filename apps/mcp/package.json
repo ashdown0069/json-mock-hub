@@ -1,0 +1,51 @@
+{
+  "name": "mcp",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@workspace/codegen": "*",
+    "@workspace/mockgen": "*",
+    "@workspace/types": "*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.14",
+    "@types/node": "^20.3.1",
+    "@workspace/eslint-config": "*",
+    "@workspace/typescript-config": "*",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "tsx": "^4.19.0",
+    "typescript": "5.9.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.ts$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "module": "commonjs",
+            "moduleResolution": "node",
+            "esModuleInterop": true
+          }
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@workspace/types$": "<rootDir>/../../packages/types/src/index.ts",
+      "^@workspace/codegen/(.*)$": "<rootDir>/../../packages/codegen/src/$1.ts",
+      "^@workspace/codegen$": "<rootDir>/../../packages/codegen/src/index.ts",
+      "^@workspace/mockgen/(.*)$": "<rootDir>/../../packages/mockgen/src/$1.ts",
+      "^@workspace/mockgen$": "<rootDir>/../../packages/mockgen/src/index.ts"
+    }
+  }
+}
