@@ -1,0 +1,25 @@
+# ============================================
+# Docker Compose - 로컬 개발 환경 (Redis)
+# ============================================
+
+services:
+  # ---- Redis ----
+  # 캐싱 , pub/sub 등 사용
+  redis:
+    image: redis:7-alpine
+    container_name: nearbybook-redis
+    restart: unless-stopped
+    ports:
+      # 로컬 백엔드에서 localhost:6379로 접속
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:

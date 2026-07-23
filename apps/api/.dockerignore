@@ -1,0 +1,71 @@
+# ============================================
+# .dockerignore - Docker 빌드 컨텍스트 제외 파일
+# ============================================
+# 작동원리:
+# Docker 빌드 시 빌드 컨텍스트(모노레포 루트)의 모든 파일을
+# Docker 데몬에 전송합니다. .dockerignore에 명시된 파일/폴더는
+# 전송에서 제외되어 빌드 속도가 빨라지고 이미지 크기가 줄어듭니다.
+#
+# 왜 필요한가?
+# - node_modules(수백 MB)를 전송하지 않아 빌드 시간 단축
+# - .env, .git 등 민감/불필요 파일이 이미지에 포함되는 것 방지
+# ============================================
+
+# 의존성 디렉토리 (컨테이너 내에서 새로 설치)
+node_modules
+**/node_modules
+
+# 빌드 결과물 (컨테이너 내에서 새로 빌드)
+dist
+**/dist
+
+# Git 관련 (이미지에 불필요)
+.git
+.gitignore
+
+# 환경 변수 (보안: 이미지에 포함하면 안 됨)
+.env
+.env.*
+!.env.example
+
+# IDE 및 에디터 설정
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS 생성 파일
+.DS_Store
+Thumbs.db
+
+# Docker 자체 파일 (재귀 방지)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 테스트 및 문서 (프로덕션에 불필요)
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+**/test
+**/coverage
+*.md
+docs
+
+# 불필요한 앱들 (api만 빌드)
+apps/web
+apps/native
+apps/extension
+apps/scraper
+
+# 불필요한 패키지들
+packages/ui
+packages/eslint-config
+packages/data-access
+
+# 기타
+.claude
+.serena
+*.log
+npm-debug.log*
+.turbo
