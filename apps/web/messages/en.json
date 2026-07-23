@@ -1,0 +1,276 @@
+{
+  "LandingPage": {
+    "title": "Welcome to Json Mock Hub",
+    "description": "Easy and fast Mock API provisioning & testing tools",
+    "documentation": "Documentation",
+    "pricing": "Pricing",
+    "heroBadge": "JsonMockHub 2.0 is Live",
+    "heroTitle": "Build APIs faster with <brand>JsonMockHub</brand>",
+    "heroDescription": "Generate production-ready mock APIs in seconds. Define schemas, manage routes in a file system, and test instantly with zero setup.",
+    "schemaBuilder": "Schema & Code Generator",
+    "schemaBuilderDesc": "Design your data schemas and instantly generate code for various frameworks and libraries.",
+    "instantEndpoints": "Instant Endpoints",
+    "instantEndpointsDesc": "Get live URLs for your mock routes immediately.",
+    "welcomeBack": "Welcome back",
+    "enterDetails": "Enter your details to access your workspace.",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "signIn": "Sign In to Workspace",
+    "orContinueWith": "Or continue with",
+    "google": "Google",
+    "noAccount": "Don't have an account?",
+    "signUpFree": "Sign up for free",
+    "invalidEmail": "Invalid email address",
+    "passwordRequired": "Password is required"
+  },
+  "Workspaces": {
+    "title": "Workspaces",
+    "createWorkspace": "New Workspace",
+    "loading": "Loading workspaces...",
+    "loadError": "Failed to load workspaces. Please try again.",
+    "createError": "Failed to create workspace.",
+    "create": {
+      "name": "Name",
+      "description": "Description (Optional)",
+      "password": "Password",
+      "confirm": "Confirm Password"
+    },
+    "error": {
+      "name": {
+        "min": "Name must be at least 3 characters."
+      },
+      "password": {
+        "notMatch": "Passwords do not match."
+      }
+    }
+  },
+  "SignupPage": {
+    "title": "Create an account",
+    "description": "Enter your details below to create your account.",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Enter your nickname",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "••••••••",
+    "submit": "Create Account",
+    "hasAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "error": {
+      "invalidEmail": "Invalid email address",
+      "nicknameRequired": "Nickname is required",
+      "nicknameMin": "Nickname must be at least 2 characters",
+      "passwordMin": "Password must be at least 6 characters",
+      "passwordNotMatch": "Passwords do not match"
+    }
+  },
+  "Button": {
+    "create": "Create",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save"
+  },
+  "errors": {
+    "auth": {
+      "api_key": {
+        "invalid": "Invalid API key."
+      },
+      "unauthorized": "Your session has expired. Please log in again.",
+      "signup": {
+        "email_exists": "Email is already in use."
+      },
+      "login": {
+        "invalid_credentials": "Invalid email or password."
+      },
+      "common": {
+        "access_denied": "Access denied."
+      }
+    },
+    "workspace": {
+      "join": {
+        "password_mismatch": "Workspace passwords do not match.",
+        "already_joined": "You have already joined this workspace.",
+        "password_not_required": "A password is not required for this workspace.",
+        "not_found": "Workspace not found."
+      },
+      "member": {
+        "role_unchangeable": "The Owner role cannot be changed."
+      },
+      "access": {
+        "not_found": "You cannot access this workspace.",
+        "not_member": "You cannot access this workspace.",
+        "owner_only": "Only the workspace owner can perform this action."
+      },
+      "permission": {
+        "denied": "You do not have permission to perform this action."
+      }
+    },
+    "itemNameRule": "Only Korean, letters, numbers, hyphen (-), and underscore (_) are allowed; spaces are not permitted.",
+    "copyFailed": "Failed to copy to clipboard.",
+    "requestFailed": "The request could not be processed. Please try again shortly."
+  },
+  "WorkspacePages": {
+    "apisTitle": "Mock APIs",
+    "codeTitle": "Client Code",
+    "dashboardTitle": "Workspace Dashboard",
+    "emptyTitle": "No mock API selected",
+    "apisEmptyDesc": "Select a Mock API from the explorer on the left, or create a new one.",
+    "codeEmptyDesc": "Select a Mock API from the explorer to generate schema-based client code."
+  },
+  "WorkspaceSettings": {
+    "pageTitle": "Workspace Settings",
+    "general": {
+      "title": "General Settings",
+      "description": "Configure your workspace options and details.",
+      "nameLabel": "Workspace Name",
+      "namePlaceholder": "My Awesome Workspace",
+      "save": "Save",
+      "saved": "Workspace name updated.",
+      "nameRequired": "Name is required."
+    },
+    "members": {
+      "title": "Member Management",
+      "description": "View and manage workspace members.",
+      "nickname": "Nickname",
+      "email": "Email",
+      "role": "Role",
+      "joinedAt": "Joined",
+      "actions": "Actions",
+      "roleOwner": "Owner",
+      "roleMember": "Member",
+      "remove": "Remove",
+      "removeDialogTitle": "Remove member",
+      "removeDialogDescription": "Remove {name} from this workspace? Removed members must re-enter the password to join again.",
+      "removeConfirm": "Remove",
+      "cancel": "Cancel",
+      "removeSuccess": "Member removed."
+    },
+    "permissions": {
+      "title": "Member Permissions",
+      "description": "Set the shared permissions applied to regular members. The owner always has full permissions.",
+      "canCreate": {
+        "label": "Create",
+        "description": "Can create folders and mock API items."
+      },
+      "canRename": {
+        "label": "Rename",
+        "description": "Can rename items."
+      },
+      "canMove": {
+        "label": "Move",
+        "description": "Can move items to other folders."
+      },
+      "canDelete": {
+        "label": "Delete",
+        "description": "Can delete items."
+      },
+      "canUpdate": {
+        "label": "Edit content",
+        "description": "Can edit mock API response content."
+      },
+      "save": "Save",
+      "saving": "Saving...",
+      "saveSuccess": "Permissions saved."
+    },
+    "apiKey": {
+      "title": "API Key",
+      "description": "Used by external clients such as MCP to access this workspace. A key is issued automatically when the workspace is created; reissuing immediately invalidates the previous key.",
+      "status": "Issued at: {issuedAt}",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "copyFailed": "Failed to copy the API key.",
+      "reissue": "Reissue",
+      "reissueSuccess": "API key reissued.",
+      "mcpHint": "This key is automatically filled into the install config on the MCP integration page.",
+      "cancel": "Cancel",
+      "reissueDialogTitle": "Reissue API Key",
+      "reissueDialogDescription": "Are you sure you want to reissue the API key? Reissuing will immediately invalidate the existing key, and all external services (MCP, etc.) using it will stop working.",
+      "reissueConfirm": "Reissue"
+    }
+  },
+  "WorkspaceMcp": {
+    "pageTitle": "MCP Integration",
+    "install": {
+      "title": "Install MCP",
+      "description": "Connect this workspace's mock API tools to an AI client (Claude Code, Cursor, etc.).",
+      "step1": "Paste the config below into your client's .mcp.json. (The API key and workspace ID are already filled in.)",
+      "step2": "Replace the --prefix value with your monorepo's absolute path.",
+      "note": "The api app (port 4001) must be running."
+    },
+    "usage": {
+      "title": "Usage",
+      "description": "After installation, ask the AI in natural language and the tools below are used automatically. All items are addressed by path (e.g. /shop/users).",
+      "tabTools": "Tools",
+      "tabExamples": "Examples",
+      "colTool": "Tool",
+      "colDesc": "Description",
+      "colExample": "Example prompt"
+    },
+    "codeOptions": {
+      "title": "Code generation options",
+      "description": "When you ask for code, the AI asks these options (supported clients show a picker) or skips any you already specified.",
+      "lang": "Language: ts (includes interface) / js",
+      "client": "Client: axios / fetch / axios+query / fetch+query",
+      "validation": "Validation: zod / yup / joi / none"
+    },
+    "tools": {
+      "create_mock_api": { "desc": "Generate mock data from a schema, create a mock API, and return the URL", "example": "Create a products mock API with id, name, price fields, 10 items." },
+      "list_mock_apis": { "desc": "List folders and mock APIs by path", "example": "What's in this workspace right now?" },
+      "delete_mock_api": { "desc": "Delete an item by path (folders include children)", "example": "Delete shop/users." },
+      "rename_mock_api": { "desc": "Rename an item by path (URL path is recomputed)", "example": "Rename products to items." },
+      "update_mock_api": { "desc": "Regenerate a mock API's schema and data by path (name/location kept)", "example": "Add an email field to the products schema and update it." },
+      "get_api_code": { "desc": "Reference code (types, client, react-query, validation)", "example": "Give me products integration code in ts, fetch+query, zod." }
+    }
+  },
+  "JoinWorkspace": {
+    "title": "Join Workspace",
+    "description": "Enter the password to join this workspace.",
+    "passwordLabel": "Workspace password",
+    "passwordPlaceholder": "Enter password",
+    "passwordRequired": "Please enter the password.",
+    "submit": "Join workspace",
+    "submitting": "Joining...",
+    "joinSuccess": "Joined the workspace.",
+    "joinError": "Failed to join."
+  },
+  "EndpointList": {
+    "heading": "Endpoints",
+    "descList": "List all",
+    "descGetOne": "Get one",
+    "descCreate": "Create (echo response)",
+    "descUpdate": "Update (merged response)",
+    "descDelete": "Delete (empty object response)",
+    "viewCode": "View code",
+    "copy": "Copy"
+  },
+  "MockApiDialog": {
+    "titleCreate": "New Mock API",
+    "titleEdit": "Edit Mock API",
+    "endpointDetails": "Endpoint Details",
+    "apiPath": "API Path",
+    "apiPathPlaceholder": "Enter name",
+    "submitCreate": "Generate Endpoint",
+    "submitEdit": "Update Endpoint",
+    "cancel": "Cancel",
+    "dataSchema": "Data Schema",
+    "addField": "Add Field",
+    "fieldNamePlaceholder": "Field name",
+    "fakerMethodPlaceholder": "Faker Method",
+    "fakerNone": "None (Default)",
+    "emptyFields": "No fields defined. Click \"Add Field\" to start building your schema.",
+    "generationOptions": "Generation Options",
+    "mockItems": "Mock Items",
+    "itemsCount": "{count} items",
+    "apiFeatures": "API Features",
+    "paginationMetadata": "Pagination Metadata",
+    "pageParam": "Page Param",
+    "limitParam": "Limit Param",
+    "pageParamPlaceholder": "e.g. page",
+    "limitParamPlaceholder": "e.g. limit"
+  }
+}
