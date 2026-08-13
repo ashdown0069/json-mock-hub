@@ -5,6 +5,9 @@ node_modules
 .pnp
 .pnp.js
 
+# MCP 클라이언트 설정 (API 키가 담길 수 있으므로 커밋하지 않는다)
+.mcp.json
+
 # Local env files (시크릿 포함 — .env.example만 커밋한다)
 .env
 .env.local
@@ -54,3 +57,6 @@ yarn-error.log*
 apps/scraper
 docs
 *.pdf
+
+# 주석 정비 가드의 임시 스냅샷 (scripts/comment-guard.mjs)
+.comment-guard
