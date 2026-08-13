@@ -1,4 +1,4 @@
-import { handleGetApiCode, sanitizeCodeOptions } from "../tools/get-api-code"
+import { handleGetApiCode } from "../tools/get-api-code"
 import type { FileBrowserItemRes } from "../api-client"
 import type { McpConfig } from "../config"
 
@@ -16,7 +16,14 @@ const fileItem: FileBrowserItemRes = {
 }
 
 const full = { path: "/users", lang: "ts", clientMode: "fetch+query", validation: "zod" } as const
-const clientOf = (over: any = {}) => ({ getItems: async () => [fileItem], ...over }) as any
+const clientOf = (over: any = {}) => {
+  const getItems = over.getItems ?? (async () => [fileItem])
+  const getItem = over.getItem ?? (async (id: string) => {
+    const list = await getItems()
+    return list.find((it: any) => it.id === id) ?? null
+  })
+  return { getItems, getItem, ...over } as any
+}
 const textOf = (res: any) => res.content[0].text as string
 
 describe("handleGetApiCode 가드", () => {
@@ -83,19 +90,73 @@ describe("handleGetApiCode 옵션 선택(elicit)", () => {
   })
 })
 
-describe("sanitizeCodeOptions", () => {
-  it("유효한 enum 값만 통과시킨다", () => {
-    expect(
-      sanitizeCodeOptions({ lang: "ts", clientMode: "fetch+query", validation: "zod" })
-    ).toEqual({ lang: "ts", clientMode: "fetch+query", validation: "zod" })
+
+
+describe("handleGetApiCode — elicitInput 실패 처리", () => {
+  const item = {
+    id: "2",
+    name: "users",
+    itemType: "File" as const,
+    parentId: null,
+    path: "/users",
+    schema: { id: "number" },
+    options: null,
+  }
+
+  const createClient = () => ({
+    getItems: jest.fn().mockResolvedValue([item]),
+    getItem: jest.fn().mockResolvedValue(item),
   })
-  it("enum 밖 값·잘못된 타입은 제거한다", () => {
-    expect(
-      sanitizeCodeOptions({ lang: "python", clientMode: 123, validation: "zod", extra: "x" })
-    ).toEqual({ validation: "zod" })
+
+  const elicitConfig = {
+    MOCK_HUB_WORKSPACE_ID: "ws1",
+    MOCK_DOMAIN: "localhost:4001",
+  } as never
+
+  const textOf = (result: { content: { text: string }[] }) =>
+    result.content[0]?.text ?? ""
+
+  it("elicit이 예외를 던져도 전파하지 않고 안내 폴백을 반환한다", async () => {
+    const elicit = jest.fn().mockRejectedValue(new Error("Request timed out"))
+
+    const result = await handleGetApiCode(
+      createClient() as never,
+      elicitConfig,
+      { path: "/users" },
+      elicit
+    )
+
+    expect(textOf(result)).toContain("다시 호출")
   })
-  it("null/undefined는 빈 객체", () => {
-    expect(sanitizeCodeOptions(null)).toEqual({})
-    expect(sanitizeCodeOptions(undefined)).toEqual({})
+
+  it("elicit이 null을 반환해도 안내 폴백을 반환한다", async () => {
+    const elicit = jest.fn().mockResolvedValue(null)
+
+    const result = await handleGetApiCode(
+      createClient() as never,
+      elicitConfig,
+      { path: "/users" },
+      elicit
+    )
+
+    expect(textOf(result)).toContain("다시 호출")
+  })
+
+  it("elicit이 값을 주면 코드를 생성한다", async () => {
+    const elicit = jest.fn().mockResolvedValue({
+      lang: "ts",
+      clientMode: "axios",
+      validation: "zod",
+    })
+
+    const result = await handleGetApiCode(
+      createClient() as never,
+      elicitConfig,
+      { path: "/users" },
+      elicit
+    )
+
+    expect(textOf(result)).toContain("## 타입")
   })
 })
+

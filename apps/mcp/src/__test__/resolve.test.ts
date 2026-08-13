@@ -1,4 +1,4 @@
-import { normalizePath, findItemByPath } from "../resolve"
+import { normalizePath, findItemByPath, findFullItemByPath } from "../resolve"
 import type { FileBrowserItemRes } from "../api-client"
 
 const item = (over: Partial<FileBrowserItemRes>): FileBrowserItemRes => ({
@@ -32,5 +32,36 @@ describe("findItemByPath", () => {
   })
   it("일치하는 항목이 없으면 null을 반환한다", () => {
     expect(findItemByPath(items, "/nope")).toBeNull()
+  })
+})
+
+describe("findFullItemByPath", () => {
+  const light = [
+    { id: "2", name: "users", itemType: "File", parentId: "1", path: "/shop/users" },
+  ]
+
+  it("경량 목록으로 id를 찾고 단건 전체를 가져온다", async () => {
+    const client = {
+      getItems: jest.fn().mockResolvedValue(light),
+      getItem: jest
+        .fn()
+        .mockResolvedValue({ ...light[0], schema: { id: "number" } }),
+    }
+
+    const itemResult = await findFullItemByPath(client as never, "/shop/users")
+
+    expect(client.getItems).toHaveBeenCalledWith("tree")
+    expect(client.getItem).toHaveBeenCalledWith("2")
+    expect(itemResult?.schema).toEqual({ id: "number" })
+  })
+
+  it("경로를 찾지 못하면 단건 조회를 하지 않고 null을 반환한다", async () => {
+    const client = {
+      getItems: jest.fn().mockResolvedValue(light),
+      getItem: jest.fn(),
+    }
+
+    expect(await findFullItemByPath(client as never, "/none")).toBeNull()
+    expect(client.getItem).not.toHaveBeenCalled()
   })
 })

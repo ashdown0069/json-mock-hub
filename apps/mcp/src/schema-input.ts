@@ -1,15 +1,30 @@
 import { z } from "zod"
-import type { FieldSchema, SchemaObject, SchemaType } from "@workspace/types"
-import { FAKER_BY_TYPE } from "@workspace/mockgen/fakerMethods"
+import {
+  SCHEMA_PRIMITIVES,
+  type FieldSchema,
+  type SchemaObject,
+  type SchemaType,
+} from "@workspace/types"
+import { fakerMethodsForType } from "@workspace/mockgen/fakerMethods"
 
-const primitiveInput = z.enum([
-  "string",
-  "number",
-  "boolean",
-  "date",
-  "uuid",
-  "objectId",
-])
+// 목록을 여기 다시 적으면 @workspace/types와 조용히 어긋난다. 이 enum은
+// satisfies로 강제되지 않아 컴파일러가 잡아주지 못하기 때문이다 —
+// objectId 제거 때 실제로 이 지점만 뒤처져 손으로 찾아 고쳐야 했다.
+const primitiveInput = z.enum(SCHEMA_PRIMITIVES)
+
+/**
+ * 도구 설명에 넣는 스키마 값 타입 안내.
+ *
+ * primitiveInput과 같은 목록에서 파생시킨다 — 문구가 실제 허용 타입과 어긋나면
+ * LLM이 거부당할 값을 계속 제안한다. create/update 두 도구가 같은 문구를 쓰므로
+ * 허용 목록을 소유한 이 모듈 한 곳에 둔다.
+ *
+ * 앞뒤 공백을 넣지 않는 것이 중요하다 — 호출부가 인접 문자열로 공백을 제공하므로,
+ * 여기에 공백을 더하면 최종 설명에 두 칸이 생긴다.
+ */
+export const SCHEMA_VALUE_TYPES_HINT =
+  `스키마 값 타입: ${SCHEMA_PRIMITIVES.map((t) => `"${t}"`).join(" | ")}` +
+  ' | { "type": "array", "items": <타입> } | 중첩 객체'
 
 // SchemaObject 재귀 입력: 값 = 기본타입 | { type: "array", items } | 중첩 객체
 export const schemaTypeInput: z.ZodType<SchemaType> = z.lazy(() =>
@@ -23,15 +38,6 @@ export const schemaTypeInput: z.ZodType<SchemaType> = z.lazy(() =>
 export const schemaObjectInput = z.record(
   schemaTypeInput
 ) as z.ZodType<SchemaObject>
-
-// 타입별 유효 faker 메서드를 "module.method" 문자열 배열로 평탄화 (generateData의 해석 포맷과 동일)
-function validMethodsForType(type: string): string[] {
-  const catalog = FAKER_BY_TYPE[type]
-  if (!catalog) return []
-  return Object.entries(catalog).flatMap(([module, methods]) =>
-    methods.map((method) => `${module}.${method}`)
-  )
-}
 
 /**
  * dot-path 힌트(예: { "author.name": "person.fullName" })를 fieldDefs에 적용합니다.
@@ -59,7 +65,7 @@ export function applyFakerHints(
       continue
     }
 
-    const valid = validMethodsForType(target.type)
+    const valid = fakerMethodsForType(target.type)
     if (!valid.includes(method)) {
       const preview = valid.slice(0, 20).join(", ")
       errors.push(
