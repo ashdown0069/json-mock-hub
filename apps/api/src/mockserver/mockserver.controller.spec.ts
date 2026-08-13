@@ -5,6 +5,7 @@ import { Types } from 'mongoose';
 import { MockserverController } from './mockserver.controller';
 import { MockserverService } from './mockserver.service';
 import { RequestLogService } from './request-log.service';
+import { MockWriteThrottlerGuard } from './mock-write-throttler.guard';
 
 describe('MockserverController 요청 로깅', () => {
   let controller: MockserverController;
@@ -19,7 +20,7 @@ describe('MockserverController 요청 로깅', () => {
       method,
       ip: '10.0.0.1',
     }) as any;
-  const res = { status: jest.fn() } as any;
+  const res = { status: jest.fn(), type: jest.fn() } as any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -30,7 +31,10 @@ describe('MockserverController 요청 로깅', () => {
         { provide: RequestLogService, useValue: mockLog },
         { provide: ConfigService, useValue: { get: () => 'localhost:3000' } },
       ],
-    }).compile();
+    })
+      .overrideGuard(MockWriteThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     controller = module.get(MockserverController);
   });
 
@@ -97,5 +101,60 @@ describe('MockserverController 요청 로깅', () => {
       {},
       undefined,
     );
+  });
+});
+
+describe('MockserverController 응답 MIME', () => {
+  let controller: MockserverController;
+  const mockService = { resolveRequest: jest.fn() };
+  const mockLog = { record: jest.fn() };
+  const workspaceId = new Types.ObjectId().toHexString();
+  const res = { status: jest.fn(), type: jest.fn() } as any;
+  const makeReq = () =>
+    ({
+      headers: { 'x-forwarded-host': `${workspaceId}.localhost:3000` },
+      hostname: `${workspaceId}.localhost:3000`,
+      path: '/api/users',
+      method: 'GET',
+      ip: '10.0.0.1',
+    }) as any;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const module = await Test.createTestingModule({
+      controllers: [MockserverController],
+      providers: [
+        { provide: MockserverService, useValue: mockService },
+        { provide: RequestLogService, useValue: mockLog },
+        { provide: ConfigService, useValue: { get: () => 'localhost:3000' } },
+      ],
+    })
+      .overrideGuard(MockWriteThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+    controller = module.get(MockserverController);
+  });
+
+  it('mock 응답을 항상 application/json으로 강제한다 (문자열 원소의 저장형 XSS 차단)', async () => {
+    // item.json 원소가 문자열이면 express가 Content-Type을 text/html로 추론한다
+    mockService.resolveRequest.mockResolvedValue({
+      status: 200,
+      body: ['<img src=x onerror=alert(1)>'],
+    });
+
+    await controller.handleAll(makeReq(), {}, undefined, res);
+
+    expect(res.type).toHaveBeenCalledWith('application/json');
+  });
+
+  it('객체 배열 응답에도 동일하게 적용한다', async () => {
+    mockService.resolveRequest.mockResolvedValue({
+      status: 200,
+      body: [{ id: 1 }],
+    });
+
+    await controller.handleAll(makeReq(), {}, undefined, res);
+
+    expect(res.type).toHaveBeenCalledWith('application/json');
   });
 });

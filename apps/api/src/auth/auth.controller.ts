@@ -9,6 +9,7 @@ import {
   HttpStatus,
   Get,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/req/signup.dto';
 import { LoginDto } from './dto/req/login.dto';
@@ -21,6 +22,7 @@ import { COOKIE_KEYS } from '../constant/cookies';
 import { Serialize } from '../interceptors/serialize.interceptor';
 import { GetUserDto } from '../users/dto/res/get-user.dto';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
+import { authCookieOptions } from './cookie-options';
 
 @Controller('auth')
 export class AuthController {
@@ -58,6 +60,10 @@ export class AuthController {
     return await this.authService.signup(signupDto);
   }
 
+  // 전역 한도(분당 60회)로는 비밀번호 시도를 막지 못한다.
+  // 주의: 인메모리 스토리지라 replicas: 2 환경에서는 인스턴스별로 카운트가 분리된다.
+  // (Redis 스토리지 도입은 별도 작업)
+  @Throttle({ 'rate-limit': { limit: 5, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -83,17 +89,6 @@ export class AuthController {
     return { message: 'Tokens refreshed' };
   }
 
-  private static readonly COOKIE_BASE_OPTIONS = {
-    httpOnly: true,
-    // __Host- 접두사는 Secure 필수(없으면 브라우저가 쿠키를 폐기)이고,
-    // SameSite=None도 Secure를 요구한다. localhost는 http에서도 Secure 쿠키를
-    // 허용하므로 개발/배포 동일하게 항상 true로 둔다.
-    secure: true,
-    // cross-site 배포에서도 쿠키가 전송되도록 None으로 고정한다.
-    sameSite: 'none',
-    path: '/',
-  } as const;
-
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
@@ -102,14 +97,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(userId);
-    res.clearCookie(
-      COOKIE_KEYS.ACCESS_TOKEN,
-      AuthController.COOKIE_BASE_OPTIONS,
-    );
-    res.clearCookie(
-      COOKIE_KEYS.REFRESH_TOKEN,
-      AuthController.COOKIE_BASE_OPTIONS,
-    );
+    res.clearCookie(COOKIE_KEYS.ACCESS_TOKEN, authCookieOptions());
+    res.clearCookie(COOKIE_KEYS.REFRESH_TOKEN, authCookieOptions());
     return { message: 'Logged out successfully' };
   }
 
@@ -119,11 +108,11 @@ export class AuthController {
     refreshToken: string,
   ) {
     res.cookie(COOKIE_KEYS.ACCESS_TOKEN, accessToken, {
-      ...AuthController.COOKIE_BASE_OPTIONS,
+      ...authCookieOptions(),
       maxAge: 15 * 60 * 1000, // 15분 (15 minutes)
     });
     res.cookie(COOKIE_KEYS.REFRESH_TOKEN, refreshToken, {
-      ...AuthController.COOKIE_BASE_OPTIONS,
+      ...authCookieOptions(),
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7일 (7 days)
     });
   }

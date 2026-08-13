@@ -52,7 +52,11 @@ describe('DashboardService', () => {
 
   it('getLogs는 최신순 정렬과 skip/limit, meta를 계산한다', async () => {
     const result = await service.getLogs(workspaceId, 2, 20);
-    const chain = logModel.find.mock.results[0].value;
+    const [firstResult] = logModel.find.mock.results;
+    if (!firstResult) {
+      throw new Error('logModel.find가 호출되지 않았습니다.');
+    }
+    const chain = firstResult.value;
     expect(chain.sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(chain.skip).toHaveBeenCalledWith(20);
     expect(chain.limit).toHaveBeenCalledWith(20);

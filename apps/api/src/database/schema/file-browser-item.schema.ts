@@ -24,16 +24,9 @@ export class FileBrowserItem {
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   json?: any;
 
-  @Prop({
-    type: {
-      pagination: { type: Boolean, default: false },
-      paginationParams: {
-        pageParam: { type: String },
-        limitParam: { type: String },
-      },
-    },
-    default: null,
-  })
+  // 옵션 형태는 상류 ItemOptionsDto가 검증하므로 여기서는 제약하지 않는다.
+  // 고정 서브도큐먼트로 선언하면 스키마에 없는 키(sort/search 등)가 캐스팅 단계에서 유실된다.
+  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   options?: any;
 
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })

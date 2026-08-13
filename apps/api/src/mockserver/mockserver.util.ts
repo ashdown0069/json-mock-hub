@@ -1,3 +1,5 @@
+import { DEFAULT_MOCK_PARAMS } from '@workspace/types';
+
 export interface PaginationMeta {
   page: number;
   limit: number;
@@ -93,8 +95,8 @@ export function paginateArray(
   params?: { pageParam?: string; limitParam?: string },
 ): PaginatedBody {
   // 사용자가 설정한 커스텀 파라미터명이 있으면 읽고, 없으면 기본 파라미터명을 사용합니다.
-  const pageKey = params?.pageParam || 'page';
-  const limitKey = params?.limitParam || 'limit';
+  const pageKey = params?.pageParam || DEFAULT_MOCK_PARAMS.pageParam;
+  const limitKey = params?.limitParam || DEFAULT_MOCK_PARAMS.limitParam;
 
   const rawPage = parseInt(String(query[pageKey] ?? '1'), 10);
   const rawLimit = parseInt(String(query[limitKey] ?? '10'), 10);

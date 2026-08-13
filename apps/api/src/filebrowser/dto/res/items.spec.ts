@@ -1,15 +1,19 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
+import { Types } from 'mongoose';
 import { FilebrowserItems } from './items';
 import { ItemOptionsDto } from '../req/create-item';
 
 /**
  * 인터셉터와 동일한 옵션으로 변환하는 헬퍼
- * (enableImplicitConversion: true, excludeExtraneousValues: true)
+ * (excludeExtraneousValues: true)
+ *
+ * enableImplicitConversion은 쓰지 않는다: 유니온 타입 필드(parentId: string | null)의
+ * design:type이 Object로 리플렉트되어, Transform 실행 전에 ObjectId가 plain object로
+ * 벗겨지며 "[object Object]"가 되는 버그가 있었다.
  */
 function transformToInstance(data: any): FilebrowserItems {
   return plainToInstance(FilebrowserItems, data, {
-    enableImplicitConversion: true,
     excludeExtraneousValues: true,
   });
 }
@@ -120,10 +124,37 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
 
       // options가 빈 객체 {}가 아니어야 하고, 속성들이 보존되어야 함
       expect(result.options).not.toEqual({});
-      expect(result.options.pagination).toBe(true);
-      expect(result.options.paginationParams).toBeDefined();
-      expect(result.options.paginationParams.pageParam).toBe('page');
-      expect(result.options.paginationParams.limitParam).toBe('limit');
+      expect(result.options?.pagination).toBe(true);
+      expect(result.options?.paginationParams).toBeDefined();
+      expect(result.options?.paginationParams?.pageParam).toBe('page');
+      expect(result.options?.paginationParams?.limitParam).toBe('limit');
+    });
+
+    it('options의 sort/search 설정이 응답에서 보존되어야 한다', () => {
+      const doc = {
+        _id: new Types.ObjectId(),
+        name: 'query-options-item',
+        itemType: 'File' as const,
+        parentId: null,
+        options: {
+          pagination: false,
+          sort: true,
+          sortParams: { sortParam: 'orderBy', orderParam: 'direction' },
+          search: true,
+          searchParams: { searchParam: 'keyword' },
+        },
+        path: '/query-options-test',
+        depth: 0,
+        workspace: new Types.ObjectId(),
+      };
+      const result = plainToInstance(FilebrowserItems, doc, {
+        excludeExtraneousValues: true,
+      });
+      expect(result.options?.sort).toBe(true);
+      expect(result.options?.sortParams?.sortParam).toBe('orderBy');
+      expect(result.options?.sortParams?.orderParam).toBe('direction');
+      expect(result.options?.search).toBe(true);
+      expect(result.options?.searchParams?.searchParam).toBe('keyword');
     });
   });
 
@@ -228,9 +259,112 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
       expect((result as any).__v).toBeUndefined();
 
       // 다른 필드들은 정상 보존
-      expect(result.options.pagination).toBe(true);
+      expect(result.options?.pagination).toBe(true);
       expect(result.json.test).toBe('data');
       expect(result.schema.type).toBe('object');
+    });
+  });
+
+  describe('회귀: parentId가 실제 ObjectId 인스턴스일 때', () => {
+    it('⑦ parentId가 "[object Object]"가 아니라 hex 문자열로 변환되어야 한다', () => {
+      // parentId는 string | null 유니온 타입이라 enableImplicitConversion이 켜져 있으면
+      // design:type이 Object로 리플렉트되어 ObjectId가 toString() 전에 벗겨지는 버그가 있었다.
+      const parentObjectId = new Types.ObjectId();
+      const plainData = {
+        _id: new Types.ObjectId(),
+        name: 'child-item',
+        itemType: 'File' as const,
+        parentId: parentObjectId,
+        options: undefined,
+        json: undefined,
+        schema: undefined,
+        fieldDefs: undefined,
+        path: '/parent/child-item',
+        depth: 1,
+        workspace: new Types.ObjectId(),
+      };
+
+      const result = transformToInstance(plainData);
+
+      expect(result.parentId).toBe(parentObjectId.toString());
+      expect(result.parentId).not.toBe('[object Object]');
+    });
+  });
+
+  describe('회귀: id/parentId/workspace는 실제 원본 ObjectId 값과 정확히 일치해야 한다', () => {
+    // class-transformer(0.5.1)는 @Type() 없이 ObjectId처럼 "생성자에 부작용이 있는"
+    // object를 변환할 때, 내부적으로 new value.constructor()로 새 인스턴스를 만들어
+    // 복제하려 시도한다. Date/Buffer는 라이브러리가 예외 처리하지만 ObjectId는 그
+    // 목록에 없어, @Transform(({ value }) => value.toString())가 원본이 아닌
+    // "새로 생성된 별개의 ObjectId"를 문자열화하는 결과를 낳는다.
+    // 단발성으로는 우연히 통과할 수 있어 반복 실행으로 검증한다.
+    it('⑧ id가 반복 변환해도 항상 원본 _id.toString()과 같아야 한다', () => {
+      for (let i = 0; i < 20; i++) {
+        const realId = new Types.ObjectId();
+        const result = transformToInstance({
+          _id: realId,
+          name: 'item',
+          itemType: 'File' as const,
+          parentId: null,
+          path: '/item',
+          depth: 0,
+          workspace: new Types.ObjectId(),
+        });
+
+        expect(result.id).toBe(realId.toString());
+      }
+    });
+
+    it('⑨ parentId가 반복 변환해도 항상 원본 parentId.toString()과 같아야 한다', () => {
+      for (let i = 0; i < 20; i++) {
+        const realParentId = new Types.ObjectId();
+        const result = transformToInstance({
+          _id: new Types.ObjectId(),
+          name: 'child',
+          itemType: 'File' as const,
+          parentId: realParentId,
+          path: '/parent/child',
+          depth: 1,
+          workspace: new Types.ObjectId(),
+        });
+
+        expect(result.parentId).toBe(realParentId.toString());
+      }
+    });
+
+    it('⑩ workspace가 반복 변환해도 항상 원본 workspace.toString()과 같아야 한다', () => {
+      for (let i = 0; i < 20; i++) {
+        const realWorkspace = new Types.ObjectId();
+        const result = transformToInstance({
+          _id: new Types.ObjectId(),
+          name: 'item',
+          itemType: 'Folder' as const,
+          parentId: null,
+          path: '/item',
+          depth: 0,
+          workspace: realWorkspace,
+        });
+
+        expect(result.workspace).toBe(realWorkspace.toString());
+      }
+    });
+
+    it('⑪ SerializeInterceptor와 동일하게 배열을 매핑 변환해도 각 아이템의 id가 서로 섞이지 않아야 한다', () => {
+      const items = Array.from({ length: 10 }).map((_, i) => ({
+        _id: new Types.ObjectId(),
+        name: `item-${i}`,
+        itemType: 'File' as const,
+        parentId: null,
+        path: `/item-${i}`,
+        depth: 0,
+        workspace: new Types.ObjectId(),
+      }));
+
+      const results = items.map((item) => transformToInstance(item));
+
+      items.forEach((item, i) => {
+        expect(results[i]!.id).toBe(item._id.toString());
+      });
     });
   });
 });

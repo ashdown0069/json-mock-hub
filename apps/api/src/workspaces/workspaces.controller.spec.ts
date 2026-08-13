@@ -9,8 +9,8 @@ describe('WorkspacesController', () => {
   let controller: WorkspacesController;
 
   const apiKeyService = {
-    getKey: jest.fn(),
-    issue: jest.fn(),
+    getMyKey: jest.fn(),
+    reissueMyKey: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -35,20 +35,24 @@ describe('WorkspacesController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('getApiKey: ApiKeyService.getKey에 위임한다', async () => {
-    const payload = { apiKey: 'mock_key', issuedAt: new Date() };
-    apiKeyService.getKey.mockResolvedValue(payload);
+  it('getMyApiKey: 요청자 본인의 키를 조회한다', async () => {
+    const expected = { apiKey: 'mock_key', issuedAt: new Date() };
+    apiKeyService.getMyKey.mockResolvedValue(expected);
 
-    await expect(controller.getApiKey('ws-1')).resolves.toBe(payload);
-    expect(apiKeyService.getKey).toHaveBeenCalledWith('ws-1');
+    await expect(
+      controller.getMyApiKey('ws-1', 'user-1'),
+    ).resolves.toBe(expected);
+    expect(apiKeyService.getMyKey).toHaveBeenCalledWith('ws-1', 'user-1');
   });
 
-  it('reissueApiKey: ApiKeyService.issue에 위임한다', async () => {
-    const payload = { apiKey: 'mock_new_key', issuedAt: new Date() };
-    apiKeyService.issue.mockResolvedValue(payload);
+  it('reissueMyApiKey: 요청자 본인의 키만 재발급한다', async () => {
+    const expected = { apiKey: 'mock_new', issuedAt: new Date() };
+    apiKeyService.reissueMyKey.mockResolvedValue(expected);
 
-    await expect(controller.reissueApiKey('ws-1')).resolves.toBe(payload);
-    expect(apiKeyService.issue).toHaveBeenCalledWith('ws-1');
+    await expect(
+      controller.reissueMyApiKey('ws-1', 'user-1'),
+    ).resolves.toBe(expected);
+    expect(apiKeyService.reissueMyKey).toHaveBeenCalledWith('ws-1', 'user-1');
   });
 
   it('폐기(DELETE) 핸들러는 더 이상 존재하지 않는다', () => {

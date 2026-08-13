@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -53,11 +54,14 @@ export class WorkspacesService {
   async create(createWorkspaceDto: CreateWorkspaceDto, userId: string) {
     return this.transactionService.withTransaction(async (session) => {
       // 1. Create Workspace — API 키는 생성 시점에 무조건 발급된다 (키 없는 상태 없음)
+      // passwordConfirm은 검증 전용 필드이므로 저장 대상에서 제외한다
+      const { passwordConfirm: _passwordConfirm, ...workspaceFields } =
+        createWorkspaceDto;
       const password = await bcrypt.hash(createWorkspaceDto.password, 10);
       const [workspace] = await this.workspaceModel.create(
         [
           {
-            ...createWorkspaceDto,
+            ...workspaceFields,
             password: password,
             owner: userId,
             apiKey: this.apiKeyService.generateKey(),
@@ -67,13 +71,24 @@ export class WorkspacesService {
         { session },
       );
 
-      // 2. Create Owner Membership
+      // create(배열)은 같은 길이의 배열을 돌려주지만 타입상으로는 보장되지 않는다.
+      // 여기서 새면 워크스페이스만 만들어지고 소유자 멤버십·기본 역할이 없는
+      // 상태로 트랜잭션이 커밋된다.
+      if (!workspace) {
+        throw new InternalServerErrorException(
+          '워크스페이스 생성에 실패했습니다.',
+        );
+      }
+
+      // 2. Create Owner Membership — 키는 멤버십에 귀속되므로 여기서 발급한다
       await this.membershipModel.create(
         [
           {
             user: new Types.ObjectId(userId),
             workspace: workspace._id,
             role: 'owner',
+            apiKey: this.apiKeyService.generateKey(),
+            apiKeyIssuedAt: new Date(),
           },
         ],
         { session },
@@ -86,7 +101,6 @@ export class WorkspacesService {
             workspace: workspace._id,
             owner: new Types.ObjectId(userId),
             role: 'owner',
-            canRemoveMembers: true,
             canCreate: true,
             canRename: true,
             canDelete: true,
@@ -104,7 +118,6 @@ export class WorkspacesService {
             workspace: workspace._id,
             owner: new Types.ObjectId(userId),
             role: 'member',
-            canRemoveMembers: false,
             canCreate: true,
             canRename: false,
             canDelete: false,
@@ -154,6 +167,16 @@ export class WorkspacesService {
         'Workspace not found or unauthorized to update',
       );
     }
+
+    // DTO를 그대로 넘기면 owner/isDeleted처럼 선언되지 않은 필드까지 통과한다.
+    // ValidationPipe의 whitelist가 1차 방어지만, 서비스에서도 갱신 가능 필드를 명시한다.
+    const { name, description, password } = updateWorkspaceDto;
+    const update: Record<string, unknown> = {};
+    if (name !== undefined) update.name = name;
+    if (description !== undefined) update.description = description;
+    // 평문 저장을 막는 유일한 지점 — 이전에는 DTO가 그대로 전달돼 평문이 저장됐다
+    if (password !== undefined) update.password = await bcrypt.hash(password, 10);
+
     const workspace = await this.workspaceModel
       .findOneAndUpdate(
         {
@@ -161,7 +184,7 @@ export class WorkspacesService {
           owner: userId,
           isDeleted: null,
         },
-        updateWorkspaceDto,
+        update,
         { new: true },
       )
       .exec();
@@ -253,17 +276,32 @@ export class WorkspacesService {
       });
     }
 
-    // 4. 멤버십 생성
-    await this.membershipModel.create({
-      workspace: workspace._id,
-      user: new Types.ObjectId(userId),
-      role: 'member',
-    });
+    // 4. 멤버십 생성과 멤버 수 증가는 함께 성공하거나 함께 실패해야 한다.
+    //    분리돼 있으면 두 번째 쓰기 실패 시 membersCount가 영구히 어긋나고,
+    //    이를 되돌릴 보정 경로가 없다.
+    //    mongoose는 create에 session을 넘길 때 문서를 배열로 감싸도록 요구한다.
+    await this.transactionService.withTransaction(async (session) => {
+      await this.membershipModel.create(
+        [
+          {
+            workspace: workspace._id,
+            user: new Types.ObjectId(userId),
+            role: 'member',
+            apiKey: this.apiKeyService.generateKey(),
+            apiKeyIssuedAt: new Date(),
+          },
+        ],
+        { session },
+      );
 
-    // 5. 멤버 수 1 증가
-    await this.workspaceModel
-      .updateOne({ _id: workspace._id }, { $inc: { membersCount: 1 } })
-      .exec();
+      await this.workspaceModel
+        .updateOne(
+          { _id: workspace._id },
+          { $inc: { membersCount: 1 } },
+          { session },
+        )
+        .exec();
+    });
 
     return { message: '워크스페이스에 참여되었습니다.', alreadyMember: false };
   }

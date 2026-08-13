@@ -29,14 +29,16 @@ WORKDIR /app
 COPY --from=prepare /app/out/json/ .
 
 
-# 2. 로컬 워크스페이스가 잡혔으므로 에러 없이 안전하게 모든 의존성을 설치합니다.
-RUN npm install --no-package-lock
+# 2. turbo prune이 만들어 준 pruned lockfile로 설치합니다.
+#    npm install --no-package-lock을 쓰면 lockfile이 무시되어 빌드마다
+#    transitive 의존성 버전이 달라지고, 검증한 것과 다른 이미지가 배포됩니다.
+RUN npm ci
 
 # 3. 실제 소스 코드(.ts 파일 등)를 복사합니다.
 COPY --from=prepare /app/out/full/ .
 
 # 4. Turborepo를 이용해 api 프로젝트와 하위 의존 패키지들을 함께 빌드합니다.
-RUN npx turbo build --filter=api...
+RUN npx turbo run build --filter=api...
 
 
 # =========================================================================

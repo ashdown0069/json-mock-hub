@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { CommonService } from './common/common.service';
 
 describe('AppController', () => {
@@ -10,7 +9,6 @@ describe('AppController', () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
       providers: [
-        AppService,
         {
           provide: CommonService,
           useValue: {},

@@ -115,18 +115,26 @@ export class WorkspacesController {
     return result;
   }
 
-  // 멤버라면 누구나 조회 가능 — /mcp 설치 설정 자동 주입에 사용된다
+  // 키가 멤버십에 귀속되므로 멤버는 자기 키만 조회한다. 남의 키를 읽을 경로는 없다.
+  // 키로 들어온 요청은 키 주인의 role로 판정되므로(JwtOrApiKeyGuard),
+  // member에게 키를 줘도 canCreate/canDelete 등 세분 권한이 그대로 적용된다.
   @UseGuards(WorkspaceMemberGuard)
   @Get(':workspaceId/api-key')
-  async getApiKey(@Param('workspaceId') workspaceId: string) {
-    return this.apiKeyService.getKey(workspaceId);
+  async getMyApiKey(
+    @Param('workspaceId') workspaceId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.apiKeyService.getMyKey(workspaceId, userId);
   }
 
-  // 재발급은 owner 전용 — 기존 키는 즉시 무효화된다
-  @UseGuards(WorkspaceOwnerGuard)
+  // 재발급 — 본인 키만 교체된다. 다른 멤버의 MCP 연동은 끊기지 않는다.
+  @UseGuards(WorkspaceMemberGuard)
   @Post(':workspaceId/api-key')
   @HttpCode(HttpStatus.OK)
-  async reissueApiKey(@Param('workspaceId') workspaceId: string) {
-    return this.apiKeyService.issue(workspaceId);
+  async reissueMyApiKey(
+    @Param('workspaceId') workspaceId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.apiKeyService.reissueMyKey(workspaceId, userId);
   }
 }

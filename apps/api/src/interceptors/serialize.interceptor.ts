@@ -25,13 +25,11 @@ export class SerializeInterceptor implements NestInterceptor {
         if (Array.isArray(data)) {
           return data.map((item) =>
             plainToInstance(this.dto, item, {
-              enableImplicitConversion: true,
               excludeExtraneousValues: true,
             }),
           );
         }
         return plainToInstance(this.dto, data, {
-          enableImplicitConversion: true,
           excludeExtraneousValues: true,
         });
       }),

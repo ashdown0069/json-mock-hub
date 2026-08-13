@@ -7,6 +7,7 @@ import {
   HttpException,
   Query,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
@@ -19,8 +20,12 @@ import {
   normalizeMockPath,
 } from './mockserver.util';
 import { RequestLogService } from './request-log.service';
+import { MockWriteThrottlerGuard } from './mock-write-throttler.guard';
 
-@SkipThrottle()
+// 전역 'rate-limit' 한도만 건너뛴다. 인자 없는 @SkipThrottle()을 쓰면
+// 아래 MockWriteThrottlerGuard의 'mock-write' 한도까지 함께 무력화된다.
+@SkipThrottle({ 'rate-limit': true })
+@UseGuards(MockWriteThrottlerGuard)
 @Controller('api')
 export class MockserverController {
   private readonly baseDomain: string;
@@ -30,7 +35,6 @@ export class MockserverController {
     private readonly configService: ConfigService,
     private readonly requestLogService: RequestLogService,
   ) {
-    // 환경변수로부터 베이스 도메인을 로드합니다 (기본값 localhost:3000)
     this.baseDomain =
       this.configService.get<string>('MOCK_BASE_DOMAIN') ?? 'localhost:3000';
   }
@@ -49,7 +53,6 @@ export class MockserverController {
       ) ?? req.hostname;
     const workspaceId = extractWorkspaceId(hostHeader, this.baseDomain);
 
-    // 호스트 헤더가 적절하지 않거나 서브도메인이 비어 있으면 404 예외를 던집니다.
     if (!workspaceId || !Types.ObjectId.isValid(workspaceId)) {
       // workspace 귀속이 불가능한 요청이므로 로깅하지 않습니다.
       throw new HttpException(
@@ -60,7 +63,6 @@ export class MockserverController {
 
     let logStatus: number = HttpStatus.INTERNAL_SERVER_ERROR;
     try {
-      // 서비스 레이어에 비즈니스 로직(파일 조회 및 목 응답 조립)을 위임합니다
       const result = await this.mockserverService.resolveRequest(
         workspaceId,
         req.path,
@@ -69,8 +71,10 @@ export class MockserverController {
         reqBody,
       );
 
-      // NestJS passthrough 옵션을 활용해 상태 코드를 동적으로 설정하고 결과 본문을 직접 반환합니다
       logStatus = result.status;
+      // item.json 원소가 문자열이면 express가 Content-Type을 text/html로 추론해
+      // 저장형 XSS가 성립한다. mock 응답은 항상 JSON이므로 명시적으로 고정한다.
+      res.type('application/json');
       res.status(result.status);
       return result.body;
     } catch (error: any) {

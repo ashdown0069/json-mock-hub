@@ -1,18 +1,15 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
+import { WorkspacesModule } from '../workspaces/workspaces.module';
+import { MockStateModule } from './mock-state.module';
 import { MockserverController } from './mockserver.controller';
+import { MockStateController } from './mock-state.controller';
 import { MockserverService } from './mockserver.service';
 import { RequestLogService } from './request-log.service';
-import { MockCorsMiddleware } from './mock-cors.middleware';
 
 @Module({
-  imports: [DatabaseModule],
-  controllers: [MockserverController],
+  imports: [DatabaseModule, MockStateModule, WorkspacesModule],
+  controllers: [MockserverController, MockStateController],
   providers: [MockserverService, RequestLogService],
 })
-export class MockserverModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    // /api 경로로 들어오는 목 서버 요청에 개방형 CORS 미들웨어를 적용합니다.
-    consumer.apply(MockCorsMiddleware).forRoutes('api');
-  }
-}
+export class MockserverModule {}

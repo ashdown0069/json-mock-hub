@@ -17,6 +17,7 @@ import {
   FileBrowserItemSchema,
 } from './schema/file-browser-item.schema';
 import { RequestLog, RequestLogSchema } from './schema/request-log.schema';
+import type { Connection, Schema } from 'mongoose';
 
 @Module({
   imports: [
@@ -24,12 +25,14 @@ import { RequestLog, RequestLogSchema } from './schema/request-log.schema';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
-        connectionFactory: (connection) => {
-          connection.plugin((schema) => {
+        connectionFactory: (connection: Connection) => {
+          connection.plugin((schema: Schema) => {
             schema.set('toJSON', {
               virtuals: true,
               versionKey: false,
-              transform: (doc, ret) => {
+              // doc은 mongoose가 문맥으로 타입을 주므로 주석을 달지 않는다.
+              // ret에만 Record를 달아 _id/__v 삭제가 통과하게 한다.
+              transform: (_doc, ret: Record<string, any>) => {
                 ret.id = ret._id.toString();
                 delete ret._id;
                 delete ret.__v;

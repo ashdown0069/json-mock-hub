@@ -22,9 +22,9 @@ export class JwtRefreshStrategy extends PassportStrategy(
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey:
-        configService.get<string>('JWT_REFRESH_SECRET') ||
-        'defaultRefreshSecret',
+      // fallback을 두면 서명 측(auth.service)과 키가 비대칭이 되어도 앱이 기동한다.
+      // 필수 여부는 validateEnv가 부팅 시 보장하며, 여기서도 getOrThrow로 이중 확인한다.
+      secretOrKey: configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
     });
   }
 

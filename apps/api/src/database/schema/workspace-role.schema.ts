@@ -31,11 +31,6 @@ export class WorkspaceRole {
   @Prop({
     required: true,
   })
-  canRemoveMembers: boolean;
-
-  @Prop({
-    required: true,
-  })
   canCreate: boolean;
 
   @Prop({

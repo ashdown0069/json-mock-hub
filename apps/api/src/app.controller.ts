@@ -1,15 +1,11 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { AppService } from './app.service';
 import { FeedbackDto } from './common/dto/feedback.dto';
 import { CommonService } from './common/common.service';
 import { hostname } from 'os';
 
 @Controller('/')
 export class AppController {
-  constructor(
-    private readonly appService: AppService,
-    private readonly commonService: CommonService,
-  ) {}
+  constructor(private readonly commonService: CommonService) {}
 
   @Get()
   async healthCheck() {

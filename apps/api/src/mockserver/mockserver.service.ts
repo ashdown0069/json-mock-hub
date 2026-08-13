@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { resolveMockApiParams } from '@workspace/types';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -11,6 +12,16 @@ import {
   paginateArray,
   PaginatedBody,
 } from './mockserver.util';
+import { applyCollectionQuery } from './collection-query.util';
+import { MockStateService } from './mock-state.service';
+import {
+  applyOverlay,
+  applyCreate,
+  applyUpdate,
+  applyDelete,
+  MAX_OVERLAY_CREATED_ROWS,
+  type ApplyCreateResult,
+} from './mock-state.util';
 
 export interface MockResponse {
   status: number;
@@ -22,7 +33,43 @@ export class MockserverService {
   constructor(
     @InjectModel(FileBrowserItem.name)
     private readonly itemModel: Model<FileBrowserItemDocument>,
+    private readonly mockStateService: MockStateService,
   ) {}
+
+  /**
+   * 대시보드 미리보기용 — 저장된 base JSON에 현재 Redis 오버레이를 병합한
+   * "실효 컬렉션"을 반환합니다. CRUD 요청과 동일한 applyOverlay 규칙을 쓰므로
+   * 실제 mock 응답과 항상 같은 값을 보여줍니다.
+   */
+  async getEffectiveJson(
+    workspaceId: string,
+    path: string,
+  ): Promise<unknown[]> {
+    const wsObjectId = new Types.ObjectId(workspaceId);
+    const normalizedPath = normalizeMockPath(path);
+
+    const item = await this.itemModel
+      .findOne({
+        workspace: wsObjectId,
+        path: normalizedPath,
+        itemType: 'File',
+      })
+      .lean()
+      .exec();
+
+    if (!item) {
+      throw new NotFoundException({
+        message: `경로 "${normalizedPath}"에 해당하는 Mock API 파일을 찾을 수 없습니다.`,
+      });
+    }
+
+    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
+    const overlay = await this.mockStateService.getOverlay(
+      workspaceId,
+      normalizedPath,
+    );
+    return applyOverlay(baseJson, overlay);
+  }
 
   /**
    * 서브도메인에서 추출된 workspaceId와 요청 경로(rawPath)를 바탕으로 파일 데이터베이스를 조회하여 응답을 결정합니다.
@@ -44,7 +91,7 @@ export class MockserverService {
       .exec();
 
     if (exactItem) {
-      return this.buildItemResponse(exactItem, method, null, query, reqBody);
+      return this.buildItemResponse(workspaceId, exactItem, method, null, query, reqBody);
     }
 
     // 2차 조회: 마지막 세그먼트를 개별 리소스 ID로 간주하고 부모 경로로 재조회 (예: /users/3 -> 부모 /users, ID 3)
@@ -61,6 +108,7 @@ export class MockserverService {
 
       if (parentItem) {
         return this.buildItemResponse(
+          workspaceId,
           parentItem,
           method,
           seg.id,
@@ -79,43 +127,81 @@ export class MockserverService {
   /**
    * 찾아낸 FileBrowserItem 데이터와 HTTP 메소드를 바탕으로 json-server 형식의 응답 구조를 생성합니다.
    */
-  private buildItemResponse(
+  private async buildItemResponse(
+    workspaceId: string,
     item: FileBrowserItem,
     method: string,
     resourceId: string | null,
     query: Record<string, unknown>,
     reqBody: unknown,
-  ): MockResponse {
-    const json: unknown[] = Array.isArray(item.json) ? item.json : [];
+  ): Promise<MockResponse> {
+    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
     const upperMethod = method.toUpperCase();
+
+    // MockStateService는 MockStateModule로 항상 주입된다(@Optional 아님)
+    const overlay = await this.mockStateService.getOverlay(
+      workspaceId,
+      item.path,
+    );
+
+    const effective = applyOverlay(baseJson, overlay);
 
     // ID가 주어지지 않은 컬렉션 단위의 요청 (예: GET /users, POST /users)
     if (!resourceId) {
       if (upperMethod === 'GET') {
-        // 페이지네이션 옵션이 활성화된 경우 페이징 처리된 객체로 감싸서 반환합니다.
-        if (item.options?.pagination) {
+        // 아이템 옵션을 공유 계약으로 해석한다 (@workspace/types)
+        const params = resolveMockApiParams(item.options);
+        const filtered = applyCollectionQuery(effective, query, params);
+
+        if (params.pagination) {
           const paginated: PaginatedBody = paginateArray(
-            json,
+            filtered,
             query,
-            item.options.paginationParams,
+            params.pagination,
           );
           return { status: 200, body: paginated };
         }
-        // 페이지네이션 비활성화 상태에서는 전체 JSON 배열을 그대로 반환합니다.
-        return { status: 200, body: json };
+        return { status: 200, body: filtered };
       }
 
       if (upperMethod === 'POST') {
-        // POST 리소스 생성: json-server 관례에 따라 요청 페이로드를 생성 성공 상태(201)로 에코 반환합니다.
-        return { status: 201, body: reqBody ?? {} };
+        const bodyObj = (typeof reqBody === 'object' && reqBody !== null ? reqBody : {}) as Record<string, unknown>;
+
+        const outcome = await this.mockStateService.mutate<ApplyCreateResult>(
+          workspaceId,
+          item.path,
+          (current) => {
+            // 락 안에서 다시 읽은 오버레이로 계산해야 동시 요청이 만든 행이
+            // 사라지지 않는다. applyCreate가 base로부터 직접 실효본을 만든다.
+            const res = applyCreate(current, baseJson, bodyObj);
+            return { overlay: res.ok ? res.overlay : null, result: res };
+          },
+        );
+
+        if (!outcome.ok) {
+          if (outcome.reason === 'conflict') {
+            return {
+              status: 409,
+              body: {
+                message: `id "${String(bodyObj.id)}" 리소스가 이미 존재합니다.`,
+              },
+            };
+          }
+          return {
+            status: 429,
+            body: {
+              message: `이 컬렉션의 mock 편집 상태가 상한(${MAX_OVERLAY_CREATED_ROWS}행)에 도달했습니다. 초기화 후 다시 시도해 주세요.`,
+            },
+          };
+        }
+        return { status: 201, body: outcome.created };
       }
     }
 
     // ID가 주어진 단일 리소스 요청 (예: GET /users/3, PUT /users/3, DELETE /users/3)
     if (resourceId) {
       if (upperMethod === 'GET') {
-        // 배열 내에서 해당 ID와 일치하는 데이터를 찾습니다.
-        const found = json.find((row: any) => String(row?.id) === resourceId);
+        const found = effective.find((row: any) => String(row?.id) === resourceId);
         if (!found) {
           return {
             status: 404,
@@ -126,27 +212,53 @@ export class MockserverService {
       }
 
       if (upperMethod === 'PUT' || upperMethod === 'PATCH') {
-        // 병합(Merge) 응답: 기존 정보와 수정을 요청한 페이로드를 병합해서 반환합니다.
-        const existing = json.find(
-          (row: any) => String(row?.id) === resourceId,
+        const bodyObj = (typeof reqBody === 'object' && reqBody !== null ? reqBody : {}) as Record<string, unknown>;
+        const mode = upperMethod === 'PUT' ? 'put' : 'patch';
+
+        const updated = await this.mockStateService.mutate(
+          workspaceId,
+          item.path,
+          (current) => {
+            const res = applyUpdate(
+              current,
+              baseJson,
+              resourceId,
+              bodyObj,
+              mode,
+            );
+            // 대상이 없으면 overlay: null로 저장을 건너뛴다
+            return {
+              overlay: res ? res.overlay : null,
+              result: res ? res.updated : null,
+            };
+          },
         );
-        // GET과 동일하게, 존재하지 않는 리소스에 대한 수정은 404로 응답합니다 (json-server 관례).
-        if (!existing) {
+
+        if (!updated) {
           return {
             status: 404,
             body: { message: `id "${resourceId}" 리소스를 찾을 수 없습니다.` },
           };
         }
-        return {
-          status: 200,
-          // id는 URL 세그먼트 문자열이 아니라 저장된 레코드의 값을 유지한다
-          // (GET 단건 응답과 타입 일관성 확보 + 클라이언트의 id 변조 방지)
-          body: { ...(existing as any), ...(reqBody as any), id: (existing as any).id },
-        };
+        return { status: 200, body: updated };
       }
 
       if (upperMethod === 'DELETE') {
-        // 삭제 성공 시 빈 객체를 반환합니다.
+        const deleted = await this.mockStateService.mutate(
+          workspaceId,
+          item.path,
+          (current) => {
+            const nextOverlay = applyDelete(current, baseJson, resourceId);
+            return { overlay: nextOverlay, result: nextOverlay !== null };
+          },
+        );
+
+        if (!deleted) {
+          return {
+            status: 404,
+            body: { message: `id "${resourceId}" 리소스를 찾을 수 없습니다.` },
+          };
+        }
         return { status: 200, body: {} };
       }
     }
@@ -154,7 +266,7 @@ export class MockserverService {
     // 지원하지 않는 부적합한 HTTP 메소드에 대한 응답
     return {
       status: 405,
-      body: { message: `${upperMethod} 메서드는 지원하지 않습니다.` },
+      body: { message: `지원하지 않는 메소드입니다: ${method}` },
     };
   }
 }

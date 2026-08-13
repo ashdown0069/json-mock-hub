@@ -9,9 +9,11 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Sse,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtOrApiKeyGuard } from '../auth/guards/jwt-or-api-key.guard';
 import { WorkspacePermissionGuard } from '../workspaces/guards/workspace-permission.guard';
 import { RequirePermission } from '../workspaces/guards/require-permission.decorator';
@@ -23,6 +25,7 @@ import { MoveItemsDto } from './dto/req/move-items';
 import { CreateItemDto } from './dto/req/create-item';
 import { RenameItemDto } from './dto/req/rename-item';
 import { UpdateItemDto } from './dto/req/update-item';
+import { DeleteItemsDto } from './dto/req/delete-items';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { FilebrowserItems } from './dto/res/items';
 
@@ -31,6 +34,11 @@ const HEARTBEAT_INTERVAL_MS = 25_000;
 
 // WorkspacePermissionGuard: 멤버십 검증 + @RequirePermission이 붙은 메서드는 권한 플래그 검사
 // (@RequirePermission이 없는 getItems/subscribe는 멤버 검증만 수행)
+// MCP는 도구 하나당 API를 2~3회 호출한다. 전역 한도(60회/분 + 1시간 차단)로는
+// 정상적인 배치 작업("mock 20개 만들어줘")이 장시간 차단에 걸린다.
+// 이 컨트롤러는 JwtOrApiKeyGuard가 지키는 인증 전용 경로라 미인증 남용 벡터가
+// 아니므로, 한도를 올리고 차단을 1분으로 줄인다.
+@Throttle({ 'rate-limit': { limit: 300, ttl: 60_000, blockDuration: 60_000 } })
 @UseGuards(JwtOrApiKeyGuard, WorkspacePermissionGuard)
 @Controller(':workspaceId/filebrowser')
 export class FilebrowserController {
@@ -61,10 +69,25 @@ export class FilebrowserController {
 
   @Serialize(FilebrowserItems)
   @Get('getItems')
-  async getItems(@Param('workspaceId') workspaceId: string) {
-    const items = await this.filebrowserService.getItems(workspaceId);
+  async getItems(
+    @Param('workspaceId') workspaceId: string,
+    @Query('view') view?: string,
+  ) {
+    // 기본값은 기존 동작(full) — 소비자 전환이 끝날 때까지 호환성을 유지한다
+    return this.filebrowserService.getItems(
+      workspaceId,
+      view === 'tree' ? 'tree' : 'full',
+    );
+  }
 
-    return items;
+  // itemId 형식 오류는 전역 예외 필터가 CastError를 400으로 변환한다
+  @Serialize(FilebrowserItems)
+  @Get('items/:itemId')
+  async getItem(
+    @Param('workspaceId') workspaceId: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.filebrowserService.getItem(workspaceId, itemId);
   }
 
   @RequirePermission('canCreate')
@@ -119,13 +142,22 @@ export class FilebrowserController {
   @Delete()
   async deleteItems(
     @Param('workspaceId') workspaceId: string,
-    @Body('itemIds') itemIds: string[],
+    @Body() body: DeleteItemsDto,
   ) {
     const result = await this.filebrowserService.deleteItems(
       workspaceId,
-      itemIds,
+      body.itemIds,
     );
     await this.filebrowserEvent.publish({ workspaceId, action: 'DELETE' });
     return result;
+  }
+
+  @RequirePermission('canUpdate')
+  @Post('resetMockState')
+  async resetMockState(
+    @Param('workspaceId') workspaceId: string,
+    @Body('itemId') itemId: string,
+  ) {
+    return this.filebrowserService.resetMockState(workspaceId, itemId);
   }
 }

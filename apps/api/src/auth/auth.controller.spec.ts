@@ -70,7 +70,7 @@ describe('AuthController', () => {
       expect(options).toMatchObject({
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/',
       });
     }
@@ -84,7 +84,7 @@ describe('AuthController', () => {
     await controller.refresh('user-1', req, res as unknown as Response);
 
     for (const [, , options] of res.cookie.mock.calls) {
-      expect(options).toMatchObject({ secure: true, sameSite: 'none' });
+      expect(options).toMatchObject({ secure: true, sameSite: 'lax' });
     }
   });
 });

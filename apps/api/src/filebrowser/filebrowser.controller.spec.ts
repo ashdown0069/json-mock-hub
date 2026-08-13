@@ -122,7 +122,7 @@ describe('FilebrowserController', () => {
     });
 
     it('deleteItems는 DELETE 액션을 발행한다', async () => {
-      await controller.deleteItems('ws-1', ['item-1']);
+      await controller.deleteItems('ws-1', { itemIds: ['507f1f77bcf86cd799439011'] });
 
       expect(mockFilebrowserEventService.publish).toHaveBeenCalledWith({
         workspaceId: 'ws-1',

@@ -43,6 +43,19 @@ export class WorkspacePermissionGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
 
+    // API 키 인증은 발급된 워크스페이스로만 스코프를 제한한다.
+    // ApiKeyService.verify가 이미 workspaceId로 조회하지만, 이 가드가 다른 경로에
+    // 재사용될 때를 대비한 이중 방어다.
+    if (
+      req.user?.viaApiKey &&
+      req.user.apiKeyWorkspaceId !== req.params?.workspaceId
+    ) {
+      throw new ForbiddenException({
+        code: 'auth.api_key.workspace_mismatch',
+        message: 'API 키가 이 워크스페이스에 대해 발급되지 않았습니다.',
+      });
+    }
+
     const { workspaceObjectId, role } = await resolveMembershipOrThrow(
       this.workspaceModel,
       this.membershipModel,

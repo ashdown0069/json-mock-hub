@@ -14,8 +14,8 @@ export class RedisLockAspect implements LazyDecorator<any, RedisLockOptions> {
     const { key, ttlSeconds } = metadata;
 
     return async (...args: any[]) => {
-      const acquired = await this.lockService.tryAcquire(key, ttlSeconds);
-      if (!acquired) {
+      const token = await this.lockService.tryAcquire(key, ttlSeconds);
+      if (!token) {
         this.logger.log(
           `Skipping cron job [${key}]: another instance holds the lock`,
         );
@@ -25,7 +25,7 @@ export class RedisLockAspect implements LazyDecorator<any, RedisLockOptions> {
       try {
         return await method(...args);
       } finally {
-        await this.lockService.release(key);
+        await this.lockService.release(key, token);
       }
     };
   }

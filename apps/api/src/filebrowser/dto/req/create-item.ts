@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsMongoId,
   IsNotEmpty,
   IsObject,
   IsOptional,
@@ -11,6 +12,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { IsUniqueFieldNames } from '../../../common/validators/unique-field-names.validator';
 
 // 프론트(apps/web/lib/validateItemName.ts)와 동일 규칙: 한글/영문/숫자/하이픈/언더바
 export const ITEM_NAME_REGEX = /^[a-zA-Z0-9가-힣_-]+$/;
@@ -25,6 +27,22 @@ export class PaginationParamsDto {
   limitParam?: string;
 }
 
+export class SortParamsDto {
+  @IsString()
+  @IsOptional()
+  sortParam?: string;
+
+  @IsString()
+  @IsOptional()
+  orderParam?: string;
+}
+
+export class SearchParamsDto {
+  @IsString()
+  @IsOptional()
+  searchParam?: string;
+}
+
 export class ItemOptionsDto {
   @IsBoolean()
   @IsOptional()
@@ -35,6 +53,26 @@ export class ItemOptionsDto {
   @ValidateNested()
   @Type(() => PaginationParamsDto)
   paginationParams?: PaginationParamsDto;
+
+  @IsBoolean()
+  @IsOptional()
+  sort?: boolean;
+
+  @IsObject()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SortParamsDto)
+  sortParams?: SortParamsDto;
+
+  @IsBoolean()
+  @IsOptional()
+  search?: boolean;
+
+  @IsObject()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SearchParamsDto)
+  searchParams?: SearchParamsDto;
 }
 
 export class CreateItemDto {
@@ -50,8 +88,8 @@ export class CreateItemDto {
   @IsNotEmpty()
   itemType: 'File' | 'Folder';
 
-  @ValidateIf((o) => o.parentId !== null) // parentId가 null이 아닐 때만 아래 검사(IsString)를 진행함
-  @IsString()
+  @ValidateIf((o) => o.parentId !== null) // null은 루트를 뜻하므로 형식 검사를 건너뛴다
+  @IsMongoId()
   parentId: string | null;
 
   @IsOptional()
@@ -69,5 +107,6 @@ export class CreateItemDto {
 
   @IsOptional()
   @IsArray()
+  @IsUniqueFieldNames()
   fieldDefs?: Record<string, any>[];
 }

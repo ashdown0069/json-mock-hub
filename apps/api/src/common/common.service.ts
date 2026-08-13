@@ -24,7 +24,13 @@ export class CommonService {
       Feedback: 255,
       Alert: 16776960,
     };
+    // .env.example에서 선택 항목으로 정의된 값이다.
+    // 없으면 알림만 건너뛰고 호출자에게는 성공으로 돌려준다.
     const discordWebHookURL = process.env.DISCORD_WEBHOOK_URL;
+    if (!discordWebHookURL) {
+      this.logger.warn('DISCORD_WEBHOOK_URL이 없어 알림 전송을 건너뜁니다.');
+      return true;
+    }
     try {
       await this.httpService.axiosRef.post(
         discordWebHookURL,

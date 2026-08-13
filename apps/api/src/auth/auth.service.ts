@@ -40,6 +40,8 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
+    // 1. 미가입 이메일과 비밀번호 불일치를 같은 code·message로 응답한다.
+    //    둘을 구분하면 응답만 보고 가입된 이메일을 골라낼 수 있다(account enumeration).
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException({
@@ -48,10 +50,10 @@ export class AuthService {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
+    // 2. 평문 대조 — DB에는 bcrypt 해시만 있다.
+    const isPasswordValid = user.password
+      ? await bcrypt.compare(loginDto.password, user.password)
+      : false;
     if (!isPasswordValid) {
       throw new UnauthorizedException({
         code: 'auth.login.invalid_credentials',
@@ -59,6 +61,9 @@ export class AuthService {
       });
     }
 
+    // 3. access·refresh를 함께 발급하고, refresh의 해시만 DB에 남긴다.
+    //    응답에는 평문 refresh가 나가고 저장소에는 해시만 있으므로
+    //    DB 덤프만으로는 세션을 재사용할 수 없다.
     const tokens = await this.generateTokens(
       user._id.toString(),
       user.email,
@@ -69,12 +74,18 @@ export class AuthService {
     return tokens;
   }
 
+  // refresh 토큰 회전(rotation). 갱신에 성공할 때마다 refresh 토큰 자체를 새로 발급하고
+  // DB의 해시를 덮어써, 방금 사용한 토큰은 그 시점부터 무효가 된다.
   async refreshTokens(userId: string, refreshToken: string) {
+    // 1. dbRefreshToken이 비어 있으면 이미 로그아웃된 세션이다.
+    //    logout()이 이 필드를 null로 지우는 것이 세션 종료의 유일한 표식이다.
     const user = await this.usersService.findById(userId);
     if (!user || !user.dbRefreshToken) {
       throw new UnauthorizedException('Access Denied');
     }
 
+    // 2. 사용자 미존재·로그아웃·토큰 불일치를 모두 같은 'Access Denied'로 응답해
+    //    실패 사유가 새어나가지 않게 한다.
     const refreshTokenMatches = await bcrypt.compare(
       refreshToken,
       user.dbRefreshToken,
@@ -84,6 +95,9 @@ export class AuthService {
       throw new UnauthorizedException('Access Denied');
     }
 
+    // 3. 회전 — 새 해시로 교체하는 이 쓰기가 끝나야 이전 refresh 토큰이 죽는다.
+    //    generateTokens와 updateRefreshToken의 순서를 바꾸면 방금 만든 토큰이 아니라
+    //    직전 토큰의 해시가 남아 갱신이 1회 만에 깨진다.
     const tokens = await this.generateTokens(
       user._id.toString(),
       user.email,
@@ -98,6 +112,9 @@ export class AuthService {
     await this.usersService.updateRefreshToken(userId, null);
   }
 
+  // Google OAuth 콜백에서 호출된다. 계정 동일성의 기준은 providerId가 아니라 이메일이다 —
+  // 비밀번호로 먼저 가입한 사용자가 나중에 같은 이메일로 구글 로그인하면 새 계정이
+  // 생기지 않고 기존 계정에 provider 정보가 붙는다.
   async validateOAuthLogin(
     email: string,
     nickname: string,
@@ -107,6 +124,8 @@ export class AuthService {
     let user = await this.usersService.findByEmail(email);
 
     if (user) {
+      // 1. 기존 계정: provider 정보가 실제로 달라졌을 때만 갱신한다.
+      //    무조건 쓰면 로그인할 때마다 불필요한 DB 쓰기가 발생한다.
       if (user.provider !== provider || user.providerId !== providerId) {
         user = await this.usersService.updateProvider(
           user._id.toString(),
@@ -115,11 +134,17 @@ export class AuthService {
         );
       }
     } else {
+      // 2. 신규 계정: password를 null로 만든다. users.schema.ts의 password는
+      //    nullable이며, 비밀번호 없이 존재하는 계정은 OAuth 전용 계정을 뜻한다.
+      //    nickname이 비어 오면 이메일 로컬파트를 표시명으로 쓴다.
       user = await this.usersService.create({
         email,
-        nickname: nickname || email.split('@')[0],
+        nickname: nickname || email.split('@')[0] || email,
         password: null,
       });
+
+      // 3. CreateUserDto에 provider·providerId가 없어 create()로는 채울 수 없다.
+      //    생성 직후 별도 쓰기로 연결한다.
       user = await this.usersService.updateProvider(
         user._id.toString(),
         provider,
@@ -140,6 +165,9 @@ export class AuthService {
     return tokens;
   }
 
+  // access와 refresh는 페이로드가 같고 서명 시크릿·만료만 다르다.
+  // 시크릿을 분리해 두었기 때문에 access 시크릿이 유출돼도 refresh 토큰을 위조할 수 없다.
+  // 두 시크릿의 존재는 부팅 시 validateEnv(app.module.ts)가 보장한다.
   private async generateTokens(
     userId: string,
     email: string,
