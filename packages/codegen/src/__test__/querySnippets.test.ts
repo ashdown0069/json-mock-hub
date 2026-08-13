@@ -8,12 +8,16 @@ const ctx: CodeGenContext = {
   resourcePath: "/users",
   schema: { name: "string" },
   pagination: null,
+  sort: null,
+  search: null,
 }
 
 const paginatedCtx: CodeGenContext = {
   ...ctx,
   pagination: { pageParam: "page", limitParam: "limit" },
 }
+
+const baseCtx = ctx
 
 describe("buildQuerySnippet 생성", () => {
   it("쿼리 키와 5종 훅을 생성한다", () => {
@@ -50,3 +54,69 @@ describe("buildQuerySnippet 생성", () => {
     expect(code).toContain("queryFn: () => getUsersList(page, limit),")
   })
 })
+
+describe("buildQuerySnippet - listQuery(필터/정렬/검색)", () => {
+  const listQueryCtx: CodeGenContext = {
+    ...ctx,
+    sort: { sortParam: "_sort", orderParam: "_order" },
+    search: { searchParam: "q" },
+  }
+  const fullCtx: CodeGenContext = {
+    ...ctx,
+    pagination: { pageParam: "p", limitParam: "size" },
+    sort: { sortParam: "_sort", orderParam: "_order" },
+    search: { searchParam: "q" },
+  }
+
+  it("TS 목록 훅이 query 인자를 받고 queryKey에 포함한다", () => {
+    const code = buildQuerySnippet(listQueryCtx, "ts")
+    expect(code).toContain(
+      "export function useUsersListQuery(query: UsersListQuery = {}) {"
+    )
+    expect(code).toContain("queryKey: [...usersKeys.all, query] as const,")
+    expect(code).toContain("queryFn: () => getUsersList(query),")
+    expect(code).toContain('import type { UsersListQuery } from "./usersApi";')
+  })
+
+  it("pagination+listQuery 조합에서 query·page·limit을 모두 전달한다", () => {
+    const code = buildQuerySnippet(fullCtx, "ts")
+    expect(code).toContain(
+      "export function useUsersListQuery(query: UsersListQuery = {}, page = 1, limit = 10) {"
+    )
+    expect(code).toContain(
+      "queryKey: [...usersKeys.all, query, { page, limit }] as const,"
+    )
+    expect(code).toContain("queryFn: () => getUsersList(query, page, limit),")
+  })
+
+  it("JS에서는 타입 import 없이 query 기본값 인자만 추가한다", () => {
+    const code = buildQuerySnippet(listQueryCtx, "js")
+    expect(code).toContain("export function useUsersListQuery(query = {}) {")
+    expect(code).not.toContain("import type")
+  })
+
+  it("listQuery 미설정 시 기존 출력이 유지된다(회귀)", () => {
+    const code = buildQuerySnippet(ctx, "ts")
+    expect(code).toContain("export function useUsersListQuery() {")
+    expect(code).not.toContain("UsersListQuery =")
+    expect(code).not.toContain("import type { UsersListQuery }")
+  })
+})
+
+describe("정렬·검색 설정 기반 훅 생성", () => {
+  it("sort 또는 search가 활성화되면 query 인자를 받는 목록 훅을 생성한다", () => {
+    const code = buildQuerySnippet(
+      { ...baseCtx, sort: { sortParam: "_sort", orderParam: "_order" } },
+      "ts"
+    )
+    expect(code).toContain("useUsersListQuery(query: UsersListQuery = {})")
+  })
+
+  it("모두 비활성화면 인자 없는 목록 훅을 생성한다", () => {
+    const code = buildQuerySnippet(baseCtx, "ts")
+    expect(code).toContain("useUsersListQuery()")
+  })
+})
+
+
+

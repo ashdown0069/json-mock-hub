@@ -1,26 +1,31 @@
-import { SchemaObject, SchemaType } from "@workspace/types"
+import {
+  SchemaObject,
+  SchemaType,
+  SchemaPrimitive,
+  MAX_SCHEMA_DEPTH,
+} from "@workspace/types"
 import { formatObjectKey } from "./identifiers"
 import { isSchemaArray, schemaToTsInterface } from "./schemaToType"
 import { CodeGenContext, CodeLang, ValidationLib } from "./types"
 
 // ---------- zod ----------
+const ZOD_BY_PRIMITIVE = {
+  string: "z.string()",
+  number: "z.number()",
+  boolean: "z.boolean()",
+  date: "z.string().datetime()",
+  uuid: "z.string().uuid()",
+} satisfies Record<SchemaPrimitive, string>
+
 function zodExpr(value: SchemaType, indent: number): string {
+  if (indent > MAX_SCHEMA_DEPTH) return "z.unknown()"
   if (typeof value === "string") {
-    switch (value) {
-      case "number":
-        return "z.number()"
-      case "boolean":
-        return "z.boolean()"
-      case "date":
-        return "z.string().datetime()"
-      case "uuid":
-        return "z.string().uuid()"
-      default:
-        return "z.string()"
-    }
+    return (ZOD_BY_PRIMITIVE as Record<string, string>)[value] ?? "z.unknown()"
   }
   if (isSchemaArray(value)) return `z.array(${zodExpr(value.items, indent)})`
-  return zodObject(value as SchemaObject, indent)
+  // Mixed 타입 저장 경로로 null/비객체가 들어올 수 있다
+  if (typeof value !== "object" || value === null) return "z.unknown()"
+  return zodObject(value, indent)
 }
 
 function zodObject(schema: SchemaObject, indent: number): string {
@@ -36,47 +41,45 @@ function zodObject(schema: SchemaObject, indent: number): string {
 }
 
 // ---------- yup ----------
+const YUP_BY_PRIMITIVE = {
+  string: "yup.string().required()",
+  number: "yup.number().required()",
+  boolean: "yup.boolean().required()",
+  date: "yup.string().required()",
+  uuid: "yup.string().uuid().required()",
+} satisfies Record<SchemaPrimitive, string>
+
 function yupExpr(value: SchemaType, indent: number): string {
+  if (indent > MAX_SCHEMA_DEPTH) return "yup.mixed()"
   if (typeof value === "string") {
-    switch (value) {
-      case "number":
-        return "yup.number().required()"
-      case "boolean":
-        return "yup.boolean().required()"
-      case "uuid":
-        return "yup.string().uuid().required()"
-      // 목 데이터의 date는 ISO 문자열로 저장되므로 string으로 검증합니다.
-      case "date":
-      default:
-        return "yup.string().required()"
-    }
+    return (YUP_BY_PRIMITIVE as Record<string, string>)[value] ?? "yup.mixed()"
   }
   if (isSchemaArray(value)) {
     return `yup.array().of(${yupExpr(value.items, indent)}).required()`
   }
-  return yupObject(value as SchemaObject, indent)
+  if (typeof value !== "object" || value === null) return "yup.mixed()"
+  return yupObject(value, indent)
 }
 
 // ---------- joi ----------
+const JOI_BY_PRIMITIVE = {
+  string: "Joi.string().required()",
+  number: "Joi.number().required()",
+  boolean: "Joi.boolean().required()",
+  date: "Joi.date().iso().required()",
+  uuid: "Joi.string().guid().required()",
+} satisfies Record<SchemaPrimitive, string>
+
 function joiExpr(value: SchemaType, indent: number): string {
+  if (indent > MAX_SCHEMA_DEPTH) return "Joi.any()"
   if (typeof value === "string") {
-    switch (value) {
-      case "number":
-        return "Joi.number().required()"
-      case "boolean":
-        return "Joi.boolean().required()"
-      case "uuid":
-        return "Joi.string().guid().required()"
-      case "date":
-        return "Joi.date().iso().required()"
-      default:
-        return "Joi.string().required()"
-    }
+    return (JOI_BY_PRIMITIVE as Record<string, string>)[value] ?? "Joi.any()"
   }
   if (isSchemaArray(value)) {
     return `Joi.array().items(${joiExpr(value.items, indent)}).required()`
   }
-  return joiObject(value as SchemaObject, indent)
+  if (typeof value !== "object" || value === null) return "Joi.any()"
+  return joiObject(value, indent)
 }
 
 function joiObject(schema: SchemaObject, indent: number): string {

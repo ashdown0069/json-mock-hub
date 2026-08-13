@@ -1,5 +1,6 @@
 import { buildValidationSnippet } from "../validationSnippets"
 import { CodeGenContext } from "../types"
+import { SCHEMA_PRIMITIVES } from "@workspace/types"
 
 const ctx: CodeGenContext = {
   resourceName: "users",
@@ -16,6 +17,8 @@ const ctx: CodeGenContext = {
     tags: { type: "array", items: "string" },
   },
   pagination: null,
+  sort: null,
+  search: null,
 }
 
 describe("buildValidationSnippet - zod", () => {
@@ -77,4 +80,66 @@ describe("buildValidationSnippet - joi", () => {
     const code = buildValidationSnippet(ctx, "joi", "ts")
     expect(code).toContain("export interface Users {")
   })
+})
+
+describe("buildValidationSnippet — 비정상 값 방어", () => {
+  const ctxWith = (schema: unknown) =>
+    ({
+      resourceName: "users",
+      typeName: "Users",
+      baseUrl: "http://localhost:4001/api",
+      resourcePath: "/users",
+      schema,
+      pagination: null,
+      sort: null,
+      search: null,
+    }) as never
+
+  it("zod: null 값에 크래시하지 않고 z.unknown()으로 폴백한다", () => {
+    expect(() =>
+      buildValidationSnippet(ctxWith({ a: null }), "zod", "ts")
+    ).not.toThrow()
+    expect(buildValidationSnippet(ctxWith({ a: null }), "zod", "ts")).toContain(
+      "z.unknown()"
+    )
+  })
+
+  it("yup: null 값에 크래시하지 않고 yup.mixed()로 폴백한다", () => {
+    expect(buildValidationSnippet(ctxWith({ a: null }), "yup", "ts")).toContain(
+      "yup.mixed()"
+    )
+  })
+
+  it("joi: null 값에 크래시하지 않고 Joi.any()로 폴백한다", () => {
+    expect(buildValidationSnippet(ctxWith({ a: null }), "joi", "ts")).toContain(
+      "Joi.any()"
+    )
+  })
+
+  it("zod: 숫자 같은 비객체 값도 z.unknown()으로 폴백한다", () => {
+    expect(buildValidationSnippet(ctxWith({ a: 123 }), "zod", "ts")).toContain(
+      "z.unknown()"
+    )
+  })
+})
+
+describe("원시 타입 매핑의 누락 방지", () => {
+  it.each(["zod", "yup", "joi"] as const)(
+    "%s는 모든 원시 타입에 대해 폴백이 아닌 표현을 만든다",
+    (lib) => {
+      const schema = Object.fromEntries(
+        SCHEMA_PRIMITIVES.map((primitive) => [`f_${primitive}`, primitive]),
+      )
+      const code = buildValidationSnippet(
+        { ...ctx, schema: schema as never },
+        lib,
+        "ts",
+      )
+
+      for (const primitive of SCHEMA_PRIMITIVES) {
+        expect(code).toContain(`f_${primitive}:`)
+      }
+      expect(code.split("\n").length).toBeGreaterThan(SCHEMA_PRIMITIVES.length)
+    },
+  )
 })

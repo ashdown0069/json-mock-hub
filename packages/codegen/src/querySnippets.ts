@@ -1,13 +1,18 @@
 import { CodeGenContext, CodeLang } from "./types"
+import { listSignature } from "./listSignature"
 
 /**
  * TanStack Query v5 훅 코드를 생성합니다.
  * 함수명은 clientSnippets와 동일한 규칙(get{TypeName}List 등)을 사용해 연결됩니다.
  */
-export function buildQuerySnippet(ctx: CodeGenContext, lang: CodeLang): string {
-  const { resourceName, typeName, pagination } = ctx
+export function buildQuerySnippet(
+  ctx: CodeGenContext,
+  lang: CodeLang
+): string {
+  const { resourceName, typeName } = ctx
   const ts = lang === "ts"
   const keysVar = `${resourceName}Keys`
+  const sig = listSignature(ctx, lang)
 
   const lines: string[] = [
     `import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";`,
@@ -22,10 +27,13 @@ export function buildQuerySnippet(ctx: CodeGenContext, lang: CodeLang): string {
   if (ts) {
     // 생성된 TS 스니펫이 단독으로 컴파일되도록 타입 import를 함께 출력합니다.
     lines.push(`import type { ${typeName} } from "./${resourceName}Schema";`)
+    if (sig.hasQuery) {
+      lines.push(`import type { ${typeName}ListQuery } from "./${resourceName}Api";`)
+    }
   }
-  lines.push(``)
 
   lines.push(
+    ``,
     `export const ${keysVar} = {`,
     ts
       ? `  all: [${JSON.stringify(resourceName)}] as const,`
@@ -37,33 +45,37 @@ export function buildQuerySnippet(ctx: CodeGenContext, lang: CodeLang): string {
     ``
   )
 
-  // 목록 조회 훅
-  if (pagination) {
-    lines.push(
-      `export function use${typeName}ListQuery(page = 1, limit = 10) {`,
-      `  return useQuery({`,
-      ts
+  // queryKey는 인자 조합에 따라 달라진다. 기존 4분기의 문자열을 그대로 보존한다.
+  const queryKeyLine = (): string => {
+    if (sig.hasQuery && sig.hasPaging) {
+      return ts
+        ? `    queryKey: [...${keysVar}.all, query, { page, limit }] as const,`
+        : `    queryKey: [...${keysVar}.all, query, { page, limit }],`
+    }
+    if (sig.hasQuery) {
+      return ts
+        ? `    queryKey: [...${keysVar}.all, query] as const,`
+        : `    queryKey: [...${keysVar}.all, query],`
+    }
+    if (sig.hasPaging) {
+      return ts
         ? `    queryKey: [...${keysVar}.all, { page, limit }] as const,`
-        : `    queryKey: [...${keysVar}.all, { page, limit }],`,
-      `    queryFn: () => get${typeName}List(page, limit),`,
-      `  });`,
-      `}`,
-      ``
-    )
-  } else {
-    lines.push(
-      `export function use${typeName}ListQuery() {`,
-      `  return useQuery({`,
-      `    queryKey: ${keysVar}.all,`,
-      `    queryFn: () => get${typeName}List(),`,
-      `  });`,
-      `}`,
-      ``
-    )
+        : `    queryKey: [...${keysVar}.all, { page, limit }],`
+    }
+    return `    queryKey: ${keysVar}.all,`
   }
 
   lines.push(
-    // 단건 조회 훅
+    `export function use${typeName}ListQuery(${sig.params}) {`,
+    `  return useQuery({`,
+    queryKeyLine(),
+    `    queryFn: () => get${typeName}List(${sig.callArgs}),`,
+    `  });`,
+    `}`,
+    ``
+  )
+
+  lines.push(
     ts
       ? `export function use${typeName}Query(id: string) {`
       : `export function use${typeName}Query(id) {`,
@@ -74,7 +86,6 @@ export function buildQuerySnippet(ctx: CodeGenContext, lang: CodeLang): string {
     `  });`,
     `}`,
     ``,
-    // 생성 뮤테이션
     `export function useCreate${typeName}Mutation() {`,
     `  const queryClient = useQueryClient();`,
     `  return useMutation({`,
@@ -85,7 +96,6 @@ export function buildQuerySnippet(ctx: CodeGenContext, lang: CodeLang): string {
     `  });`,
     `}`,
     ``,
-    // 수정 뮤테이션
     `export function useUpdate${typeName}Mutation() {`,
     `  const queryClient = useQueryClient();`,
     `  return useMutation({`,
@@ -99,7 +109,6 @@ export function buildQuerySnippet(ctx: CodeGenContext, lang: CodeLang): string {
     `  });`,
     `}`,
     ``,
-    // 삭제 뮤테이션
     `export function useDelete${typeName}Mutation() {`,
     `  const queryClient = useQueryClient();`,
     `  return useMutation({`,

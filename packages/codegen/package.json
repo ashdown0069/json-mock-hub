@@ -11,11 +11,14 @@
     "./clientSnippets": "./src/clientSnippets.ts",
     "./querySnippets": "./src/querySnippets.ts",
     "./validationSnippets": "./src/validationSnippets.ts",
-    "./types": "./src/types.ts"
+    "./listSignature": "./src/listSignature.ts",
+    "./types": "./src/types.ts",
+    "./context": "./src/context.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@workspace/types": "*"
@@ -23,6 +26,7 @@
   "devDependencies": {
     "@types/jest": "29.5.14",
     "@types/node": "^20.3.1",
+    "@workspace/eslint-config": "*",
     "@workspace/typescript-config": "*",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.0",

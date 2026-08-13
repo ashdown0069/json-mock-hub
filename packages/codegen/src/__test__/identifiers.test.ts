@@ -1,4 +1,4 @@
-import { toIdentifier, toPascalCase, formatObjectKey } from "../identifiers"
+import { toIdentifier, toPascalCase, formatObjectKey, quoteLiteral, escapeTemplate } from "../identifiers"
 
 describe("toIdentifier 변환", () => {
   it("하이픈을 언더바로 치환한다", () => {
@@ -31,5 +31,41 @@ describe("formatObjectKey 처리", () => {
 
   it("무효 문자가 포함된 키는 따옴표로 감싼다", () => {
     expect(formatObjectKey("user-name")).toBe('"user-name"')
+  })
+})
+
+describe("quoteLiteral", () => {
+  it("일반 문자열을 따옴표로 감싼다", () => {
+    expect(quoteLiteral("http://a.com/api")).toBe('"http://a.com/api"')
+  })
+
+  it("따옴표를 이스케이프해 리터럴 탈출을 막는다", () => {
+    expect(quoteLiteral('http://a"; process.exit(1); //')).toBe(
+      '"http://a\\"; process.exit(1); //"'
+    )
+  })
+
+  it("개행과 백슬래시를 이스케이프한다", () => {
+    expect(quoteLiteral("a\nb\\c")).toBe('"a\\nb\\\\c"')
+  })
+})
+
+describe("escapeTemplate", () => {
+  it("일반 문자열은 그대로 둔다", () => {
+    expect(escapeTemplate("/users")).toBe("/users")
+  })
+
+  it("${ 를 이스케이프해 임의 표현식 평가를 막는다", () => {
+    expect(escapeTemplate("/u${process.env.SECRET}s")).toBe(
+      "/u\\${process.env.SECRET}s"
+    )
+  })
+
+  it("백틱을 이스케이프해 템플릿 리터럴 탈출을 막는다", () => {
+    expect(escapeTemplate("/a`b")).toBe("/a\\`b")
+  })
+
+  it("백슬래시를 먼저 이스케이프해 이중 처리되지 않게 한다", () => {
+    expect(escapeTemplate("a\\b")).toBe("a\\\\b")
   })
 })

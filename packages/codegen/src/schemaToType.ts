@@ -1,5 +1,13 @@
-import { SchemaArrayType, SchemaObject, SchemaType } from "@workspace/types"
+import {
+  SchemaPrimitive,
+  SchemaArrayType,
+  SchemaObject,
+  SchemaType,
+  MAX_SCHEMA_DEPTH,
+} from "@workspace/types"
 import { formatObjectKey } from "./identifiers"
+
+export { MAX_SCHEMA_DEPTH }
 
 // convertSchema.ts(fieldsToSchema)가 저장하는 배열 표현 { type: "array", items } 판별 가드
 export function isSchemaArray(value: SchemaType): value is SchemaArrayType {
@@ -12,23 +20,30 @@ export function isSchemaArray(value: SchemaType): value is SchemaArrayType {
 }
 
 // date/uuid는 JSON에 문자열로 저장되므로 TS 타입은 string으로 매핑합니다.
-const PRIMITIVE_TS_MAP: Record<string, string> = {
+const PRIMITIVE_TS_MAP = {
   string: "string",
   number: "number",
   boolean: "boolean",
   date: "string",
   uuid: "string",
-  objectId: "string",
-}
+} satisfies Record<SchemaPrimitive, string>
 
 function schemaTypeToTs(value: SchemaType, indent: number): string {
+  if (indent > MAX_SCHEMA_DEPTH) return "unknown"
+
   if (typeof value === "string") {
-    return PRIMITIVE_TS_MAP[value] ?? "string"
+    // 미지 타입을 string으로 폴백하면 잘못된 타입이 조용히 통과한다
+    return (PRIMITIVE_TS_MAP as Record<string, string>)[value] ?? "unknown"
   }
   if (isSchemaArray(value)) {
     return `${schemaTypeToTs(value.items, indent)}[]`
   }
-  return objectToTs(value as SchemaObject, indent)
+  // DB의 schema는 Mixed 타입이라 null/숫자 같은 값이 저장될 수 있다.
+  // Object.entries(null)이 던지던 크래시를 여기서 흡수한다.
+  if (typeof value !== "object" || value === null) {
+    return "unknown"
+  }
+  return objectToTs(value, indent)
 }
 
 function objectToTs(schema: SchemaObject, indent: number): string {
