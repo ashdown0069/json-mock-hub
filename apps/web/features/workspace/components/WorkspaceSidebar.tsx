@@ -11,8 +11,7 @@ import {
 } from "@workspace/ui/components/sidebar"
 import { Settings, LayoutDashboard, LogOut, CodeXml, Route, Plug } from "lucide-react"
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { Link, usePathname } from "@/i18n/routing"
 import { useWorkspaceBasePath } from "@/hooks/useWorkspaceBasePath"
 
 interface WorkspaceSidebarProps {
@@ -20,10 +19,11 @@ interface WorkspaceSidebarProps {
 }
 
 export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
+  // next-intl의 usePathname은 로케일 접두사를 뗀 경로를 돌려주므로
+  // 논리 경로인 basePath와 같은 좌표계에서 비교할 수 있다.
   const pathname = usePathname()
   const { basePath, lobbyPath } = useWorkspaceBasePath()
 
-  // 활성화 판정 로직
   const isDashboardActive = pathname === basePath
   const isApisActive = pathname.startsWith(`${basePath}/apis`)
   const isCodeActive = pathname.startsWith(`${basePath}/code`)

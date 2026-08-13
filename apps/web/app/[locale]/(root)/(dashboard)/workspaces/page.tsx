@@ -11,7 +11,6 @@ import { prefetchWorkspaceList } from "@/features/workspace/api/getWorkspaceList
 const WorkspacesPage = async () => {
   const queryClient = new QueryClient()
 
-  // 공통 헬퍼 함수를 통해 서버 사이드 프리페치 수행
   await prefetchWorkspaceList(queryClient)
 
   return (

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useBoolean } from "usehooks-ts"
 import { useForm, Controller } from "react-hook-form"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/i18n/routing"
 import { Eye, EyeOff, Lock, LogIn } from "lucide-react"
 import {
   Card,
@@ -37,7 +37,7 @@ export function JoinWorkspaceGate({ workspaceId }: JoinWorkspaceGateProps) {
   const router = useRouter()
   const handleError = useApiErrorHandler()
   const t = useTranslations("JoinWorkspace")
-  const [showPassword, setShowPassword] = useState(false)
+  const { value: showPassword, toggle: toggleShowPassword } = useBoolean(false)
   const { control, handleSubmit, setError, setValue } = useForm<JoinFormValues>(
     {
       defaultValues: { password: "" },
@@ -109,7 +109,7 @@ export function JoinWorkspaceGate({ workspaceId }: JoinWorkspaceGateProps) {
                       <InputGroupButton
                         size="icon-xs"
                         type="button"
-                        onClick={() => setShowPassword((prev) => !prev)}
+                        onClick={toggleShowPassword}
                       >
                         {showPassword ? (
                           <EyeOff className="size-4" />

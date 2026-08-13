@@ -3,6 +3,8 @@
 import { FolderPlus, Plus, Pencil, Trash2, FilePen } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
 import { Tooltip } from "@/components/Tooltip/Tooltip";
+import { useWorkspaceBasePath } from "@/hooks/useWorkspaceBasePath";
+import { useMyPermissions } from "@/hooks/useMyPermissions";
 
 interface Props {
   onCreateFolder?: (e: React.MouseEvent) => void;
@@ -10,10 +12,6 @@ interface Props {
   onRename?: (e: React.MouseEvent) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDelete?: (e: React.MouseEvent) => void;
-  canCreate?: boolean;
-  canRename?: boolean;
-  canDelete?: boolean;
-  canUpdate?: boolean;
 }
 
 export function TreeActionButtons({
@@ -22,11 +20,12 @@ export function TreeActionButtons({
   onRename,
   onEdit,
   onDelete,
-  canCreate = true,
-  canRename = true,
-  canDelete = true,
-  canUpdate = true,
 }: Props) {
+  // 권한은 프롭이나 Context로 받지 않는다 — workspaceId를 useWorkspaceBasePath로
+  // 즉시 얻을 수 있으므로, react-query 캐시를 공유하는 useMyPermissions를
+  // 필요한 이 컴포넌트가 직접 호출하는 편이 Provider보다 단순하다.
+  const { workspaceId } = useWorkspaceBasePath();
+  const { canCreate, canRename, canDelete, canUpdate } = useMyPermissions(workspaceId);
 
   return (
     <div className="flex items-center gap-1 bg-transparent">

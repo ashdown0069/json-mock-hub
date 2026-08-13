@@ -8,27 +8,17 @@ export function useCreateWorkspaceSchema() {
     .object({
       name: z.string().min(3, { message: t("error.name.min") }),
       description: z.string().optional(),
-      password: z.string().optional(),
-      passwordConfirm: z.string().optional(),
+      // 워크스페이스 참여는 비밀번호 대조로만 이뤄지므로(joinWorkspace) 필수다.
+      // 이전에는 optional이라 빈 값으로 제출하면 API가 500을 반환했다.
+      password: z.string().min(4, { message: t("error.password.min") }),
+      passwordConfirm: z
+        .string({ required_error: t("error.password.notMatch") })
+        .min(1, { message: t("error.password.min") }),
     })
-    .refine(
-      (data) => {
-        // 둘 다 없으면 OK
-        if (!data.password && !data.passwordConfirm) return true
-        // 둘 다 존재해야 하고, 최소 길이 1 이상, 값이 같아야 함
-        return (
-          !!data.password &&
-          !!data.passwordConfirm &&
-          data.password.length >= 1 &&
-          data.passwordConfirm.length >= 1 &&
-          data.password === data.passwordConfirm
-        )
-      },
-      {
-        message: t("error.password.notMatch"),
-        path: ["passwordConfirm"],
-      }
-    )
+    .refine((data) => data.password === data.passwordConfirm, {
+      message: t("error.password.notMatch"),
+      path: ["passwordConfirm"],
+    })
 
   return createWorkspaceFormSchema
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import { Link } from "@/i18n/routing"
 import { useParams } from "next/navigation"
 import {
   DropdownMenu,
@@ -14,18 +14,15 @@ import {
 import { Check, Plus, PanelLeftOpen, Loader2 } from "lucide-react"
 import { useGetWorkspaceList } from "../api/getWorkspaceList"
 import { useWorkspaceBasePath } from "@/hooks/useWorkspaceBasePath"
-import { localePath } from "@/lib/localePath"
 
 export function WorkspaceSwitcher() {
   const params = useParams()
   const workspaceId = (params.workspaceId as string) || ""
-  const { basePath, lobbyPath, locale } = useWorkspaceBasePath()
+  const { lobbyPath } = useWorkspaceBasePath()
   const { data: workspaces, isLoading } = useGetWorkspaceList()
 
-  // localePath를 사용하여 안전하게 워크스페이스 경로 생성
-  const buildWorkspacePath = (wsId: string) => {
-    return localePath(locale, "/workspaces/" + wsId)
-  }
+  // 로케일 접두사가 없는 논리 경로. 접두사는 @/i18n/routing의 Link가 붙인다.
+  const buildWorkspacePath = (wsId: string) => `/workspaces/${wsId}`
 
   return (
     <DropdownMenu>

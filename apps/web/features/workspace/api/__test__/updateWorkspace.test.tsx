@@ -4,6 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { axiosInstance } from "@/lib/axios"
 import { useUpdateWorkspace } from "../updateWorkspace"
 
+jest.mock("next-intl", () => ({
+  useTranslations: () => {
+    const t = (key: string) => key
+    t.has = () => false
+    return t
+  },
+}))
+
 jest.mock("@/lib/axios", () => ({ axiosInstance: { patch: jest.fn() } }))
 const mockPatch = axiosInstance.patch as jest.Mock
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useLocale } from "next-intl"
+import { useFormatDate } from "@/hooks/useFormatDate"
 import {
   Card,
   CardContent,
@@ -25,7 +25,6 @@ import {
   REQUEST_LOGS_PAGE_SIZE,
 } from "../api/getRequestLogs"
 
-// 메소드별 시각 구분용 색상 (light 팔레트 + 어두운 텍스트)
 const METHOD_STYLES: Record<string, string> = {
   GET: "bg-blue-100 text-blue-700 hover:bg-blue-100 border-none shadow-none",
   POST: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none shadow-none",
@@ -36,14 +35,9 @@ const METHOD_STYLES: Record<string, string> = {
 
 export function RequestLogTable({ workspaceId }: { workspaceId: string }) {
   const [page, setPage] = useState(1)
-  const locale = useLocale()
-  const { data, isPending } = useGetRequestLogs(workspaceId, page)
+  const formatDate = useFormatDate()
+  const { data, isPending, isError, refetch } = useGetRequestLogs(workspaceId, page)
 
-  const formatTime = (iso: string) =>
-    new Intl.DateTimeFormat(locale, {
-      dateStyle: "short",
-      timeStyle: "medium",
-    }).format(new Date(iso))
 
   return (
     <Card className="border-slate-100 shadow-sm">
@@ -69,7 +63,20 @@ export function RequestLogTable({ workspaceId }: { workspaceId: string }) {
                   </TableCell>
                 </TableRow>
               ))}
-            {!isPending && data?.data.length === 0 && (
+            {!isPending && isError && (
+              // 실패를 "로그 없음"으로 위장하지 않는다
+              <TableRow className="border-transparent hover:bg-transparent">
+                <TableCell colSpan={4} className="h-24 text-center text-slate-400 text-sm">
+                  <div className="flex flex-col items-center gap-2">
+                    <span>Failed to load requests</span>
+                    <Button variant="outline" size="sm" onClick={() => refetch()}>
+                      Retry
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {!isPending && !isError && data?.data.length === 0 && (
               <TableRow className="border-transparent hover:bg-transparent">
                 <TableCell
                   colSpan={4}
@@ -80,10 +87,11 @@ export function RequestLogTable({ workspaceId }: { workspaceId: string }) {
               </TableRow>
             )}
             {!isPending &&
+              !isError &&
               data?.data.map((log) => (
                 <TableRow key={log.id} className="border-slate-50 hover:bg-slate-50/40">
                   <TableCell className="text-slate-500 text-sm font-light">
-                    {formatTime(log.createdAt)}
+                    {formatDate(log.createdAt)}
                   </TableCell>
                   <TableCell>
                     <Badge className={`${METHOD_STYLES[log.method] ?? ""} px-2 py-0.5 text-xs font-semibold rounded`}>

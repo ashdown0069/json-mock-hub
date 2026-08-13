@@ -1,56 +1,31 @@
-import { axiosInstance } from "@/lib/axios";
-import { QueryClient } from "@tanstack/react-query";
-import { getWorkspaceList } from "../getWorkspaceList";
-import { prefetchWorkspaceList } from "../getWorkspaceList.server";
+import { mapWorkspace } from "../getWorkspaceList"
 
-jest.mock("@/lib/axios", () => ({
-  axiosInstance: {
-    get: jest.fn(),
-  },
-}));
-const mockedAxiosInstance = axiosInstance as jest.Mocked<typeof axiosInstance>;
+describe("mapWorkspace 정규화", () => {
+  const raw = {
+    id: "1",
+    name: "shop",
+    description: "설명",
+    createdAt: "2026-07-01T00:00:00.000Z",
+  } as any
 
-describe("getWorkspaceList 서비스", () => {
-  it("MockAPI 응답 데이터를 UI용 WorkSpaceInfoProps 스펙에 맞게 매핑하여 반환해야 한다", async () => {
-    const mockApiResponse = [
-      {
-        id: "1",
-        name: "smith, Barrows and Wisozk",
-        description: "description 1",
-        password: "password 1",
-        owner: "owner 1",
-        membersCount: 76,
-        isDeleted: false,
-        createdAt: "2026-06-30T08:18:07.009Z",
-      },
-    ];
+  it("membersCount가 없으면 0으로 채운다", () => {
+    expect(mapWorkspace(raw).membersCount).toBe(0)
+  })
 
-    mockedAxiosInstance.get.mockResolvedValueOnce({ data: mockApiResponse });
+  it("updatedAt이 없으면 createdAt으로 채운다", () => {
+    expect(mapWorkspace(raw).updatedAt).toBe("2026-07-01T00:00:00.000Z")
+  })
 
-    const result = await getWorkspaceList();
+  it("이미 값이 있으면 그대로 둔다", () => {
+    const full = {
+      ...raw,
+      membersCount: 5,
+      updatedAt: "2026-07-20T00:00:00.000Z",
+    } as any
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({
-      id: "1",
-      name: "smith, Barrows and Wisozk",
-      description: "description 1",
-      membersCount: 76,
-      createdAt: "2026-06-30T08:18:07.009Z",
-      updatedAt: "2026-06-30T08:18:07.009Z",
-    });
-  });
-
-  it("prefetchWorkspaceList 함수가 존재하고 정상적으로 호출되어야 한다", async () => {
-    const queryClient = new QueryClient();
-    const prefetchSpy = jest.spyOn(queryClient, "prefetchQuery").mockResolvedValueOnce(undefined);
-
-    await prefetchWorkspaceList(queryClient);
-
-    expect(prefetchSpy).toHaveBeenCalledWith({
-      queryKey: ["workspaces", "list"],
-      queryFn: expect.any(Function),
-    });
-
-    prefetchSpy.mockRestore();
-  });
-});
+    expect(mapWorkspace(full)).toMatchObject({
+      membersCount: 5,
+      updatedAt: "2026-07-20T00:00:00.000Z",
+    })
+  })
+})

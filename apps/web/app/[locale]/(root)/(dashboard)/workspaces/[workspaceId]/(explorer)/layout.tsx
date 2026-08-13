@@ -8,7 +8,9 @@ export default function ExplorerLayout({
   return (
     <>
       <ApisExplorer />
-      <div className="flex flex-1 flex-col overflow-y-auto">{children}</div>
+      <div className="flex flex-1 flex-col overflow-y-auto pb-8">
+        {children}
+      </div>
     </>
   )
 }

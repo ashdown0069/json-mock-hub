@@ -61,4 +61,25 @@ describe("tree.utils", () => {
       expect(tree).toEqual([])
     })
   })
+
+  describe("buildTree — 빈 폴더", () => {
+    it("자식이 없는 폴더는 children을 만들지 않는다 (트리 자료구조의 의미 유지)", () => {
+      const [root] = buildTree([
+        { id: "1", name: "empty", itemType: "Folder", parentId: null },
+      ])
+
+      expect(root?.children).toBeUndefined()
+    })
+
+    it("빈 폴더와 형제 파일이 같은 레벨에 유지된다", () => {
+      const roots = buildTree([
+        { id: "1", name: "empty", itemType: "Folder", parentId: null },
+        { id: "2", name: "users", itemType: "File", parentId: null },
+      ])
+
+      expect(roots).toHaveLength(2)
+      expect(roots.map((r) => r.id)).toEqual(["1", "2"])
+    })
+  })
 })
+

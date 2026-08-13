@@ -24,12 +24,34 @@ describe("useCreateWorkspaceSchema 훅", () => {
     expect(nameError?.message).toBe("error.name.min")
   })
 
-  it("비밀번호와 비밀번호 확인이 모두 없는 경우 검증에 성공해야 한다", () => {
+  it("비밀번호가 없으면 검증에 실패해야 한다 (API가 필수로 요구한다)", () => {
     const schema = getSchema()
     const result = schema.safeParse({
       name: "workspace-name",
     })
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
+    if (result.success) return
+
+    const passwordError = result.error.errors.find((err) =>
+      err.path.includes("password")
+    )
+    expect(passwordError).toBeDefined()
+  })
+
+  it("비밀번호가 4자 미만이면 검증에 실패해야 한다", () => {
+    const schema = getSchema()
+    const result = schema.safeParse({
+      name: "workspace-name",
+      password: "abc",
+      passwordConfirm: "abc",
+    })
+    expect(result.success).toBe(false)
+    if (result.success) return
+
+    const minError = result.error.errors.find(
+      (err) => err.path.join(".") === "password"
+    )
+    expect(minError?.message).toBe("error.password.min")
   })
 
   it("비밀번호는 입력했으나 비밀번호 확인을 입력하지 않은 경우 검증에 실패해야 한다", () => {

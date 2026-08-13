@@ -10,9 +10,12 @@ const createJestConfig = nextJest({
 const config: Config = {
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
+  transformIgnorePatterns: ['/node_modules/(?!(nanoid|next-intl|use-intl)/)'],
   // Add more setup options before each test is run
+  setupFiles: ['<rootDir>/jest.polyfill.ts'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
+    '^nanoid$': '<rootDir>/../../node_modules/nanoid/index.cjs',
     '^@/(.*)$': '<rootDir>/$1',
     '^@workspace/types$': '<rootDir>/../../packages/types/src/index.ts',
     '^@workspace/codegen$': '<rootDir>/../../packages/codegen/src/index.ts',
@@ -27,8 +30,6 @@ const config: Config = {
     '!**/__test__/**',
     '!**/*.d.ts',
     '!lib/axios.ts',
-    '!lib/auth.ts',
-    '!features/mock-api/lib/shiki.ts',
   ],
   coverageThreshold: {
     global: {
@@ -40,5 +41,11 @@ const config: Config = {
   },
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-export default createJestConfig(config)
+export default async function () {
+  const makeConfig = createJestConfig(config)
+  const finalConfig = await makeConfig()
+  finalConfig.transformIgnorePatterns = [
+    '/node_modules/(?!(nanoid|next-intl|use-intl|@formatjs|@intl|intl-messageformat)/)',
+  ]
+  return finalConfig
+}

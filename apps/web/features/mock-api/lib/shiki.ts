@@ -1,26 +1,29 @@
 import { createHighlighterCore, type HighlighterCore } from "shiki/core"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 
-// 싱글턴 인스턴스를 유지하기 위한 변수입니다.
 let highlighterPromise: Promise<HighlighterCore> | null = null
 
 /**
- * Shiki 코드 하이라이터를 싱글턴 형식으로 동적 초기화하여 반환합니다.
- * 전체 패키지 번들을 방지하고 필요한 언어(JSON, JS)와 테마만 fine-grained 번들 방식으로 로드합니다.
+ * Shiki 하이라이터를 싱글턴으로 초기화한다.
+ * 전체 패키지 번들을 방지하기 위해 필요한 언어와 테마만 fine-grained import로 로드한다.
  */
 export function getHighlighter(): Promise<HighlighterCore> {
   if (!highlighterPromise) {
     highlighterPromise = createHighlighterCore({
-      // github-light 테마를 동적으로 가져옵니다.
       themes: [import("@shikijs/themes/github-light")],
-      // JSON, JS, TS 구문 분석을 위한 언어 팩을 동적으로 가져옵니다.
       langs: [
         import("@shikijs/langs/json"),
         import("@shikijs/langs/javascript"),
         import("@shikijs/langs/typescript"),
+        import("@shikijs/langs/shellscript"),
       ],
-      // 정규식 엔진으로 자바스크립트 내장 엔진을 사용해 번들 크기를 줄입니다.
+      // onig 대신 JS 내장 정규식 엔진을 쓰면 WASM 로딩이 없어 번들이 줄어든다
       engine: createJavaScriptRegexEngine(),
+    }).catch((error) => {
+      // 실패한 promise를 캐시에 남기면 새로고침 전까지 하이라이팅이 영구히 죽는다.
+      // 캐시를 비워 다음 호출이 다시 시도하게 한다.
+      highlighterPromise = null
+      throw error
     })
   }
   return highlighterPromise

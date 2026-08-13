@@ -11,6 +11,9 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default
+    messages: (await import(`../messages/${locale}.json`)).default,
+    // 타임존을 고정하지 않으면 서버(런타임 기본 타임존)와 클라이언트(브라우저 로컬 타임존)의
+    // 날짜/시간 포맷 결과가 달라져 하이드레이션 에러가 발생한다.
+    timeZone: 'UTC',
   };
 });

@@ -8,6 +8,7 @@ import { DashboardStatsCards } from "@/features/dashboard/components/DashboardSt
 import { RequestLogTable } from "@/features/dashboard/components/RequestLogTable"
 import { prefetchDashboardStats } from "@/features/dashboard/api/getDashboardStats.server"
 import { prefetchRequestLogs } from "@/features/dashboard/api/getRequestLogs.server"
+import { fetchWorkspace } from "@/features/workspace/api/getWorkspace.server"
 
 export default async function DashboardPage({
   params,
@@ -19,16 +20,22 @@ export default async function DashboardPage({
 
   const queryClient = new QueryClient()
 
-  await Promise.all([
+  const [workspace] = await Promise.all([
+    // API 장애 시 제목만 기본값으로 떨어뜨린다 (대시보드 자체는 렌더한다)
+    fetchWorkspace(queryClient, workspaceId).catch(() => null),
     prefetchDashboardStats(queryClient, workspaceId),
     prefetchRequestLogs(queryClient, workspaceId, 1),
   ])
 
+  const titleText = workspace?.name
+    ? t("dashboardTitleWithName", { name: workspace.name })
+    : t("dashboardTitle")
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="flex-1 p-8 bg-slate-50/50 min-h-full">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">{t("dashboardTitle")}</h1>
+      <div className="min-h-full flex-1 bg-slate-50/50 p-8">
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">{titleText}</h1>
         </div>
 
         <DashboardStatsCards workspaceId={workspaceId} />

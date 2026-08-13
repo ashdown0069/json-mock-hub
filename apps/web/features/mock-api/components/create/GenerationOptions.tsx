@@ -26,6 +26,16 @@ export function GenerationOptions() {
     setPageParam,
     limitParam,
     setLimitParam,
+    enableSort,
+    setEnableSort,
+    sortParam,
+    setSortParam,
+    orderParam,
+    setOrderParam,
+    enableSearch,
+    setEnableSearch,
+    searchParam,
+    setSearchParam,
   } = useCreateMockApiStore(
     useShallow((state) => ({
       itemCount: state.itemCount,
@@ -36,6 +46,16 @@ export function GenerationOptions() {
       setPageParam: state.setPageParam,
       limitParam: state.limitParam,
       setLimitParam: state.setLimitParam,
+      enableSort: state.enableSort,
+      setEnableSort: state.setEnableSort,
+      sortParam: state.sortParam,
+      setSortParam: state.setSortParam,
+      orderParam: state.orderParam,
+      setOrderParam: state.setOrderParam,
+      enableSearch: state.enableSearch,
+      setEnableSearch: state.setEnableSearch,
+      searchParam: state.searchParam,
+      setSearchParam: state.setSearchParam,
     }))
   )
 
@@ -109,6 +129,69 @@ export function GenerationOptions() {
               )}
             </div>
 
+            <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center justify-between">
+                <FieldLabel
+                  className="cursor-pointer"
+                  onClick={() => setEnableSort(!enableSort)}
+                >
+                  {t("sortFeature")}
+                </FieldLabel>
+                <Switch checked={enableSort} onCheckedChange={setEnableSort} />
+              </div>
+              {enableSort && (
+                <FieldGroup className="animate-in gap-4 duration-200 fade-in slide-in-from-top-2">
+                  <Field className="flex-1">
+                    <FieldLabel className="text-xs">{t("sortParam")}</FieldLabel>
+                    <Input
+                      className="h-8 bg-background text-xs"
+                      value={sortParam}
+                      onChange={(e) => setSortParam(e.target.value)}
+                      placeholder={t("sortParamPlaceholder")}
+                    />
+                  </Field>
+                  <Field className="flex-1">
+                    <FieldLabel className="text-xs">{t("orderParam")}</FieldLabel>
+                    <Input
+                      className="h-8 bg-background text-xs"
+                      value={orderParam}
+                      onChange={(e) => setOrderParam(e.target.value)}
+                      placeholder={t("orderParamPlaceholder")}
+                    />
+                  </Field>
+                </FieldGroup>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-4 rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center justify-between">
+                <FieldLabel
+                  className="cursor-pointer"
+                  onClick={() => setEnableSearch(!enableSearch)}
+                >
+                  {t("searchFeature")}
+                </FieldLabel>
+                <Switch
+                  checked={enableSearch}
+                  onCheckedChange={setEnableSearch}
+                />
+              </div>
+              {enableSearch && (
+                <FieldGroup className="animate-in gap-4 duration-200 fade-in slide-in-from-top-2">
+                  <Field className="flex-1">
+                    <FieldLabel className="text-xs">
+                      {t("searchParam")}
+                    </FieldLabel>
+                    <Input
+                      className="h-8 bg-background text-xs"
+                      value={searchParam}
+                      onChange={(e) => setSearchParam(e.target.value)}
+                      placeholder={t("searchParamPlaceholder")}
+                    />
+                  </Field>
+                </FieldGroup>
+              )}
+            </div>
           </FieldGroup>
         </div>
       </CardContent>

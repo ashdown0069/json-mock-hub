@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { axiosInstance, type customAxiosError } from "@/lib/axios"
 import { workspaceKeys } from "@/lib/queryKeys"
-import type { Workspace } from "./getWorkspaceList"
+import type { Workspace } from "../types"
 
 export interface UpdateWorkspaceRequest {
   name: string
@@ -18,8 +18,12 @@ export async function updateWorkspace(
   return data
 }
 
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
+
 export function useUpdateWorkspace(workspaceId: string) {
   const queryClient = useQueryClient()
+  const handleApiError = useApiErrorHandler()
+
   return useMutation<Workspace, customAxiosError, UpdateWorkspaceRequest>({
     mutationFn: (payload) => updateWorkspace(workspaceId, payload),
     onSuccess: () => {
@@ -27,5 +31,6 @@ export function useUpdateWorkspace(workspaceId: string) {
       queryClient.invalidateQueries({ queryKey: workspaceKeys.detail(workspaceId) })
       queryClient.invalidateQueries({ queryKey: workspaceKeys.lists() })
     },
+    onError: (error) => handleApiError(error),
   })
 }

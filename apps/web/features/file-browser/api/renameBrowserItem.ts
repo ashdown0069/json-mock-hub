@@ -3,6 +3,8 @@ import { axiosInstance, type customAxiosError } from "@/lib/axios"
 import { browserKeys } from "@/lib/queryKeys"
 import { FileItem } from "../types"
 
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
+
 export interface RenameItemPayload {
   itemId: string
   newName: string
@@ -21,10 +23,14 @@ export async function renameBrowserItem(
 
 export function useRenameBrowserItem(workspaceId: string) {
   const queryClient = useQueryClient()
+  const handleApiError = useApiErrorHandler()
+
   return useMutation<FileItem, customAxiosError, RenameItemPayload>({
     mutationFn: (payload: RenameItemPayload) => renameBrowserItem(workspaceId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: browserKeys.all(workspaceId) })
     },
+    onError: (error) => handleApiError(error),
   })
 }
+

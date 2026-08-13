@@ -8,7 +8,12 @@ import { useFileBrowserSSE } from "./useFileBrowserSSE"
 
 // 서버 데이터 + SSE 동기화 + 임시 노드를 합성해 트리 데이터를 만드는 훅
 export function useFileTreeData(workspaceId: string) {
-  const { data: flatItems = [], isLoading } = useGetBrowserItems(workspaceId)
+  const {
+    data: flatItems = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useGetBrowserItems(workspaceId)
   useFileBrowserSSE(workspaceId)
 
   const [tempNode, setTempNode] = useState<FileItem | null>(null)
@@ -18,5 +23,5 @@ export function useFileTreeData(workspaceId: string) {
     return buildTree(merged)
   }, [flatItems, tempNode])
 
-  return { flatItems, treeData, isLoading, tempNode, setTempNode }
+  return { flatItems, treeData, isLoading, isError, refetch, tempNode, setTempNode }
 }

@@ -1,24 +1,31 @@
 "use client"
 
-import { useParams } from "next/navigation"
+import dynamic from "next/dynamic"
 import { CodeXml } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useFileBrowser } from "@/features/file-browser/store/useFileBrowser"
-import { useGetBrowserItems } from "@/features/file-browser/api/getBrowserItems"
-import { CodeGenPanel } from "@/features/code-gen/components/CodeGenPanel"
+import { useSelectedFile } from "@/features/mock-api/hooks/useSelectedFile"
+
+// 코드 생성 패널은 트리에서 파일을 고른 뒤에만 필요하다. 정적 import로 두면
+// /code에 들어오기만 해도 코드젠 스니펫 빌더와 하이라이터를 함께 내려받는다.
+const CodeGenPanel = dynamic(
+  () =>
+    import("@/features/code-gen/components/CodeGenPanel").then(
+      (mod) => mod.CodeGenPanel,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="h-64 animate-pulse rounded-xl border border-slate-200 bg-white"
+        aria-hidden="true"
+      />
+    ),
+  },
+)
 
 export default function CodePage() {
   const t = useTranslations("WorkspacePages")
-  const params = useParams()
-  const workspaceId = params.workspaceId as string
-
-  const { data: items = [] } = useGetBrowserItems(workspaceId)
-  const activeItem = useFileBrowser((state) => state.activeItem)
-
-  // 좌측 트리에서 선택된 항목이 File일 때만 코드 생성 패널을 노출합니다.
-  const selectedFile = items.find(
-    (item) => item.id === activeItem && item.itemType === "File"
-  )
+  const { item } = useSelectedFile()
 
   return (
     <div className="min-h-full flex-1 bg-slate-50/50 p-8">
@@ -29,8 +36,8 @@ export default function CodePage() {
         </h1>
       </div>
 
-      {selectedFile ? (
-        <CodeGenPanel item={selectedFile} workspaceId={workspaceId} />
+      {item ? (
+        <CodeGenPanel />
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white py-24 shadow-sm">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100">

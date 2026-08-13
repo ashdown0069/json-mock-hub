@@ -1,54 +1,218 @@
-import { render, screen, fireEvent } from "@testing-library/react"
-import { EndpointListPanel } from "../EndpointListPanel"
-import { FileItem } from "@/features/file-browser/types"
-
-// next-intl은 ESM 전용이라 jest(CJS 변환)가 파싱하지 못하므로 저장소 관례대로 모킹한다.
-// (McpGuide.test.tsx와 동일 취지) useTranslations는 실제 ko 메시지를 네임스페이스 기준으로
-// 조회해, "코드보기" 등 번역 문자열에 의존하는 단언이 그대로 동작하게 한다.
-jest.mock("next-intl", () => {
-  // 팩토리는 호이스팅되므로 외부 변수 대신 내부에서 직접 require 한다.
-  const koMessages = require("@/messages/ko.json")
-  return {
-    useTranslations: (namespace: string) => (key: string) => {
-      const segments = `${namespace}.${key}`.split(".")
-      let cur: unknown = koMessages
-      for (const s of segments) {
-        cur = (cur as Record<string, unknown> | undefined)?.[s]
-      }
-      return typeof cur === "string" ? cur : `${namespace}.${key}`
-    },
-  }
-})
-
-const pushMock = jest.fn()
-
-// 라우터와 URL 파라미터를 모킹해 코드보기 버튼의 라우팅 동작을 검증합니다.
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushMock }),
-  useParams: () => ({ locale: "ko", workspaceId: "ws1" }),
+jest.mock("../CodeBlock", () => ({
+  CodeBlock: ({ code }: { code: string }) => (
+    <pre data-testid="request-body-code">{code}</pre>
+  ),
 }))
 
-const item: FileItem = {
-  id: "1",
-  name: "users",
-  itemType: "File",
-  path: "/users",
+const mockPush = jest.fn()
+jest.mock('@/i18n/routing', () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
+
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { EndpointListPanel } from '../EndpointListPanel'
+import { FileItem } from "@/features/file-browser/types"
+import { useSelectedFile } from "@/features/mock-api/hooks/useSelectedFile"
+
+const mutateMock = jest.fn()
+jest.mock('@/features/mock-api/api/resetMockState', () => ({
+  useResetMockState: () => ({ mutate: mutateMock, isPending: false }),
+}))
+jest.mock('next-intl', () => ({
+  useTranslations: () => (key: string, params?: Record<string, string>) => {
+    let text = key
+    if (key === 'queryHintSort') {
+      text = '정렬: ?{sortParam}={field}&{orderParam}=asc|desc'
+    } else if (key === 'queryHintSearch') {
+      text = '전문검색: ?{searchParam}=검색어'
+    }
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        text = text.replace(`{${k}}`, v)
+      })
+    }
+    return text
+  },
+}))
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn() }),
+}))
+jest.mock('@/hooks/useWorkspaceBasePath', () => ({
+  useWorkspaceBasePath: () => ({ basePath: '/workspaces/ws1' }),
+}))
+jest.mock('@/features/mock-api/hooks/useSelectedFile', () => ({
+  useSelectedFile: jest.fn(),
+}))
+
+const mockedUseSelectedFile = useSelectedFile as jest.Mock
+
+const defaultItem: FileItem = { id: 'item1', name: 'users', path: '/users', itemType: 'File' } as any
+
+const renderPanel = (overrideItem?: Partial<FileItem>) => {
+  const testItem = {
+    ...defaultItem,
+    ...overrideItem,
+    options: {
+      ...defaultItem.options,
+      ...overrideItem?.options,
+    },
+  }
+  mockedUseSelectedFile.mockReturnValue({ item: testItem, workspaceId: 'ws1' })
+  return render(<EndpointListPanel />)
 }
 
-describe("EndpointListPanel 코드보기 라우팅", () => {
-  beforeEach(() => pushMock.mockClear())
-
-  it("코드보기 클릭 시 워크스페이스 code 경로로 이동한다", () => {
-    render(<EndpointListPanel item={item} workspaceId="ws1" />)
-    fireEvent.click(screen.getAllByRole("button", { name: /코드보기/ })[0]!)
-    expect(pushMock).toHaveBeenCalledWith("/workspaces/ws1/code")
+describe('EndpointListPanel', () => {
+  beforeEach(() => {
+    mutateMock.mockClear()
   })
 
-  it("코드보기 클릭 후에도 인라인 코드 블록을 렌더링하지 않는다", () => {
-    render(<EndpointListPanel item={item} workspaceId="ws1" />)
-    // 클릭 전에는 물론, 라우팅 호출이 발생한 이후에도 인라인 코드 블록이 추가되지 않아야
-    // 회귀(토글 기반 인라인 렌더링으로의 복귀)를 검출할 수 있습니다.
-    fireEvent.click(screen.getAllByRole("button", { name: /코드보기/ })[0]!)
-    expect(document.querySelector("pre")).not.toBeInTheDocument()
+  it('상태 초기화 버튼을 렌더한다', () => {
+    renderPanel()
+    expect(screen.getByText('resetState')).toBeInTheDocument()
+  })
+
+  it('초기화 확인 시 itemId로 mutate를 호출한다', () => {
+    renderPanel()
+    fireEvent.click(screen.getByText('resetState'))
+    fireEvent.click(screen.getByText('resetConfirm'))
+    expect(mutateMock).toHaveBeenCalledWith(
+      { itemId: 'item1' },
+      expect.any(Object),
+    )
   })
 })
+
+describe('코드보기 버튼', () => {
+  beforeEach(() => mockPush.mockClear())
+
+  it('패널 전체에서 코드보기 버튼은 1개만 렌더된다', () => {
+    renderPanel()
+    expect(screen.getAllByText('viewCode')).toHaveLength(1)
+  })
+
+  it('코드보기 클릭 시 워크스페이스의 /code 경로로 이동한다', () => {
+    renderPanel()
+    fireEvent.click(screen.getByText('viewCode'))
+    expect(mockPush).toHaveBeenCalledWith('/workspaces/ws1/code')
+  })
+})
+
+describe("쿼리 힌트 조건부 표시", () => {
+  it("sort 옵션이 켜진 아이템은 설정된 파라미터명으로 정렬 힌트를 보여준다", () => {
+    renderPanel({
+      options: {
+        pagination: false,
+        sort: true,
+        sortParams: { sortParam: "orderBy", orderParam: "direction" },
+      },
+    })
+    expect(screen.getByText(/\?orderBy=\{field\}&direction=asc\|desc/)).toBeInTheDocument()
+  })
+
+  it("search 옵션이 켜진 아이템은 검색 힌트를 보여준다", () => {
+    renderPanel({
+      options: {
+        pagination: false,
+        search: true,
+        searchParams: { searchParam: "keyword" },
+      },
+    })
+    expect(screen.getByText(/\?keyword=/)).toBeInTheDocument()
+  })
+
+  it("sort/search가 모두 꺼져 있으면 쿼리 힌트 박스를 렌더하지 않는다", () => {
+    renderPanel({ options: { pagination: false } })
+    expect(screen.queryByText(/쿼리 파라미터/)).not.toBeInTheDocument()
+  })
+
+  it("필터 힌트(?field=value)는 더 이상 표시되지 않는다", () => {
+    renderPanel({
+      options: { pagination: false, sort: true, search: true },
+    })
+    expect(screen.queryByText(/field=value/)).not.toBeInTheDocument()
+  })
+})
+
+describe('EndpointRow URL 복사', () => {
+  beforeAll(() => {
+    Object.assign(navigator, {
+      clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+    })
+  })
+
+  it('복사 직후 언마운트되면 대기 중이던 리셋 타이머가 정리된다', async () => {
+    jest.useFakeTimers({ legacyFakeTimers: true })
+    const { unmount } = renderPanel()
+
+    // 엔드포인트 행마다 복사 버튼이 있으므로 첫 번째를 사용한다
+    const copyButtons = screen.getAllByRole('button', { name: /copy/i })
+    await act(async () => {
+      fireEvent.click(copyButtons[0]!)
+    })
+
+    expect(jest.getTimerCount()).toBeGreaterThan(0)
+
+    unmount()
+
+    expect(jest.getTimerCount()).toBe(0)
+    jest.useRealTimers()
+  })
+})
+
+describe("PATCH 엔드포인트", () => {
+  it("PATCH 행을 PUT과 DELETE 사이에 추가한다", () => {
+    renderPanel()
+    const methodBadges = screen.getAllByText(/^(GET|POST|PUT|PATCH|DELETE)$/)
+    expect(methodBadges.map((el) => el.textContent)).toEqual([
+      "GET",
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+    ])
+    expect(screen.getByText("descPatch")).toBeInTheDocument()
+  })
+
+  it("PATCH의 URL은 PUT과 동일한 :id 패턴을 사용한다", () => {
+    renderPanel()
+    const patchRow = screen.getByText("descPatch").closest("div.rounded-lg")
+    expect(patchRow).not.toBeNull()
+    expect(patchRow!.textContent).toContain("/users/:id")
+  })
+})
+
+describe("Request Body 미리보기", () => {
+  it("fieldDefs 기준으로 id를 제외한 필드를 빈 문자열 값으로 보여준다", () => {
+    renderPanel({
+      fieldDefs: [
+        { id: "f1", name: "id", type: "uuid" },
+        { id: "f2", name: "title", type: "string" },
+        { id: "f3", name: "price", type: "number" },
+      ],
+    })
+    const bodyCode = screen.getByTestId("request-body-code")
+    expect(JSON.parse(bodyCode.textContent!)).toEqual({ title: "", price: "" })
+  })
+
+  it("fieldDefs가 없으면 schema에서 필드를 역변환해 사용한다 (레거시 아이템)", () => {
+    renderPanel({
+      fieldDefs: undefined,
+      schema: { id: "uuid", name: "string" },
+    })
+    const bodyCode = screen.getByTestId("request-body-code")
+    expect(JSON.parse(bodyCode.textContent!)).toEqual({ name: "" })
+  })
+
+  it("id 외 필드가 없으면 빈 객체를 보여준다", () => {
+    renderPanel({ fieldDefs: [], schema: undefined })
+    const bodyCode = screen.getByTestId("request-body-code")
+    expect(JSON.parse(bodyCode.textContent!)).toEqual({})
+  })
+
+  it("Request Body 제목을 렌더한다", () => {
+    renderPanel()
+    expect(screen.getByText("requestBodyTitle")).toBeInTheDocument()
+  })
+})
+

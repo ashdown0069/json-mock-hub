@@ -3,99 +3,70 @@ import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
 } from "axios"
+import createAuthRefresh from "axios-auth-refresh"
 
-// 1. 기본 API 요청용 인스턴스 (401 에러 가로채기 인터셉터 적용)
 export const axiosInstance: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
   withCredentials: true,
 })
 
-// 2. 토큰 갱신 등 인터셉터 적용을 배제해야 하는 인증 전용 인스턴스
-const authAxios: AxiosInstance = axios.create({
+// API의 CsrfHeaderGuard가 요구하는 커스텀 헤더
+const CSRF_METHODS = new Set(["post", "put", "patch", "delete"])
+
+const attachCsrfHeader = (config: InternalAxiosRequestConfig) => {
+  if (CSRF_METHODS.has((config.method ?? "get").toLowerCase())) {
+    config.headers["X-Requested-With"] = "XMLHttpRequest"
+  }
+  return config
+}
+
+axiosInstance.interceptors.request.use(attachCsrfHeader)
+
+// axiosInstance의 401 인터셉터가 갱신 요청에도 개입하면 무한 루프가 되므로
+// 인터셉터가 없는 별도 인스턴스로 인증 요청을 보낸다
+export const authAxios: AxiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
   withCredentials: true,
 })
+authAxios.interceptors.request.use(attachCsrfHeader)
 
-// 3. 동시 요청(경쟁 상태) 제어를 위한 변수 및 대기열 선언
-let isRefreshing = false
-let failedQueue: Array<{
-  resolve: (value?: unknown) => void
-  reject: (reason?: unknown) => void
-}> = []
-
-// 대기열 내 모든 요청 처리 헬퍼 함수
-const processQueue = (error: AxiosError | null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else {
-      prom.resolve()
+/**
+ * 401 발생 시 axios-auth-refresh가 호출하는 갱신 로직.
+ * 동시에 여러 요청이 401을 받아도 axios-auth-refresh가 큐를 관리하므로 1회만 실행된다.
+ */
+const refreshAuthLogic = async () => {
+  try {
+    await authAxios.post("/auth/refresh")
+  } catch (error) {
+    if (typeof window !== "undefined") {
+      window.location.href = "/"
     }
-  })
-  failedQueue = []
-}
-
-// 4. Response Interceptor 설정
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean
-    }
-
-    // 401 에러가 발생했고, 아직 재시도하지 않은 요청인 경우
-    if (
-      error.response?.status === 401 &&
-      originalRequest &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true
-
-      // 이미 다른 요청이 토큰을 갱신 중인 경우 대기열에 추가
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        })
-          .then(() => axiosInstance(originalRequest))
-          .catch((err) => Promise.reject(err))
-      }
-
-      isRefreshing = true
-
-      try {
-        // 인터셉터가 없는 순수 인스턴스(authAxios)로 토큰 갱신 요청을 보냅니다.
-        // 이로써 갱신 요청의 401 에러가 이 인터셉터로 들어오는 것을 원천 차단합니다.
-        await authAxios.post("/auth/refresh")
-
-        // 대기열의 요청들 재실행 허용
-        processQueue(null)
-
-        // 현재 실패했던 원래 요청 재시도
-        return axiosInstance(originalRequest)
-      } catch (refreshError) {
-        // 토큰 갱신에 실패한 경우 (리프레시 토큰 만료 등)
-        processQueue(refreshError as AxiosError)
-
-        // 브라우저 환경에서 메인 로그인 화면(/)으로 이동
-        if (typeof window !== "undefined") {
-          window.location.href = "/"
-        }
-        return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
-      }
-    }
-
     return Promise.reject(error)
   }
-)
+}
 
-// SSE 등 axios 인터셉터 밖에서 토큰 갱신이 필요할 때 사용
-export const refreshAccessToken = () => authAxios.post("/auth/refresh")
+createAuthRefresh(axiosInstance, refreshAuthLogic, {
+  statusCodes: [401],
+  deduplicateRefresh: false,
+})
 
-export type customAxiosError = AxiosError<{
-  message?: string
-  code?: string
-}>
+/**
+ * SSE 등 axios 인터셉터를 거치지 않는 통신에서 수동으로 토큰을 갱신할 때 쓰는 헬퍼
+ */
+export const refreshAccessToken = async (): Promise<boolean> => {
+  try {
+    await authAxios.post("/auth/refresh")
+    return true
+  } catch {
+    return false
+  }
+}
+
+
+export type customAxiosError = AxiosError<{ code?: string }>
+
+export const customAxiosError = (error: unknown): error is customAxiosError => {
+  return axios.isAxiosError(error)
+}
 
 export default axiosInstance

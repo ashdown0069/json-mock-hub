@@ -1,10 +1,21 @@
 {
+  "Error": {
+    "title": "Something went wrong",
+    "description": "This may be temporary. Please try again.",
+    "retry": "Try again",
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The address may have changed or the page may have been removed.",
+    "backHome": "Go home"
+  },
+  "FileBrowser": {
+    "loading": "Loading APIs…",
+    "loadFailed": "Could not load the list.",
+    "retry": "Try again",
+    "permissionLoadFailed": "Could not load permissions; some actions may be hidden."
+  },
   "LandingPage": {
     "title": "Welcome to Json Mock Hub",
     "description": "Easy and fast Mock API provisioning & testing tools",
-    "documentation": "Documentation",
-    "pricing": "Pricing",
-    "heroBadge": "JsonMockHub 2.0 is Live",
     "heroTitle": "Build APIs faster with <brand>JsonMockHub</brand>",
     "heroDescription": "Generate production-ready mock APIs in seconds. Define schemas, manage routes in a file system, and test instantly with zero setup.",
     "schemaBuilder": "Schema & Code Generator",
@@ -30,6 +41,8 @@
     "createWorkspace": "New Workspace",
     "loading": "Loading workspaces...",
     "loadError": "Failed to load workspaces. Please try again.",
+    "emptyTitle": "No workspaces yet",
+    "emptyDescription": "Create your first workspace to start building mock APIs.",
     "createError": "Failed to create workspace.",
     "create": {
       "name": "Name",
@@ -42,6 +55,7 @@
         "min": "Name must be at least 3 characters."
       },
       "password": {
+        "min": "The password must be at least 4 characters.",
         "notMatch": "Passwords do not match."
       }
     }
@@ -76,6 +90,7 @@
     "save": "Save"
   },
   "errors": {
+    "duplicate": "An item with the same name already exists here. Please use a different name.",
     "auth": {
       "api_key": {
         "invalid": "Invalid API key."
@@ -95,11 +110,11 @@
       "join": {
         "password_mismatch": "Workspace passwords do not match.",
         "already_joined": "You have already joined this workspace.",
-        "password_not_required": "A password is not required for this workspace.",
         "not_found": "Workspace not found."
       },
       "member": {
-        "role_unchangeable": "The Owner role cannot be changed."
+        "role_unchangeable": "The Owner role cannot be changed.",
+        "cannot_remove_owner": "The owner cannot be removed."
       },
       "access": {
         "not_found": "You cannot access this workspace.",
@@ -111,19 +126,26 @@
       }
     },
     "itemNameRule": "Only Korean, letters, numbers, hyphen (-), and underscore (_) are allowed; spaces are not permitted.",
+    "idFieldReserved": "The id field is added automatically and cannot be defined manually. Please rename the field.",
     "copyFailed": "Failed to copy to clipboard.",
-    "requestFailed": "The request could not be processed. Please try again shortly."
+    "requestFailed": "The request could not be processed. Please try again shortly.",
+    "signupFailed": "Sign-up failed."
   },
   "WorkspacePages": {
     "apisTitle": "Mock APIs",
     "codeTitle": "Client Code",
     "dashboardTitle": "Workspace Dashboard",
+    "dashboardTitleWithName": "{name} Workspace Dashboard",
     "emptyTitle": "No mock API selected",
     "apisEmptyDesc": "Select a Mock API from the explorer on the left, or create a new one.",
     "codeEmptyDesc": "Select a Mock API from the explorer to generate schema-based client code."
   },
   "WorkspaceSettings": {
     "pageTitle": "Workspace Settings",
+    "common": {
+      "loadFailed": "Could not load this information.",
+      "retry": "Try again"
+    },
     "general": {
       "title": "General Settings",
       "description": "Configure your workspace options and details.",
@@ -176,31 +198,37 @@
       "save": "Save",
       "saving": "Saving...",
       "saveSuccess": "Permissions saved."
-    },
-    "apiKey": {
-      "title": "API Key",
-      "description": "Used by external clients such as MCP to access this workspace. A key is issued automatically when the workspace is created; reissuing immediately invalidates the previous key.",
-      "status": "Issued at: {issuedAt}",
-      "copy": "Copy",
-      "copied": "Copied.",
-      "copyFailed": "Failed to copy the API key.",
-      "reissue": "Reissue",
-      "reissueSuccess": "API key reissued.",
-      "mcpHint": "This key is automatically filled into the install config on the MCP integration page.",
-      "cancel": "Cancel",
-      "reissueDialogTitle": "Reissue API Key",
-      "reissueDialogDescription": "Are you sure you want to reissue the API key? Reissuing will immediately invalidate the existing key, and all external services (MCP, etc.) using it will stop working.",
-      "reissueConfirm": "Reissue"
     }
   },
   "WorkspaceMcp": {
     "pageTitle": "MCP Integration",
+    "apiKeyUnavailable": "Could not load the API key. Only members of this workspace can use the MCP integration key.",
     "install": {
       "title": "Install MCP",
-      "description": "Connect this workspace's mock API tools to an AI client (Claude Code, Cursor, etc.).",
-      "step1": "Paste the config below into your client's .mcp.json. (The API key and workspace ID are already filled in.)",
-      "step2": "Replace the --prefix value with your monorepo's absolute path.",
-      "note": "The api app (port 4001) must be running."
+      "description": "Connect this workspace's mock API tools to your AI client. Pick one of the two methods below.",
+      "prereqTitle": "Before you start",
+      "step1": "The MCP server runs locally. Clone this project's repository and run npm install first.",
+      "step2": "Replace the path placeholder in the config below with the absolute path of your cloned monorepo.",
+      "json": {
+        "title": "Method 1. Paste the config JSON",
+        "description": "Paste the block below into the settings file of the MCP client you use.",
+        "windowsPathNote": "In JSON, Windows paths need doubled backslashes (C:\\\\Users\\\\me\\\\repo) or forward slashes (C:/Users/me/repo)."
+      },
+      "cli": {
+        "title": "Method 2. Claude Code CLI",
+        "description": "Run the command below in your terminal. The config is stored only in your personal file (~/.claude.json), so the API key never lands in the repository."
+      },
+      "securityNote": "The API key acts with exactly the permissions you have in this workspace. Never commit it. If it leaks, press the reissue button below — the previous key is revoked immediately.",
+      "note": "The config is filled with the API address of the environment you are currently connected to."
+    },
+    "apiKey": {
+      "status": "Issued: {issuedAt}",
+      "reissue": "Reissue key",
+      "reissueSuccess": "Your API key has been reissued.",
+      "cancel": "Cancel",
+      "reissueDialogTitle": "Reissue API key",
+      "reissueDialogDescription": "Reissue your API key? The current key is revoked immediately and your own MCP integration stops working. Other members are unaffected.",
+      "reissueConfirm": "Reissue"
     },
     "usage": {
       "title": "Usage",
@@ -220,10 +248,14 @@
     },
     "tools": {
       "create_mock_api": { "desc": "Generate mock data from a schema, create a mock API, and return the URL", "example": "Create a products mock API with id, name, price fields, 10 items." },
+      "create_folder": { "desc": "Create a folder for mock APIs (intermediate folders included)", "example": "Create the shop/v1 folder." },
       "list_mock_apis": { "desc": "List folders and mock APIs by path", "example": "What's in this workspace right now?" },
-      "delete_mock_api": { "desc": "Delete an item by path (folders include children)", "example": "Delete shop/users." },
-      "rename_mock_api": { "desc": "Rename an item by path (URL path is recomputed)", "example": "Rename products to items." },
+      "describe_mock_api": { "desc": "Inspect the stored schema, enabled options, faker settings, and current data", "example": "What does the products schema look like now?" },
       "update_mock_api": { "desc": "Regenerate a mock API's schema and data by path (name/location kept)", "example": "Add an email field to the products schema and update it." },
+      "rename_mock_api": { "desc": "Rename an item by path (URL path is recomputed)", "example": "Rename products to items." },
+      "move_mock_api": { "desc": "Move an item to another folder by path", "example": "Move users into the shop folder." },
+      "delete_mock_api": { "desc": "Delete an item by path (folders include children)", "example": "Delete shop/users." },
+      "reset_mock_state": { "desc": "Discard runtime edits made through the mock server and restore the original data", "example": "Reset the products state." },
       "get_api_code": { "desc": "Reference code (types, client, react-query, validation)", "example": "Give me products integration code in ts, fetch+query, zod." }
     }
   },
@@ -242,13 +274,29 @@
     "heading": "Endpoints",
     "descList": "List all",
     "descGetOne": "Get one",
-    "descCreate": "Create (echo response)",
-    "descUpdate": "Update (merged response)",
-    "descDelete": "Delete (empty object response)",
+    "descCreate": "Create (persists)",
+    "descUpdate": "Update (persists)",
+    "descPatch": "Partially update resource (stateful)",
+    "descDelete": "Delete (persists)",
     "viewCode": "View code",
-    "copy": "Copy"
+    "copy": "Copy",
+    "resetState": "Reset state",
+    "resetConfirmTitle": "Reset mock state?",
+    "resetConfirmDesc": "All data created/updated/deleted via the API returns to the original schema. This cannot be undone.",
+    "resetConfirm": "Reset",
+    "cancel": "Cancel",
+    "resetSuccess": "Mock state has been reset.",
+    "queryHintTitle": "Query parameters (GET list)",
+    "queryHintSort": "Sort: ?{sortParam}={field}&{orderParam}=asc|desc",
+    "queryHintSearch": "Full-text search: ?{searchParam}=keyword",
+    "statefulNote": "POST/PUT/PATCH/DELETE change real state and persist for 1 hour.",
+    "requestBodyTitle": "Request Body"
   },
   "MockApiDialog": {
+    "createSuccess": "Mock API created.",
+    "updateSuccess": "Mock API updated.",
+    "createFailed": "Failed to create the Mock API.",
+    "updateFailed": "Failed to update the Mock API.",
     "titleCreate": "New Mock API",
     "titleEdit": "Edit Mock API",
     "endpointDetails": "Endpoint Details",
@@ -260,9 +308,11 @@
     "dataSchema": "Data Schema",
     "addField": "Add Field",
     "fieldNamePlaceholder": "Field name",
+    "duplicateFieldName": "A field with this name already exists at this level.",
     "fakerMethodPlaceholder": "Faker Method",
     "fakerNone": "None (Default)",
     "emptyFields": "No fields defined. Click \"Add Field\" to start building your schema.",
+    "idFieldAuto": "Auto-increment (1, 2, 3…)",
     "generationOptions": "Generation Options",
     "mockItems": "Mock Items",
     "itemsCount": "{count} items",
@@ -271,6 +321,14 @@
     "pageParam": "Page Param",
     "limitParam": "Limit Param",
     "pageParamPlaceholder": "e.g. page",
-    "limitParamPlaceholder": "e.g. limit"
+    "limitParamPlaceholder": "e.g. limit",
+    "sortFeature": "Sorting",
+    "sortParam": "Sort parameter",
+    "orderParam": "Order parameter",
+    "sortParamPlaceholder": "e.g. _sort",
+    "orderParamPlaceholder": "e.g. _order",
+    "searchFeature": "Full-text search",
+    "searchParam": "Search parameter",
+    "searchParamPlaceholder": "e.g. q"
   }
 }

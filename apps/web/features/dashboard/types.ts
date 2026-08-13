@@ -1,3 +1,5 @@
+import type { PaginationMeta } from "@workspace/types"
+
 export interface DashboardStats {
   totalRoutes: number
   requestVolume24h: number
@@ -12,16 +14,7 @@ export interface RequestLogItem {
   createdAt: string
 }
 
-export interface RequestLogsMeta {
-  page: number
-  limit: number
-  totalItems: number
-  totalPages: number
-  hasNext: boolean
-  hasPrev: boolean
-}
-
 export interface RequestLogsResponse {
   data: RequestLogItem[]
-  meta: RequestLogsMeta
+  meta: PaginationMeta
 }

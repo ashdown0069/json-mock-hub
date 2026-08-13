@@ -20,10 +20,6 @@ import { isValidItemName } from "@/lib/validateItemName"
 export interface FileTreeNodeProps extends NodeRendererProps<FileTree> {
   onCancelCreate: () => void
   onEditMockApi?: (itemId: string) => void
-  canCreate?: boolean
-  canRename?: boolean
-  canDelete?: boolean
-  canUpdate?: boolean
 }
 
 export function FileTreeNode({
@@ -32,10 +28,6 @@ export function FileTreeNode({
   dragHandle,
   onCancelCreate,
   onEditMockApi,
-  canCreate = true,
-  canRename = true,
-  canDelete = true,
-  canUpdate = true,
 }: FileTreeNodeProps) {
   const t = useTranslations("errors")
   const setActiveItem = useFileBrowser((state) => state.setActiveItem)
@@ -138,10 +130,6 @@ export function FileTreeNode({
       {!node.isEditing && (
         <div className="pointer-events-none ml-2 flex shrink-0 items-center opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
           <TreeActionButtons
-            canCreate={canCreate}
-            canRename={canRename}
-            canDelete={canDelete}
-            canUpdate={canUpdate}
             onCreateFolder={
               isFolder
                 ? (e) => {

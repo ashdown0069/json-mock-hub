@@ -15,7 +15,6 @@ import { Label } from "@workspace/ui/components/label"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { useGetWorkspace } from "@/features/workspace/api/getWorkspace"
 import { useUpdateWorkspace } from "@/features/workspace/api/updateWorkspace"
-import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
 
 interface GeneralSettingsSectionProps {
   workspaceId: string
@@ -24,9 +23,9 @@ interface GeneralSettingsSectionProps {
 /** 워크스페이스 일반 설정(이름) — 실제 조회/저장 동작 섹션 (owner 전용 설정 페이지). */
 export function GeneralSettingsSection({ workspaceId }: GeneralSettingsSectionProps) {
   const t = useTranslations("WorkspaceSettings.general")
-  const { data: workspace, isLoading } = useGetWorkspace(workspaceId)
+  const tCommon = useTranslations("WorkspaceSettings.common")
+  const { data: workspace, isLoading, isError, refetch } = useGetWorkspace(workspaceId)
   const updateMutation = useUpdateWorkspace(workspaceId)
-  const handleApiError = useApiErrorHandler()
 
   const schema = z.object({ name: z.string().min(1, { message: t("nameRequired") }) })
   type FormValues = z.infer<typeof schema>
@@ -38,7 +37,6 @@ export function GeneralSettingsSection({ workspaceId }: GeneralSettingsSectionPr
     formState: { errors, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: "" } })
 
-  // 조회된 이름으로 폼을 프리필한다
   useEffect(() => {
     if (workspace?.name) reset({ name: workspace.name })
   }, [workspace?.name, reset])
@@ -51,7 +49,6 @@ export function GeneralSettingsSection({ workspaceId }: GeneralSettingsSectionPr
           toast.success(t("saved"), { position: "top-center" })
           reset({ name: values.name.trim() })
         },
-        onError: (error) => handleApiError(error),
       }
     )
   }
@@ -65,6 +62,14 @@ export function GeneralSettingsSection({ workspaceId }: GeneralSettingsSectionPr
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-10 w-full max-w-md" />
+        ) : isError ? (
+          // 실패를 빈 폼으로 위장하면 "설정이 초기화됐다"고 오인한다
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted-foreground">{tCommon("loadFailed")}</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              {tCommon("retry")}
+            </Button>
+          </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1">

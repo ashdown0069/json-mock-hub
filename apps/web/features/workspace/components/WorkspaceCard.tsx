@@ -8,10 +8,17 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card"
 import { ArrowRight, FolderOpen, User } from "lucide-react"
-import React, { useState } from "react"
-import type { WorkSpaceInfoProps } from "../types"
-import { cn, formatDate } from "@/lib/utils"
-import Link from "next/link"
+import React from "react"
+import { cn } from "@/lib/utils"
+import { useFormatDate } from "@/hooks/useFormatDate"
+import { Link } from "@/i18n/routing"
+import type { Workspace } from "../types"
+
+// 카드가 실제로 렌더에 쓰는 필드만 받는다. updatedAt은 구조분해만 되고 쓰이지 않았다.
+type WorkspaceCardProps = Pick<
+  Workspace,
+  "id" | "name" | "description" | "membersCount" | "createdAt"
+>
 
 export const WorkspaceCard = ({
   id,
@@ -19,8 +26,8 @@ export const WorkspaceCard = ({
   description,
   membersCount,
   createdAt,
-  updatedAt,
-}: WorkSpaceInfoProps) => {
+}: WorkspaceCardProps) => {
+  const formatDate = useFormatDate()
   return (
     <Link href={`/workspaces/${id}`}>
       <Card

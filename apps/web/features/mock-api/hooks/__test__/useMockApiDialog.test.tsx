@@ -9,6 +9,19 @@ jest.mock("next/navigation", () => ({
     push: mockPush,
   }),
 }))
+jest.mock("@/i18n/routing", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}))
+
+jest.mock("next-intl", () => ({
+  useTranslations: () => {
+    const t = (key: string) => key
+    t.has = () => false
+    return t
+  },
+}))
 
 jest.mock("sonner", () => ({
   toast: {
@@ -19,11 +32,13 @@ jest.mock("sonner", () => ({
 
 const mockCreateItem = jest.fn()
 const mockUpdateItem = jest.fn()
+const mockUseCreateBrowserItem = jest.fn((_wsId: string, _options?: any) => ({ mutate: mockCreateItem }))
+const mockUseUpdateBrowserItem = jest.fn((_wsId: string, _options?: any) => ({ mutate: mockUpdateItem }))
 jest.mock("@/features/file-browser/api/createBrowserItem", () => ({
-  useCreateBrowserItem: () => ({ mutate: mockCreateItem }),
+  useCreateBrowserItem: (wsId: string, options?: any) => mockUseCreateBrowserItem(wsId, options),
 }))
 jest.mock("@/features/file-browser/api/updateBrowserItem", () => ({
-  useUpdateBrowserItem: () => ({ mutate: mockUpdateItem }),
+  useUpdateBrowserItem: (wsId: string, options?: any) => mockUseUpdateBrowserItem(wsId, options),
 }))
 
 const mockSetActiveItem = jest.fn()
@@ -173,54 +188,25 @@ describe("useMockApiDialog 및 parentPathOf 테스트", () => {
       })
 
       const [, options] = mockCreateItem.mock.calls[0]
-      const createdItem = { id: "created-api-id" }
+      const createdItem = { _id: "created-api-id", path: "/new-api" }
 
       act(() => {
         options.onSuccess(createdItem)
       })
 
       expect(mockSetActiveItem).toHaveBeenCalledWith("created-api-id")
-      expect(toast.success).toHaveBeenCalledWith("Mock API가 생성되었습니다.")
+      expect(toast.success).toHaveBeenCalledWith("createSuccess")
       expect(result.current.isOpen).toBe(false)
       expect(mockResetCreateForm).toHaveBeenCalled()
       expect(mockPush).toHaveBeenCalledWith("/workspaces/ws-id/apis")
     })
 
-    it("생성 실패 시 에러 토스트가 응답 메시지(또는 기본 메시지)와 함께 표시되어야 한다", () => {
-      const { result } = renderHook(() => useMockApiDialog("ws-id", "/workspaces/ws-id"))
+    it("useCreateBrowserItem 훅에 번역된 defaultMsg 옵션을 전달해야 한다", () => {
+      renderHook(() => useMockApiDialog("ws-id", "/workspaces/ws-id"))
 
-      act(() => {
-        result.current.openCreate("parent-id", "/parent-path")
+      expect(mockUseCreateBrowserItem).toHaveBeenCalledWith("ws-id", {
+        defaultMsg: "createFailed",
       })
-
-      const payload = {
-        name: "new-api",
-        schema: {},
-      } as any
-
-      act(() => {
-        result.current.onSubmit(payload)
-      })
-
-      const [, options] = mockCreateItem.mock.calls[0]
-
-      const customError = {
-        response: {
-          data: {
-            message: "서버 오류 발생",
-          },
-        },
-      }
-      act(() => {
-        options.onError(customError)
-      })
-      expect(toast.error).toHaveBeenCalledWith("서버 오류 발생", { position: "top-center" })
-
-      const genericError = new Error("Generic error")
-      act(() => {
-        options.onError(genericError)
-      })
-      expect(toast.error).toHaveBeenLastCalledWith("Mock API 생성에 실패했습니다.", { position: "top-center" })
     })
   })
 
@@ -288,54 +274,18 @@ describe("useMockApiDialog 및 parentPathOf 테스트", () => {
         options.onSuccess()
       })
 
-      expect(toast.success).toHaveBeenCalledWith("Mock API가 수정되었습니다.")
+      expect(toast.success).toHaveBeenCalledWith("updateSuccess")
       expect(result.current.isOpen).toBe(false)
       expect(result.current.editTarget).toBeNull()
       expect(mockResetCreateForm).toHaveBeenCalled()
     })
 
-    it("수정 실패 시 에러 토스트가 응답 메시지(또는 기본 메시지)와 함께 표시되어야 한다", () => {
-      const { result } = renderHook(() => useMockApiDialog("ws-id", "/workspaces/ws-id"))
-      const mockItem: FileItem = {
-        id: "api-id",
-        name: "list",
-        itemType: "File",
-        path: "/users/list",
-        parentId: "parent-id",
-      }
+    it("useUpdateBrowserItem 훅에 번역된 defaultMsg 옵션을 전달해야 한다", () => {
+      renderHook(() => useMockApiDialog("ws-id", "/workspaces/ws-id"))
 
-      act(() => {
-        result.current.openEdit(mockItem)
+      expect(mockUseUpdateBrowserItem).toHaveBeenCalledWith("ws-id", {
+        defaultMsg: "updateFailed",
       })
-
-      const payload = {
-        name: "updated-api",
-        schema: {},
-      } as any
-
-      act(() => {
-        result.current.onSubmit(payload)
-      })
-
-      const [, options] = mockUpdateItem.mock.calls[0]
-
-      const customError = {
-        response: {
-          data: {
-            message: "수정 오류 발생",
-          },
-        },
-      }
-      act(() => {
-        options.onError(customError)
-      })
-      expect(toast.error).toHaveBeenCalledWith("수정 오류 발생", { position: "top-center" })
-
-      const genericError = new Error("Generic error")
-      act(() => {
-        options.onError(genericError)
-      })
-      expect(toast.error).toHaveBeenLastCalledWith("Mock API 수정에 실패했습니다.", { position: "top-center" })
     })
   })
 })

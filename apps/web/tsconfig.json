@@ -6,6 +6,7 @@
       "@/*": ["./*"],
       "@workspace/ui/*": ["../../packages/ui/src/*"]
     },
+    "types": ["jest", "@testing-library/jest-dom", "node"],
     "plugins": [
       {
         "name": "next"

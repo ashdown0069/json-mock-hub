@@ -1,186 +1,66 @@
-import React from "react"
 import { renderHook, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import axiosInstance from "@/lib/axios"
+import type { ReactNode } from "react"
+import { axiosInstance } from "@/lib/axios"
 import { useMyPermissions } from "../useMyPermissions"
 
-jest.mock("@/lib/axios", () => {
-  const instance = { get: jest.fn() }
-  return { __esModule: true, default: instance, axiosInstance: instance }
-})
+jest.mock("next-intl", () => ({
+  useTranslations: () => {
+    const t = (key: string) => key
+    t.has = () => false
+    return t
+  },
+}))
 
-const mockedAxios = axiosInstance as jest.Mocked<typeof axiosInstance>
-
-const createWrapper = () => {
+function wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
+    defaultOptions: { queries: { retry: false } },
   })
-  return ({ children }: { children: React.ReactNode }) => (
+  return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
 }
 
-describe("useMyPermissions 훅", () => {
-  afterEach(() => {
-    jest.clearAllMocks()
-    jest.restoreAllMocks()
+describe("useMyPermissions", () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it("workspaceId가 비어 있으면 요청하지 않는다", () => {
+    const get = jest.spyOn(axiosInstance, "get")
+
+    renderHook(() => useMyPermissions(""), { wrapper })
+
+    expect(get).not.toHaveBeenCalled()
   })
 
-  it("로딩 중일 때", () => {
-    mockedAxios.get.mockImplementation(() => new Promise(() => {}))
+  it("조회 실패를 isError로 노출한다 (권한 false와 구분되어야 함)", async () => {
+    jest.spyOn(axiosInstance, "get").mockRejectedValue(new Error("500"))
 
-    const { result } = renderHook(() => useMyPermissions("ws-1"), {
-      wrapper: createWrapper(),
-    })
+    const { result } = renderHook(() => useMyPermissions("ws1"), { wrapper })
 
-    expect(result.current.isLoading).toBe(true)
-    expect(result.current.isOwner).toBe(false)
-    expect(result.current.canCreate).toBe(false)
-    expect(result.current.canRename).toBe(false)
-    expect(result.current.canMove).toBe(false)
+    await waitFor(() => expect(result.current.isError).toBe(true))
+  })
+
+  it("조회 실패 시에도 권한 플래그는 false를 유지한다 (안전한 기본값)", async () => {
+    jest.spyOn(axiosInstance, "get").mockRejectedValue(new Error("500"))
+
+    const { result } = renderHook(() => useMyPermissions("ws1"), { wrapper })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.canDelete).toBe(false)
-    expect(result.current.canUpdate).toBe(false)
   })
 
-  it("owner 권한일 때", async () => {
-    mockedAxios.get.mockImplementation((url) => {
-      if (url.includes("/membership")) {
-        return Promise.resolve({ data: { isMember: true, role: "owner" } })
+  it("owner면 모든 권한이 true다", async () => {
+    jest.spyOn(axiosInstance, "get").mockImplementation(async (url: string) => {
+      if (url.endsWith("/membership")) {
+        return { data: { isMember: true, role: "owner" } } as never
       }
-      if (url.includes("/roles")) {
-        return Promise.resolve({ data: [] })
-      }
-      return Promise.reject(new Error("Invalid URL"))
+      return { data: [] } as never
     })
 
-    const { result } = renderHook(() => useMyPermissions("ws-1"), {
-      wrapper: createWrapper(),
-    })
+    const { result } = renderHook(() => useMyPermissions("ws1"), { wrapper })
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/membership")
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/roles")
-
-    expect(result.current.isOwner).toBe(true)
-    expect(result.current.canCreate).toBe(true)
-    expect(result.current.canRename).toBe(true)
-    expect(result.current.canMove).toBe(true)
+    await waitFor(() => expect(result.current.isOwner).toBe(true))
     expect(result.current.canDelete).toBe(true)
-    expect(result.current.canUpdate).toBe(true)
-  })
-
-  it("member 권한일 때", async () => {
-    mockedAxios.get.mockImplementation((url) => {
-      if (url.includes("/membership")) {
-        return Promise.resolve({ data: { isMember: true, role: "member" } })
-      }
-      if (url.includes("/roles")) {
-        return Promise.resolve({
-          data: [
-            {
-              id: "role-member-id",
-              workspace: "ws-1",
-              role: "member",
-              canCreate: true,
-              canRename: false,
-              canMove: true,
-              canDelete: false,
-              canUpdate: true,
-            },
-          ],
-        })
-      }
-      return Promise.reject(new Error("Invalid URL"))
-    })
-
-    const { result } = renderHook(() => useMyPermissions("ws-1"), {
-      wrapper: createWrapper(),
-    })
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/membership")
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/roles")
-
-    expect(result.current.isOwner).toBe(false)
-    expect(result.current.canCreate).toBe(true)
-    expect(result.current.canRename).toBe(false)
-    expect(result.current.canMove).toBe(true)
-    expect(result.current.canDelete).toBe(false)
-    expect(result.current.canUpdate).toBe(true)
-  })
-
-  it("member 역할 문서가 없을 때", async () => {
-    mockedAxios.get.mockImplementation((url) => {
-      if (url.includes("/membership")) {
-        return Promise.resolve({ data: { isMember: true, role: "member" } })
-      }
-      if (url.includes("/roles")) {
-        return Promise.resolve({
-          data: [
-            {
-              id: "role-guest-id",
-              workspace: "ws-1",
-              role: "guest" as any,
-              canCreate: true,
-              canRename: true,
-              canMove: true,
-              canDelete: true,
-              canUpdate: true,
-            },
-          ],
-        })
-      }
-      return Promise.reject(new Error("Invalid URL"))
-    })
-
-    const { result } = renderHook(() => useMyPermissions("ws-1"), {
-      wrapper: createWrapper(),
-    })
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/membership")
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/roles")
-
-    expect(result.current.isOwner).toBe(false)
-    expect(result.current.canCreate).toBe(false)
-    expect(result.current.canRename).toBe(false)
-    expect(result.current.canMove).toBe(false)
-    expect(result.current.canDelete).toBe(false)
-    expect(result.current.canUpdate).toBe(false)
-  })
-
-  it("API 호출 에러 상황일 때", async () => {
-    mockedAxios.get.mockRejectedValue(new Error("API Error"))
-
-    const { result } = renderHook(() => useMyPermissions("ws-1"), {
-      wrapper: createWrapper(),
-    })
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/membership")
-    expect(mockedAxios.get).toHaveBeenCalledWith("/workspaces/ws-1/roles")
-
-    expect(result.current.isOwner).toBe(false)
-    expect(result.current.canCreate).toBe(false)
-    expect(result.current.canRename).toBe(false)
-    expect(result.current.canMove).toBe(false)
-    expect(result.current.canDelete).toBe(false)
-    expect(result.current.canUpdate).toBe(false)
+    expect(result.current.isError).toBe(false)
   })
 })

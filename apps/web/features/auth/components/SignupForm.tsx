@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useTranslations } from "next-intl"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/i18n/routing"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@workspace/ui/components/button"
@@ -15,11 +15,8 @@ import {
 } from "@workspace/ui/components/field"
 import { getSignupSchema, type SignupFormValues } from "../schema/signupSchema"
 import { useSignup } from "../api/signupService"
-import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
-
 export function SignupForm() {
   const t = useTranslations("SignupPage")
-  const handleError = useApiErrorHandler()
   const router = useRouter()
   const signupSchema = getSignupSchema(t)
   const { mutate: signup, isPending } = useSignup()
@@ -49,9 +46,6 @@ export function SignupForm() {
         onSuccess: () => {
           router.push("/")
         },
-        onError: (error) => {
-          handleError(error, { defaultMsg: "회원가입에 실패했습니다." })
-        }
       }
     )
   }

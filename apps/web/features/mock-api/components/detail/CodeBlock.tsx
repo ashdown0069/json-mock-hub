@@ -1,54 +1,62 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useBoolean, useCopyToClipboard, useTimeout } from "usehooks-ts"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { Check, Copy } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import { getHighlighter } from "../../lib/shiki"
 
+/** 복사 완료 체크 아이콘이 유지되는 시간(ms) */
+const COPIED_RESET_MS = 1500
+
 interface CodeBlockProps {
   code: string
-  lang: "json" | "javascript" | "typescript"
+  lang: "json" | "javascript" | "typescript" | "shellscript"
   className?: string
 }
 
 export function CodeBlock({ code, lang, className = "" }: CodeBlockProps) {
   const [html, setHtml] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
+  const {
+    value: copied,
+    setTrue: markCopied,
+    setFalse: clearCopied,
+  } = useBoolean(false)
+  const [, copyToClipboard] = useCopyToClipboard()
   const t = useTranslations("errors")
 
-  // 컴포넌트 마운트 및 코드/언어 변경 시 Shiki 하이라이터를 사용해 코드를 HTML로 변환합니다.
+  // delay가 null이면 useTimeout은 타이머를 예약하지 않는다. 즉 복사 직후에만 예약되고,
+  // 언마운트 시 clearTimeout이 보장된다 (기존 setTimeout에는 정리가 없었다).
+  useTimeout(clearCopied, copied ? COPIED_RESET_MS : null)
+
   useEffect(() => {
     let cancelled = false
     getHighlighter()
       .then((highlighter) => {
         if (cancelled) return
-        // Shiki 하이라이터를 사용해 동적으로 HTML을 생성합니다.
         setHtml(highlighter.codeToHtml(code, { lang, theme: "github-light" }))
       })
       .catch(() => {
-        // Shiki 로딩이 실패한 경우, 상태를 null로 유지하여 기본 pre 태그 폴백이 렌더링되게 합니다.
+        // Shiki 로딩 실패 시 상태를 null로 유지해 기본 pre 태그 폴백이 렌더링되게 한다
       })
     return () => {
       cancelled = true
     }
   }, [code, lang])
 
-  // 클립보드에 코드를 복사하고 피드백 상태를 제어하는 핸들러입니다.
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
+    // useCopyToClipboard는 예외를 던지지 않고 성공 여부를 boolean으로 돌려준다.
+    if (await copyToClipboard(code)) {
+      markCopied()
+    } else {
       toast.error(t("copyFailed"))
     }
   }
 
   return (
     <div className="relative min-w-0 rounded-lg border bg-white">
-      {/* 우측 상단 코드 복사 버튼 */}
       <Button
         variant="ghost"
         size="icon"
@@ -63,7 +71,6 @@ export function CodeBlock({ code, lang, className = "" }: CodeBlockProps) {
         )}
       </Button>
 
-      {/* Shiki 하이라이트된 HTML이 준비되면 렌더링하고, 로딩 전이나 실패 시 pre 태그로 폴백합니다. */}
       {html ? (
         <div
           className={`overflow-auto p-4 text-sm [&_pre]:m-0 [&_pre]:!bg-transparent ${className}`}

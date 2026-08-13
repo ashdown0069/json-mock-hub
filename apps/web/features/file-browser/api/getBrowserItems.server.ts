@@ -1,5 +1,5 @@
 import "server-only"
-import { useQuery, QueryClient } from "@tanstack/react-query"
+import { QueryClient } from "@tanstack/react-query"
 import { serverAxiosInstance } from "@/lib/serverAxios"
 import { browserKeys } from "@/lib/queryKeys"
 import { FileItem } from "../types"

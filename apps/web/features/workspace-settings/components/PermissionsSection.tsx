@@ -17,7 +17,6 @@ import { Label } from "@workspace/ui/components/label"
 import { Button } from "@workspace/ui/components/button"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { useRoles, useUpdateRole } from "../api/roles"
-import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
 
 const permissionsSchema = z.object({
   canCreate: z.boolean(),
@@ -43,11 +42,11 @@ interface PermissionsSectionProps {
 
 export function PermissionsSection({ workspaceId }: PermissionsSectionProps) {
   const t = useTranslations("WorkspaceSettings.permissions")
-  const { data: roles, isLoading } = useRoles(workspaceId)
+  const tCommon = useTranslations("WorkspaceSettings.common")
+  const { data: roles, isLoading, isError, refetch } = useRoles(workspaceId)
   const updateRole = useUpdateRole(workspaceId)
-  const handleApiError = useApiErrorHandler()
 
-  // owner 역할은 항상 전권이므로 UI에서 다루지 않고 member 역할만 편집 대상 (FR-3.3)
+  // owner 역할은 항상 전권이므로 UI에서 다루지 않고 member 역할만 편집 대상
   const memberRole = roles?.find((role) => role.role === "member")
 
   const form = useForm<PermissionsFormValues>({
@@ -80,9 +79,6 @@ export function PermissionsSection({ workspaceId }: PermissionsSectionProps) {
         onSuccess: () => {
           toast.success(t("saveSuccess"), { position: "top-center" })
         },
-        onError: (error) => {
-          handleApiError(error)
-        },
       }
     )
   }
@@ -94,7 +90,15 @@ export function PermissionsSection({ workspaceId }: PermissionsSectionProps) {
         <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading || !memberRole ? (
+        {isError ? (
+          // isError를 먼저 보지 않으면 memberRole이 undefined로 남아 스켈레톤이 영구히 표시된다
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted-foreground">{tCommon("loadFailed")}</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              {tCommon("retry")}
+            </Button>
+          </div>
+        ) : isLoading || !memberRole ? (
           <div className="space-y-2">
             <Skeleton className="h-6 w-64" />
             <Skeleton className="h-6 w-64" />
@@ -130,7 +134,6 @@ export function PermissionsSection({ workspaceId }: PermissionsSectionProps) {
                 />
               ))}
             </div>
-            {/* 변경 사항이 있을 때만 저장 가능 (isDirty 기반) */}
             <Button
               type="submit"
               disabled={!form.formState.isDirty || updateRole.isPending}

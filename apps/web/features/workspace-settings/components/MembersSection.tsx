@@ -23,19 +23,20 @@ import { Button } from "@workspace/ui/components/button"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { UserMinus } from "lucide-react"
-import { useMembers, useRemoveMember, type WorkspaceMember } from "../api/members"
-import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
-import { formatDate } from "@/lib/utils"
+import { useMembers, useRemoveMember } from "../api/members"
+import { useFormatDate } from "@/hooks/useFormatDate"
+import type { WorkspaceMember } from "../types"
 
 interface MembersSectionProps {
   workspaceId: string
 }
 
 export function MembersSection({ workspaceId }: MembersSectionProps) {
+  const formatDate = useFormatDate()
   const t = useTranslations("WorkspaceSettings.members")
-  const { data: members, isLoading } = useMembers(workspaceId)
+  const tCommon = useTranslations("WorkspaceSettings.common")
+  const { data: members, isLoading, isError, refetch } = useMembers(workspaceId)
   const removeMember = useRemoveMember(workspaceId)
-  const handleApiError = useApiErrorHandler()
 
   // 추방 확인 다이얼로그 대상 멤버 (null이면 닫힘)
   const [removeTarget, setRemoveTarget] = useState<WorkspaceMember | null>(null)
@@ -49,8 +50,7 @@ export function MembersSection({ workspaceId }: MembersSectionProps) {
           toast.success(t("removeSuccess"), { position: "top-center" })
           setRemoveTarget(null)
         },
-        onError: (error) => {
-          handleApiError(error)
+        onError: () => {
           setRemoveTarget(null)
         },
       }
@@ -69,6 +69,14 @@ export function MembersSection({ workspaceId }: MembersSectionProps) {
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-9 w-full" />
+          </div>
+        ) : isError ? (
+          // 실패를 빈 테이블로 위장하면 "멤버가 사라졌다"고 오인한다
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted-foreground">{tCommon("loadFailed")}</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              {tCommon("retry")}
+            </Button>
           </div>
         ) : (
           <Table>
@@ -101,7 +109,6 @@ export function MembersSection({ workspaceId }: MembersSectionProps) {
                       : "-"}
                   </TableCell>
                   <TableCell className="text-right">
-                    {/* owner 본인은 추방 불가 — member 행에만 추방 버튼 노출 */}
                     {member.role !== "owner" && (
                       <Button
                         variant="destructive"

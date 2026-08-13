@@ -1,6 +1,14 @@
 import { axiosInstance } from "@/lib/axios";
 import { createWorkspace } from "../createWorkspace";
 
+jest.mock("next-intl", () => ({
+  useTranslations: () => {
+    const t = (key: string) => key
+    t.has = () => false
+    return t
+  },
+}))
+
 jest.mock("@/lib/axios", () => ({
   axiosInstance: {
     post: jest.fn(),

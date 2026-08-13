@@ -3,6 +3,8 @@ import { axiosInstance, type customAxiosError } from "@/lib/axios"
 import { browserKeys } from "@/lib/queryKeys"
 import { FileItem } from "../types"
 
+import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
+
 export interface MoveItemsPayload {
   dragIds: string[]
   parentId: string | null
@@ -21,10 +23,14 @@ export async function moveBrowserItems(
 
 export function useMoveBrowserItems(workspaceId: string) {
   const queryClient = useQueryClient()
+  const handleApiError = useApiErrorHandler()
+
   return useMutation<FileItem[], customAxiosError, MoveItemsPayload>({
     mutationFn: (payload: MoveItemsPayload) => moveBrowserItems(workspaceId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: browserKeys.all(workspaceId) })
     },
+    onError: (error) => handleApiError(error),
   })
 }
+

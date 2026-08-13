@@ -1,23 +1,24 @@
 "use client"
-import React, { useState } from "react"
+import React from "react"
+import { useBoolean } from "usehooks-ts"
 import {
   CreateWorkspaceFormTypes,
   useCreateWorkspaceSchema,
 } from "./CreateWorkspaceSchema"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useApiErrorHandler } from "@/hooks/useApiErrorHandler"
 import { useTranslations } from "next-intl"
 import CreateWorkspaceDialog from "./CreateWorkspaceDialog"
 import { CreateWorkspaceForm } from "./CreateWorkspaceForm"
 import { useCreateWorkspace } from "../../api/createWorkspace"
 
 export default function CreateWorkspace() {
-  const handleError = useApiErrorHandler()
   const t = useTranslations("Workspaces")
   const createWorkspaceSchema = useCreateWorkspaceSchema()
-  const createWorkspaceMutation = useCreateWorkspace()
-  const [open, setOpen] = useState(false)
+  const createWorkspaceMutation = useCreateWorkspace({
+    defaultMsg: t("createError"),
+  })
+  const { value: open, setValue: setOpen } = useBoolean(false)
   const form = useForm<CreateWorkspaceFormTypes>({
     resolver: zodResolver(createWorkspaceSchema),
     defaultValues: {
@@ -46,9 +47,6 @@ export default function CreateWorkspace() {
       {
         onSuccess: () => {
           handleOpenChange(false)
-        },
-        onError: (error) => {
-          handleError(error, { defaultMsg: t("createError") })
         },
       }
     )

@@ -1,19 +1,19 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { localePath } from "@/lib/localePath"
 
 /**
- * locale이 ko(기본 로케일)일 때 URL에서 locale 세그먼트를 생략하는
- * 워크스페이스 경로 규칙을 공용화한 훅입니다. (WorkspaceSidebar와 동일 규칙)
+ * 워크스페이스 기준 경로를 "로케일 접두사가 없는 논리 경로"로 제공한다.
+ * 접두사 부착은 @/i18n/routing의 Link/useRouter/redirect가 전담하므로
+ * 여기서 직접 붙이면 /ko/ko/... 처럼 이중으로 부착된다.
  */
 export function useWorkspaceBasePath() {
   const params = useParams()
-  const locale = params.locale as string
   const workspaceId = params.workspaceId as string
 
-  const basePath = localePath(locale, `/workspaces/${workspaceId}`)
-  const lobbyPath = localePath(locale, "/workspaces")
-
-  return { basePath, lobbyPath, workspaceId, locale }
+  return {
+    basePath: `/workspaces/${workspaceId}`,
+    lobbyPath: "/workspaces",
+    workspaceId,
+  }
 }

@@ -241,4 +241,44 @@ describe("useCreateMockApiStore", () => {
       expect(state.limitParam).toBe("pageSize")
     })
   })
+
+  describe("정렬·검색 옵션 상태", () => {
+    beforeEach(() => {
+      useCreateMockApiStore.getState().reset()
+    })
+
+    it("초기값은 비활성화 + 기본 파라미터명(_sort/_order/q)이다", () => {
+      const s = useCreateMockApiStore.getState()
+      expect(s.enableSort).toBe(false)
+      expect(s.sortParam).toBe("_sort")
+      expect(s.orderParam).toBe("_order")
+      expect(s.enableSearch).toBe(false)
+      expect(s.searchParam).toBe("q")
+    })
+
+    it("세터로 토글과 파라미터명을 변경할 수 있다", () => {
+      const s = useCreateMockApiStore.getState()
+      s.setEnableSort(true)
+      s.setSortParam("orderBy")
+      s.setOrderParam("direction")
+      s.setEnableSearch(true)
+      s.setSearchParam("keyword")
+      const next = useCreateMockApiStore.getState()
+      expect(next.enableSort).toBe(true)
+      expect(next.sortParam).toBe("orderBy")
+      expect(next.orderParam).toBe("direction")
+      expect(next.enableSearch).toBe(true)
+      expect(next.searchParam).toBe("keyword")
+    })
+
+    it("reset하면 정렬·검색 상태도 초기값으로 돌아간다", () => {
+      const s = useCreateMockApiStore.getState()
+      s.setEnableSort(true)
+      s.setSearchParam("keyword")
+      s.reset()
+      const next = useCreateMockApiStore.getState()
+      expect(next.enableSort).toBe(false)
+      expect(next.searchParam).toBe("q")
+    })
+  })
 })

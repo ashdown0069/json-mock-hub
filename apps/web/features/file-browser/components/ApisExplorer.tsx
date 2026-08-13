@@ -1,36 +1,55 @@
 "use client"
 
 import { useState, useRef } from "react"
+import dynamic from "next/dynamic"
+import { useBoolean } from "usehooks-ts"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { FileTree } from "./FileTree"
 import { TreeActionButtons } from "./TreeActionButtons"
-import { useMyPermissions } from "@/hooks/useMyPermissions"
 import { Input } from "@workspace/ui/components/input"
-import { CreateMockApiDialog } from "@/features/mock-api/components/create/CreateMockApiDialog"
 import { useMockApiDialog } from "@/features/mock-api/hooks/useMockApiDialog"
 import { useCreateBrowserItem } from "../api/createBrowserItem"
 import { useWorkspaceBasePath } from "@/hooks/useWorkspaceBasePath"
 import { isValidItemName } from "@/lib/validateItemName"
 
+// 다이얼로그는 faker(더미 데이터 생성)와 스키마 에디터를 끌고 오는 가장 무거운
+// 화면이다. 정적 import로 두면 /apis·/code에 들어오기만 해도 약 194KB(gzip)를
+// 내려받는다. named export이므로 default를 꺼내 준다.
+const CreateMockApiDialog = dynamic(
+  () =>
+    import("@/features/mock-api/components/create/CreateMockApiDialog").then(
+      (mod) => mod.CreateMockApiDialog,
+    ),
+  { ssr: false },
+)
+
 export function ApisExplorer() {
   const t = useTranslations("errors")
   const { workspaceId, basePath } = useWorkspaceBasePath()
-  const { canCreate } = useMyPermissions(workspaceId)
 
   // 폴더는 인라인 입력으로 생성하고, Mock API(File)는 다이얼로그로 생성합니다.
-  const [creatingFolder, setCreatingFolder] = useState(false)
+  const {
+    value: creatingFolder,
+    setTrue: startCreatingFolder,
+    setFalse: stopCreatingFolder,
+  } = useBoolean(false)
   const [rootItemName, setRootItemName] = useState("")
   const { mutate: createItem } = useCreateBrowserItem(workspaceId)
   const dialog = useMockApiDialog(workspaceId, basePath)
   const hasSubmittedRef = useRef(false)
 
-  // 루트 폴더 생성 시 공용 이름 검증 규칙을 사용해 검사합니다.
+  // 한 번이라도 연 뒤에는 마운트를 유지한다. isOpen만으로 언마운트하면
+  // shadcn Dialog의 닫힘 애니메이션(data-[state=closed]:animate-out)이 잘린다.
+  // 첫 렌더에는 마운트되지 않으므로 초기 번들 효과는 그대로 얻는다.
+  const [dialogMounted, setDialogMounted] = useState(false)
+  if (dialog.isOpen && !dialogMounted) setDialogMounted(true)
+
   const handleRootCreate = () => {
     if (hasSubmittedRef.current) return
     const name = rootItemName.trim()
     if (!name) {
-      setCreatingFolder(false)
+      stopCreatingFolder()
       setRootItemName("")
       return
     }
@@ -42,7 +61,7 @@ export function ApisExplorer() {
     } else {
       createItem({ name, itemType: "Folder", parentId: null })
     }
-    setCreatingFolder(false)
+    stopCreatingFolder()
     setRootItemName("")
   }
 
@@ -53,10 +72,9 @@ export function ApisExplorer() {
           APIs Explorer
         </h2>
         <TreeActionButtons
-          canCreate={canCreate}
           onCreateFolder={() => {
             hasSubmittedRef.current = false
-            setCreatingFolder(true)
+            startCreatingFolder()
           }}
           onCreateFile={() => dialog.openCreate(null, "/")}
         />
@@ -74,7 +92,7 @@ export function ApisExplorer() {
                 if (e.key === "Enter") handleRootCreate()
                 if (e.key === "Escape") {
                   hasSubmittedRef.current = true // 후속 onBlur 방어
-                  setCreatingFolder(false)
+                  stopCreatingFolder()
                   setRootItemName("")
                 }
               }}
@@ -89,14 +107,16 @@ export function ApisExplorer() {
       </div>
 
       {/* Mock API 생성/수정 다이얼로그 (루트/폴더 공용) */}
-      <CreateMockApiDialog
-        isOpen={dialog.isOpen}
-        onClose={dialog.close}
-        onCreate={dialog.onSubmit}
-        workspaceId={workspaceId}
-        parentPath={dialog.parentPath}
-        editItem={dialog.editTarget}
-      />
+      {dialogMounted ? (
+        <CreateMockApiDialog
+          isOpen={dialog.isOpen}
+          onClose={dialog.close}
+          onCreate={dialog.onSubmit}
+          workspaceId={workspaceId}
+          parentPath={dialog.parentPath}
+          editItem={dialog.editTarget}
+        />
+      ) : null}
     </div>
   )
 }

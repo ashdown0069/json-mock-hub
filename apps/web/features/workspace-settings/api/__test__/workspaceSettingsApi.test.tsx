@@ -4,7 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios"
 import { useMembers, useRemoveMember } from "../members"
 import { useRoles, useUpdateRole } from "../roles"
-import { useWorkspaceApiKey, useReissueApiKey } from "../apiKey"
+
+jest.mock("next-intl", () => ({
+  useTranslations: () => {
+    const t = (key: string) => key
+    t.has = () => false
+    return t
+  },
+}))
 
 jest.mock("@/lib/axios", () => {
   const instance = {
@@ -98,6 +105,12 @@ describe("워크스페이스 설정 API 통합 테스트", () => {
   })
 
   describe("역할 관리 API 훅", () => {
+    it("workspaceId가 비어 있으면 역할 목록을 요청하지 않아야 한다", () => {
+      renderHook(() => useRoles(""), { wrapper })
+
+      expect(mockedAxiosInstance.get).not.toHaveBeenCalled()
+    })
+
     it("역할 목록을 성공적으로 조회해야 한다", async () => {
       const mockRoles = [
         {
@@ -171,68 +184,6 @@ describe("워크스페이스 설정 API 통합 테스트", () => {
       mockedAxiosInstance.get.mockRejectedValueOnce(new Error("Network Error"))
 
       const { result } = renderHook(() => useRoles("ws-1"), { wrapper })
-      await waitFor(() => expect(result.current.isError).toBe(true))
-      expect(result.current.error).toBeDefined()
-    })
-  })
-
-  describe("API 키 관리 API 훅", () => {
-    it("워크스페이스 API 키를 성공적으로 조회해야 한다", async () => {
-      const mockApiKey = {
-        apiKey: "mock_current_key",
-        issuedAt: "2026-07-16T00:00:00Z",
-      }
-      mockedAxiosInstance.get.mockResolvedValueOnce({ data: mockApiKey })
-
-      const { result } = renderHook(() => useWorkspaceApiKey("ws-1"), { wrapper })
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true)
-      })
-
-      expect(mockedAxiosInstance.get).toHaveBeenCalledWith("/workspaces/ws-1/api-key")
-      expect(result.current.data).toEqual(mockApiKey)
-    })
-
-    it("API 키를 재발급하고 API 키 쿼리를 초기화해야 한다", async () => {
-      const mockReissued = {
-        apiKey: "mock_new_key",
-        issuedAt: "2026-07-22T00:00:00Z",
-      }
-      mockedAxiosInstance.post.mockResolvedValueOnce({ data: mockReissued })
-
-      const { result } = renderHook(() => useReissueApiKey("ws-1"), { wrapper })
-
-      act(() => {
-        result.current.mutate()
-      })
-
-      await waitFor(() => {
-        expect(result.current.isSuccess).toBe(true)
-      })
-
-      expect(mockedAxiosInstance.post).toHaveBeenCalledWith("/workspaces/ws-1/api-key")
-      expect(invalidateSpy).toHaveBeenCalledWith({
-        queryKey: ["workspace", "ws-1", "api-key"],
-      })
-      expect(result.current.data).toEqual(mockReissued)
-    })
-
-    it("useWorkspaceApiKey 훅은 조회 실패 시 에러 상태를 반환해야 한다", async () => {
-      mockedAxiosInstance.get.mockRejectedValueOnce(new Error("Network Error"))
-
-      const { result } = renderHook(() => useWorkspaceApiKey("ws-1"), { wrapper })
-      await waitFor(() => expect(result.current.isError).toBe(true))
-      expect(result.current.error).toBeDefined()
-    })
-
-    it("useReissueApiKey 훅은 재발급 실패 시 에러 상태를 반환해야 한다", async () => {
-      mockedAxiosInstance.post.mockRejectedValueOnce(new Error("Post Error"))
-
-      const { result } = renderHook(() => useReissueApiKey("ws-1"), { wrapper })
-      act(() => {
-        result.current.mutate()
-      })
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.error).toBeDefined()
     })

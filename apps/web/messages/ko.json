@@ -1,10 +1,21 @@
 {
+  "Error": {
+    "title": "문제가 발생했습니다",
+    "description": "일시적인 오류일 수 있습니다. 다시 시도해 주세요.",
+    "retry": "다시 시도",
+    "notFoundTitle": "페이지를 찾을 수 없습니다",
+    "notFoundDescription": "주소가 바뀌었거나 삭제된 페이지일 수 있습니다.",
+    "backHome": "홈으로"
+  },
+  "FileBrowser": {
+    "loading": "API 목록을 불러오는 중…",
+    "loadFailed": "목록을 불러오지 못했습니다.",
+    "retry": "다시 시도",
+    "permissionLoadFailed": "권한 정보를 불러오지 못해 일부 기능이 표시되지 않을 수 있습니다."
+  },
   "LandingPage": {
     "title": "Json Mock Hub에 오신 것을 환영합니다",
     "description": "쉽고 빠른 Mock API 제공 및 테스팅 도구",
-    "documentation": "문서",
-    "pricing": "가격",
-    "heroBadge": "JsonMockHub 2.0 출시",
     "heroTitle": "<brand>JsonMockHub</brand>로 빠르게 API를 구축하세요",
     "heroDescription": "프로덕션 레벨의 Mock API를 단 몇 초 만에 생성하세요. 스키마를 정의하고, 파일 시스템에서 라우트를 관리하며, 설정 없이 즉시 테스트하세요.",
     "schemaBuilder": "스키마 & 코드 생성기",
@@ -30,6 +41,8 @@
     "createWorkspace": "새 워크스페이스 생성",
     "loading": "워크스페이스 목록을 불러오는 중입니다...",
     "loadError": "워크스페이스 목록을 불러오지 못했습니다. 다시 시도해 주세요.",
+    "emptyTitle": "아직 워크스페이스가 없습니다",
+    "emptyDescription": "첫 워크스페이스를 만들어 Mock API를 시작해 보세요.",
     "createError": "워크스페이스 생성에 실패했습니다.",
     "create": {
       "name": "이름",
@@ -42,6 +55,7 @@
         "min": "이름은 최소 3글자 이상이어야 합니다."
       },
       "password": {
+        "min": "비밀번호는 4자 이상이어야 합니다.",
         "notMatch": "비밀번호가 일치하지 않습니다."
       }
     }
@@ -76,6 +90,7 @@
     "save": "저장"
   },
   "errors": {
+    "duplicate": "같은 위치에 동일한 이름이 이미 있습니다. 다른 이름을 사용해 주세요.",
     "auth": {
       "api_key": {
         "invalid": "유효하지 않은 API 키입니다."
@@ -95,11 +110,11 @@
       "join": {
         "password_mismatch": "워크스페이스 비밀번호가 일치하지 않습니다.",
         "already_joined": "이미 참여 중인 워크스페이스입니다.",
-        "password_not_required": "이 워크스페이스는 비밀번호가 필요하지 않습니다.",
         "not_found": "워크스페이스를 찾을 수 없습니다."
       },
       "member": {
-        "role_unchangeable": "소유자(Owner)의 역할은 변경할 수 없습니다."
+        "role_unchangeable": "소유자(Owner)의 역할은 변경할 수 없습니다.",
+        "cannot_remove_owner": "소유자는 추방할 수 없습니다."
       },
       "access": {
         "not_found": "워크스페이스에 접근할 수 없습니다.",
@@ -111,19 +126,26 @@
       }
     },
     "itemNameRule": "한글, 영문, 숫자, 하이픈(-), 언더바(_)만 사용 가능하며 공백은 허용되지 않습니다.",
+    "idFieldReserved": "id 필드는 자동으로 추가되므로 직접 정의할 수 없습니다. 필드명을 변경해주세요.",
     "copyFailed": "클립보드 복사에 실패했습니다.",
-    "requestFailed": "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
+    "requestFailed": "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    "signupFailed": "회원가입에 실패했습니다."
   },
   "WorkspacePages": {
     "apisTitle": "Mock API",
     "codeTitle": "클라이언트 코드",
     "dashboardTitle": "워크스페이스 대시보드",
+    "dashboardTitleWithName": "{name} 워크스페이스 대시보드",
     "emptyTitle": "선택된 Mock API가 없습니다",
     "apisEmptyDesc": "좌측 탐색기에서 Mock API를 선택하거나 새로 생성하세요.",
     "codeEmptyDesc": "좌측 탐색기에서 Mock API를 선택하면 스키마 기반 클라이언트 코드를 생성합니다."
   },
   "WorkspaceSettings": {
     "pageTitle": "워크스페이스 설정",
+    "common": {
+      "loadFailed": "정보를 불러오지 못했습니다.",
+      "retry": "다시 시도"
+    },
     "general": {
       "title": "일반 설정",
       "description": "워크스페이스 옵션과 정보를 설정합니다.",
@@ -176,31 +198,37 @@
       "save": "저장",
       "saving": "저장 중...",
       "saveSuccess": "권한이 저장되었습니다."
-    },
-    "apiKey": {
-      "title": "API 키",
-      "description": "MCP 등 외부 클라이언트가 이 워크스페이스에 접근할 때 사용하는 키입니다. 워크스페이스 생성 시 자동 발급되며, 재발급 시 기존 키는 즉시 무효화됩니다.",
-      "status": "발급일: {issuedAt}",
-      "copy": "복사",
-      "copied": "복사되었습니다.",
-      "copyFailed": "API 키를 복사하는 데 실패했습니다.",
-      "reissue": "재발급",
-      "reissueSuccess": "API 키가 재발급되었습니다.",
-      "mcpHint": "이 키는 MCP 연동 페이지의 설치 설정에 자동으로 채워집니다.",
-      "cancel": "취소",
-      "reissueDialogTitle": "API 키 재발급",
-      "reissueDialogDescription": "API 키를 재발급하시겠습니까? 재발급 시 기존 API 키는 즉시 무효화되며, 해당 키를 사용 중인 모든 외부 연동 서비스(MCP 등)가 중단됩니다.",
-      "reissueConfirm": "재발급"
     }
   },
   "WorkspaceMcp": {
     "pageTitle": "MCP 연동",
+    "apiKeyUnavailable": "API 키를 불러오지 못했습니다. 이 워크스페이스의 멤버만 MCP 연동 키를 사용할 수 있습니다.",
     "install": {
       "title": "MCP 설치",
-      "description": "AI 클라이언트(Claude Code·Cursor 등)에 이 워크스페이스의 mock API 도구를 연결합니다.",
-      "step1": "아래 설정을 클라이언트의 .mcp.json에 붙여넣습니다. (API 키와 워크스페이스 ID는 이미 채워져 있습니다)",
-      "step2": "모노레포 절대경로를 --prefix 값에 채웁니다.",
-      "note": "api 앱(포트 4001)이 실행 중이어야 합니다."
+      "description": "AI 클라이언트에 이 워크스페이스의 mock API 도구를 연결합니다. 아래 두 방법 중 하나를 고르세요.",
+      "prereqTitle": "사전 준비",
+      "step1": "MCP 서버는 로컬에서 실행됩니다. 먼저 이 프로젝트 저장소를 clone하고 npm install을 실행하세요.",
+      "step2": "아래 설정에 있는 경로 자리를 clone한 모노레포의 절대경로로 바꿉니다.",
+      "json": {
+        "title": "방법 1. 설정 JSON 붙여넣기",
+        "description": "사용 중인 MCP 클라이언트의 설정 파일에 아래 내용을 붙여넣습니다.",
+        "windowsPathNote": "Windows 경로는 JSON에서 역슬래시를 두 번 쓰거나(C:\\\\Users\\\\me\\\\repo) 슬래시로 바꿔서(C:/Users/me/repo) 넣으세요."
+      },
+      "cli": {
+        "title": "방법 2. Claude Code CLI",
+        "description": "터미널에서 아래 명령을 실행합니다. 설정이 개인 파일(~/.claude.json)에만 저장되어 저장소에 API 키가 남지 않습니다."
+      },
+      "securityNote": "API 키는 이 워크스페이스에서 내가 가진 권한과 동일한 범위로 동작합니다. 저장소에 커밋하지 마세요. 유출된 경우 아래 재발급 버튼을 누르면 기존 키는 즉시 무효화됩니다.",
+      "note": "설정에는 현재 접속 중인 환경의 API 주소가 채워집니다."
+    },
+    "apiKey": {
+      "status": "발급일: {issuedAt}",
+      "reissue": "키 재발급",
+      "reissueSuccess": "API 키가 재발급되었습니다.",
+      "cancel": "취소",
+      "reissueDialogTitle": "API 키 재발급",
+      "reissueDialogDescription": "내 API 키를 재발급하시겠습니까? 기존 키는 즉시 무효화되며 내가 등록한 MCP 연동이 중단됩니다. 다른 멤버의 연동에는 영향이 없습니다.",
+      "reissueConfirm": "재발급"
     },
     "usage": {
       "title": "사용법",
@@ -220,10 +248,14 @@
     },
     "tools": {
       "create_mock_api": { "desc": "스키마로 mock 데이터를 만들어 mock API 생성 + 호출 URL 반환", "example": "products mock API 만들어줘. id·이름·가격 필드로 10개." },
+      "create_folder": { "desc": "mock API를 담을 폴더 생성 (중간 폴더도 함께)", "example": "shop/v1 폴더 만들어줘." },
       "list_mock_apis": { "desc": "폴더·mock API 목록을 경로로 조회", "example": "지금 워크스페이스에 뭐 있어?" },
-      "delete_mock_api": { "desc": "경로로 항목 삭제 (폴더는 하위 포함)", "example": "shop/users 지워줘." },
-      "rename_mock_api": { "desc": "경로로 항목 이름 변경 (URL 경로도 갱신)", "example": "products를 items로 바꿔줘." },
+      "describe_mock_api": { "desc": "저장된 스키마·활성 옵션·faker 설정·현재 데이터 조회", "example": "products 스키마가 지금 어떻게 돼 있어?" },
       "update_mock_api": { "desc": "경로의 mock API 스키마·데이터를 새로 생성해 갱신(이름·위치 유지)", "example": "products 스키마에 email 필드 추가해서 갱신해줘." },
+      "rename_mock_api": { "desc": "경로로 항목 이름 변경 (URL 경로도 갱신)", "example": "products를 items로 바꿔줘." },
+      "move_mock_api": { "desc": "경로로 항목을 다른 폴더로 이동", "example": "users를 shop 폴더로 옮겨줘." },
+      "delete_mock_api": { "desc": "경로로 항목 삭제 (폴더는 하위 포함)", "example": "shop/users 지워줘." },
+      "reset_mock_state": { "desc": "mock 서버로 편집한 런타임 상태를 원본으로 되돌림", "example": "products 상태 초기화해줘." },
       "get_api_code": { "desc": "연동 코드(타입·클라이언트·react-query·검증) 참고 생성", "example": "products 연동 코드 줘. ts, fetch+query, zod로." }
     }
   },
@@ -242,13 +274,29 @@
     "heading": "Endpoints",
     "descList": "전체 목록 조회",
     "descGetOne": "단건 리소스 조회",
-    "descCreate": "새 리소스 생성 (에코 응답)",
-    "descUpdate": "기존 리소스 수정 (병합 응답)",
-    "descDelete": "리소스 삭제 (빈 객체 응답)",
+    "descCreate": "새 리소스 생성 (상태 반영)",
+    "descUpdate": "기존 리소스 수정 (상태 반영)",
+    "descPatch": "부분 수정 (상태 반영)",
+    "descDelete": "리소스 삭제 (상태 반영)",
     "viewCode": "코드보기",
-    "copy": "복사하기"
+    "copy": "복사하기",
+    "resetState": "상태 초기화",
+    "resetConfirmTitle": "Mock 상태를 초기화할까요?",
+    "resetConfirmDesc": "API로 생성·수정·삭제한 데이터가 모두 원본 스키마 상태로 돌아갑니다. 되돌릴 수 없습니다.",
+    "resetConfirm": "초기화",
+    "cancel": "취소",
+    "resetSuccess": "Mock 상태를 초기화했습니다.",
+    "queryHintTitle": "쿼리 파라미터 (GET 목록)",
+    "queryHintSort": "정렬: ?{sortParam}={field}&{orderParam}=asc|desc",
+    "queryHintSearch": "전문검색: ?{searchParam}=검색어",
+    "statefulNote": "POST/PUT/PATCH/DELETE는 실제 상태를 변경하며 1시간 동안 유지됩니다.",
+    "requestBodyTitle": "Request Body"
   },
   "MockApiDialog": {
+    "createSuccess": "Mock API가 생성되었습니다.",
+    "updateSuccess": "Mock API가 수정되었습니다.",
+    "createFailed": "Mock API 생성에 실패했습니다.",
+    "updateFailed": "Mock API 수정에 실패했습니다.",
     "titleCreate": "새 Mock API",
     "titleEdit": "Mock API 수정",
     "endpointDetails": "엔드포인트 정보",
@@ -260,9 +308,11 @@
     "dataSchema": "데이터 스키마",
     "addField": "필드 추가",
     "fieldNamePlaceholder": "필드 이름",
+    "duplicateFieldName": "같은 위치에 동일한 필드명이 있습니다.",
     "fakerMethodPlaceholder": "Faker 메서드",
     "fakerNone": "없음 (기본값)",
     "emptyFields": "정의된 필드가 없습니다. \"필드 추가\"를 눌러 스키마 구성을 시작하세요.",
+    "idFieldAuto": "자동 증가 (1, 2, 3…)",
     "generationOptions": "생성 옵션",
     "mockItems": "Mock 아이템",
     "itemsCount": "{count}개",
@@ -271,6 +321,14 @@
     "pageParam": "페이지 파라미터",
     "limitParam": "리밋 파라미터",
     "pageParamPlaceholder": "예: page",
-    "limitParamPlaceholder": "예: limit"
+    "limitParamPlaceholder": "예: limit",
+    "sortFeature": "정렬 기능",
+    "sortParam": "정렬 파라미터",
+    "orderParam": "정렬 방향 파라미터",
+    "sortParamPlaceholder": "예: _sort",
+    "orderParamPlaceholder": "예: _order",
+    "searchFeature": "전문검색 기능",
+    "searchParam": "검색 파라미터",
+    "searchParamPlaceholder": "예: q"
   }
 }

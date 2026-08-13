@@ -1,20 +1,18 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
-import { FileItem } from "@/features/file-browser/types"
-import { SchemaObject } from "@/types/schema"
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@workspace/ui/components/tabs"
+import { SchemaObject } from "@workspace/types"
 import { getMockApiBaseUrl } from "@/lib/mockApiUrl"
 import { CodeBlock } from "@/features/mock-api/components/detail/CodeBlock"
+import { CodeGenToolbar } from "./CodeGenToolbar"
+import { buildCodeGenContext } from "@workspace/codegen/context"
 import {
-  toIdentifier,
-  toPascalCase,
   buildValidationSnippet,
   buildClientSnippet,
   buildQuerySnippet,
@@ -23,116 +21,108 @@ import {
   type HttpClientLib,
   type ValidationLib,
 } from "@workspace/codegen"
+import { useSelectedFile } from "@/features/mock-api/hooks/useSelectedFile"
 
-interface CodeGenPanelProps {
-  item: FileItem
-  workspaceId: string
-}
+/** 메인 탭으로 전환되는 코드 섹션 식별자 */
+type CodeSection = "validation" | "client" | "query"
+
+const SECTION_TABS: { value: CodeSection; label: string }[] = [
+  { value: "validation", label: "Validation Schema" },
+  { value: "client", label: "API Client" },
+  { value: "query", label: "TanStack Query Hooks" },
+]
+
+// 밑줄형(line) 탭. 기본 px-1.5 패딩을 px-4로 넓히고, 비활성 slate-500 → 활성 indigo-700 +
+// 하단 인디케이터로 선택 상태를 분명히 한다.
+// after:bottom / h 오버라이드는 기본 클래스와 동일한 변형 접두사를 붙여야 실제로 덮인다.
+const SECTION_TAB_CLASS =
+  "h-full flex-none cursor-pointer px-4 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 after:bg-indigo-600 data-active:font-semibold data-active:text-indigo-700 group-data-horizontal/tabs:after:bottom-[-1px]"
 
 /**
  * 선택된 Mock API의 저장 스키마를 바탕으로
  * 검증 스키마(zod/yup/joi), HTTP 클라이언트(axios/fetch), TanStack Query 훅 코드를 생성해 보여줍니다.
+ * 옵션은 상단 툴바에 모으고, 코드는 메인 탭으로 한 번에 하나만 노출합니다.
  */
-export function CodeGenPanel({ item, workspaceId }: CodeGenPanelProps) {
+export function CodeGenPanel() {
+  const { item, workspaceId } = useSelectedFile()
+  const [section, setSection] = useState<CodeSection>("validation")
   const [lang, setLang] = useState<CodeLang>("ts")
   const [validationLib, setValidationLib] = useState<ValidationLib>("zod")
   const [clientLib, setClientLib] = useState<HttpClientLib>("axios")
 
-  const ctx = useMemo<CodeGenContext>(() => {
-    const resourceName = toIdentifier(item.name)
-    return {
-      resourceName,
-      typeName: toPascalCase(resourceName),
-      baseUrl: getMockApiBaseUrl(workspaceId),
-      resourcePath: item.path ?? `/${item.name}`,
-      schema: (item.schema ?? {}) as SchemaObject,
-      pagination: item.options?.pagination
-        ? {
-            pageParam: item.options.paginationParams?.pageParam ?? "page",
-            limitParam: item.options.paginationParams?.limitParam ?? "limit",
-          }
-        : null,
-    }
-  }, [item, workspaceId])
+  // Rules of Hooks: item이 없어도 훅 호출 순서를 지키기 위해 ctx를 null로 폴백한다.
+  const ctx = useMemo<CodeGenContext | null>(
+    () =>
+      item ? buildCodeGenContext(item, { baseUrl: getMockApiBaseUrl(workspaceId) }) : null,
+    [item, workspaceId],
+  )
 
   const shikiLang = lang === "ts" ? "typescript" : "javascript"
 
   const validationCode = useMemo(
-    () => buildValidationSnippet(ctx, validationLib, lang),
+    () => (ctx ? buildValidationSnippet(ctx, validationLib, lang) : ""),
     [ctx, validationLib, lang]
   )
   const clientCode = useMemo(
-    () => buildClientSnippet(ctx, clientLib, lang),
+    () => (ctx ? buildClientSnippet(ctx, clientLib, lang) : ""),
     [ctx, clientLib, lang]
   )
-  const queryCode = useMemo(() => buildQuerySnippet(ctx, lang), [ctx, lang])
+  const queryCode = useMemo(() => (ctx ? buildQuerySnippet(ctx, lang) : ""), [ctx, lang])
+
+  if (!item || !ctx) return null
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
-      {/* 언어 선택 */}
-      <Tabs value={lang} onValueChange={(v) => setLang(v as CodeLang)}>
-        <TabsList className="h-9">
-          <TabsTrigger value="ts" className="cursor-pointer">TypeScript</TabsTrigger>
-          <TabsTrigger value="js" className="cursor-pointer">JavaScript</TabsTrigger>
-        </TabsList>
-      </Tabs>
+    <div className="flex max-w-4xl flex-col gap-4">
+      <CodeGenToolbar
+        lang={lang}
+        onLangChange={setLang}
+        validationLib={validationLib}
+        onValidationLibChange={setValidationLib}
+        clientLib={clientLib}
+        onClientLibChange={setClientLib}
+      />
 
-      {/* 검증 스키마 */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-sm font-semibold">
-            Validation Schema
-          </CardTitle>
-          <Tabs
-            value={validationLib}
-            onValueChange={(v) => setValidationLib(v as ValidationLib)}
-          >
-            <TabsList className="h-9">
-              <TabsTrigger value="zod" className="cursor-pointer">zod</TabsTrigger>
-              <TabsTrigger value="yup" className="cursor-pointer">yup</TabsTrigger>
-              <TabsTrigger value="joi" className="cursor-pointer">joi</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent>
+      <Tabs
+        value={section}
+        onValueChange={(value) => setSection(value as CodeSection)}
+      >
+        <TabsList
+          variant="line"
+          className="w-full justify-start gap-1 rounded-none border-b border-slate-200 p-0 group-data-horizontal/tabs:h-10"
+        >
+          {SECTION_TABS.map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className={SECTION_TAB_CLASS}
+            >
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="validation">
           <CodeBlock
             code={validationCode}
             lang={shikiLang}
-            className="max-h-96"
+            className="max-h-140"
           />
-        </CardContent>
-      </Card>
-
-      {/* HTTP 클라이언트 */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-sm font-semibold">API Client</CardTitle>
-          <Tabs
-            value={clientLib}
-            onValueChange={(v) => setClientLib(v as HttpClientLib)}
-          >
-            <TabsList className="h-9">
-              <TabsTrigger value="axios" className="cursor-pointer">axios</TabsTrigger>
-              <TabsTrigger value="fetch" className="cursor-pointer">fetch</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent>
-          <CodeBlock code={clientCode} lang={shikiLang} className="max-h-96" />
-        </CardContent>
-      </Card>
-
-      {/* TanStack Query */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-sm font-semibold">
-            TanStack Query Hooks
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CodeBlock code={queryCode} lang={shikiLang} className="max-h-96" />
-        </CardContent>
-      </Card>
+        </TabsContent>
+        <TabsContent value="client">
+          <CodeBlock
+            code={clientCode}
+            lang={shikiLang}
+            className="max-h-140"
+          />
+        </TabsContent>
+        <TabsContent value="query">
+          <CodeBlock
+            code={queryCode}
+            lang={shikiLang}
+            className="max-h-140"
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

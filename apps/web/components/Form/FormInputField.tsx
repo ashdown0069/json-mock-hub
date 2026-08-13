@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
+import { useBoolean } from "usehooks-ts"
 import { Control, Controller, FieldPath, FieldValues } from "react-hook-form"
 import { Eye, EyeOff } from "lucide-react"
 import { Field, FieldLabel, FieldError } from "@workspace/ui/components/field"
@@ -35,7 +36,7 @@ export function FormInputField<
   placeholder,
   className,
 }: FormInputFieldProps<TFieldValues, TName>) {
-  const [showPassword, setShowPassword] = useState(false)
+  const { value: showPassword, toggle: toggleShowPassword } = useBoolean(false)
   const isPassword = type === "password"
 
   return (
@@ -58,7 +59,7 @@ export function FormInputField<
                 <InputGroupButton
                   type="button"
                   size="icon-xs"
-                  onClick={() => setShowPassword((prev) => !prev)}
+                  onClick={toggleShowPassword}
                 >
                   {showPassword ? (
                     <EyeOff className="size-4" />

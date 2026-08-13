@@ -1,39 +1,42 @@
 import { buildHydrationState } from "../hydrateFromItem"
-import { FileItem } from "@/features/file-browser/types"
-import { FieldType } from "@/types/schema"
+import type { FileItem } from "@/features/file-browser/types"
 
-describe("buildHydrationState — 수정 다이얼로그 폼 복원 규칙", () => {
-  const base: FileItem = { id: "1", name: "/users", itemType: "File" }
+const baseItem = {
+  id: "1",
+  name: "users",
+  itemType: "File",
+  schema: { name: "string" },
+} as FileItem
 
-  it("fieldDefs가 있으면 그대로 fields로 사용한다", () => {
-    const fieldDefs = [{ id: "f1", name: "email", type: "string" as FieldType }]
-    const state = buildHydrationState({ ...base, fieldDefs })
-    expect(state.fields).toBe(fieldDefs)
-    expect(state.apiPath).toBe("/users")
-  })
+describe("buildHydrationState — 파라미터명 기본값", () => {
+  it("옵션이 없으면 공유 기본값으로 폼을 채운다", () => {
+    const state = buildHydrationState(baseItem)
 
-  it("fieldDefs가 없으면 schema를 역변환해 fields를 만든다", () => {
-    const state = buildHydrationState({
-      ...base,
-      fieldDefs: null,
-      schema: { email: "string" },
-    })
-    expect(state.fields.length).toBeGreaterThan(0)
-    expect(state.fields[0]).toMatchObject({ name: "email", type: "string" })
-  })
-
-  it("json 배열 길이를 1~50 범위로 clamp해 itemCount로 쓴다", () => {
-    expect(
-      buildHydrationState({ ...base, json: new Array(200).fill({}) }).itemCount
-    ).toEqual([50])
-    expect(buildHydrationState({ ...base, json: [] }).itemCount).toEqual([1])
-    expect(buildHydrationState({ ...base, json: "not-array" }).itemCount).toEqual([10])
-  })
-
-  it("pagination 옵션이 없으면 기본값(false, page/limit)을 채운다", () => {
-    const state = buildHydrationState(base)
-    expect(state.enablePagination).toBe(false)
+    // 폼은 기능이 꺼져 있어도 입력 칸을 보여주므로 이름이 비면 안 된다
     expect(state.pageParam).toBe("page")
     expect(state.limitParam).toBe("limit")
+    expect(state.sortParam).toBe("_sort")
+    expect(state.orderParam).toBe("_order")
+    expect(state.searchParam).toBe("q")
+    expect(state.enablePagination).toBe(false)
+  })
+
+  it("저장된 파라미터명을 복원한다", () => {
+    const state = buildHydrationState({
+      ...baseItem,
+      options: {
+        pagination: true,
+        paginationParams: { pageParam: "p", limitParam: "size" },
+        sort: true,
+        sortParams: { sortParam: "orderBy", orderParam: "dir" },
+        search: true,
+        searchParams: { searchParam: "keyword" },
+      },
+    } as FileItem)
+
+    expect(state.pageParam).toBe("p")
+    expect(state.sortParam).toBe("orderBy")
+    expect(state.searchParam).toBe("keyword")
+    expect(state.enableSearch).toBe(true)
   })
 })

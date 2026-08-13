@@ -1,3 +1,7 @@
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}))
+
 import { axiosInstance } from "@/lib/axios";
 import { getBrowserItems } from "../getBrowserItems";
 import { createBrowserItem } from "../createBrowserItem";

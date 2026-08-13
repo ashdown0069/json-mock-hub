@@ -12,6 +12,9 @@ describe("MockApiDialog 메시지 카탈로그", () => {
     "generationOptions", "mockItems", "itemsCount", "apiFeatures",
     "paginationMetadata", "pageParam", "limitParam",
     "pageParamPlaceholder", "limitParamPlaceholder",
+    "sortFeature", "sortParam", "orderParam",
+    "sortParamPlaceholder", "orderParamPlaceholder",
+    "searchFeature", "searchParam", "searchParamPlaceholder",
   ]
 
   it("en과 ko의 MockApiDialog 키 집합이 완전히 동일하다", () => {

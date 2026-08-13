@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import Providers from "@/components/providers/QueryProvider"
 import { NextIntlClientProvider } from "next-intl"
-import { getMessages } from "next-intl/server"
+import { getMessages, getTimeZone } from "next-intl/server"
 import { notFound } from "next/navigation"
 import { routing } from "@/i18n/routing"
 import "@workspace/ui/globals.css"
@@ -37,15 +37,15 @@ export default async function LocaleLayout({
     notFound()
   }
 
-  // 메시지 가져오기
   const messages = await getMessages()
+  const timeZone = await getTimeZone()
 
   return (
     <html lang={locale}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider messages={messages} timeZone={timeZone}>
           <Toaster
             richColors
             position="top-center"

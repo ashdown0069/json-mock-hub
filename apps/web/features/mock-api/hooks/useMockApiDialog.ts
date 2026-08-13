@@ -1,18 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { useRouter } from "@/i18n/routing"
 import { toast } from "sonner"
 import { FileItem } from "@/features/file-browser/types"
 import { useCreateBrowserItem } from "@/features/file-browser/api/createBrowserItem"
 import { useUpdateBrowserItem } from "@/features/file-browser/api/updateBrowserItem"
 import { useFileBrowser } from "@/features/file-browser/store/useFileBrowser"
-import { customAxiosError } from "@/lib/axios"
 import { CreateMockApiPayload } from "../types"
 import { useCreateMockApiStore } from "../store/useCreateMockApiStore"
 import { buildHydrationState } from "../lib/hydrateFromItem"
 
-// Mock API 생성 다이얼로그가 열릴 때의 생성 위치(부모 폴더) 정보
 interface DialogParent {
   id: string | null
   path: string
@@ -25,14 +24,18 @@ export function parentPathOf(path?: string) {
   return idx <= 0 ? "/" : path.slice(0, idx)
 }
 
-// Mock API 생성/수정 다이얼로그의 상태와 제출 로직을 담당하는 훅
 export function useMockApiDialog(workspaceId: string, basePath: string) {
   const router = useRouter()
+  const t = useTranslations("MockApiDialog")
   const [dialogParent, setDialogParent] = useState<DialogParent | null>(null)
   const [editTarget, setEditTarget] = useState<FileItem | null>(null)
 
-  const { mutate: createItem } = useCreateBrowserItem(workspaceId)
-  const { mutate: updateItem } = useUpdateBrowserItem(workspaceId)
+  const { mutate: createItem } = useCreateBrowserItem(workspaceId, {
+    defaultMsg: t("createFailed"),
+  })
+  const { mutate: updateItem } = useUpdateBrowserItem(workspaceId, {
+    defaultMsg: t("updateFailed"),
+  })
   const setActiveItem = useFileBrowser((state) => state.setActiveItem)
   const resetCreateForm = useCreateMockApiStore((state) => state.reset)
   const hydrate = useCreateMockApiStore((state) => state.hydrate)
@@ -52,24 +55,17 @@ export function useMockApiDialog(workspaceId: string, basePath: string) {
 
   const createMockApi = (payload: CreateMockApiPayload) => {
     if (!dialogParent) return
+
     createItem(
       { ...payload, itemType: "File", parentId: dialogParent.id },
       {
         onSuccess: (created) => {
-          setActiveItem(created.id)
-          toast.success("Mock API가 생성되었습니다.")
-          // 성공했을 때만 다이얼로그를 닫고 폼 스토어를 초기화합니다.
+          setActiveItem(created._id)
+          toast.success(t("createSuccess"))
+          // 실패 시에는 폼을 유지해 재시도할 수 있게 하고, 성공 시에만 닫는다
           setDialogParent(null)
           resetCreateForm()
-          // 생성 직후 상세 패널이 보이도록 apis 페이지로 이동합니다.
           router.push(`${basePath}/apis`)
-        },
-        onError: (error) => {
-          const axiosError = error as customAxiosError
-          toast.error(
-            axiosError.response?.data?.message ?? "Mock API 생성에 실패했습니다.",
-            { position: "top-center" }
-          )
         },
       }
     )
@@ -86,17 +82,10 @@ export function useMockApiDialog(workspaceId: string, basePath: string) {
       },
       {
         onSuccess: () => {
-          toast.success("Mock API가 수정되었습니다.")
-          // 성공했을 때만 닫고 초기화 (create와 동일 패턴 — 실패 시 폼 유지)
+          toast.success(t("updateSuccess"))
+          // 실패 시 폼을 유지해 재시도 가능 (create와 동일 패턴)
           setEditTarget(null)
           resetCreateForm()
-        },
-        onError: (error) => {
-          const axiosError = error as customAxiosError
-          toast.error(
-            axiosError.response?.data?.message ?? "Mock API 수정에 실패했습니다.",
-            { position: "top-center" }
-          )
         },
       }
     )

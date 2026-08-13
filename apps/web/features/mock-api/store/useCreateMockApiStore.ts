@@ -1,8 +1,15 @@
 import { create } from 'zustand'
-import { FieldSchema, FieldType } from '@/types/schema'
+import { FieldSchema, FieldType } from '@workspace/types'
 import { mapFieldTree } from '../utils/mapFieldTree'
-import { generateUUID } from '../utils/uuid'
-import { FAKER_BY_TYPE } from '@workspace/mockgen/fakerMethods'
+import { isFakerMethodAllowed } from '@workspace/mockgen/fakerMethods'
+
+const generateId = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return Math.random().toString(36).substring(2, 11)
+}
+
 
 interface CreateMockApiSeedState {
   apiPath: string
@@ -11,6 +18,11 @@ interface CreateMockApiSeedState {
   enablePagination: boolean
   pageParam: string
   limitParam: string
+  enableSort: boolean
+  sortParam: string
+  orderParam: string
+  enableSearch: boolean
+  searchParam: string
 }
 
 interface CreateMockApiState extends CreateMockApiSeedState {
@@ -26,6 +38,11 @@ interface CreateMockApiState extends CreateMockApiSeedState {
   setEnablePagination: (val: boolean) => void
   setPageParam: (val: string) => void
   setLimitParam: (val: string) => void
+  setEnableSort: (val: boolean) => void
+  setSortParam: (val: string) => void
+  setOrderParam: (val: string) => void
+  setEnableSearch: (val: boolean) => void
+  setSearchParam: (val: string) => void
 
   hydrate: (seed: Partial<CreateMockApiSeedState>) => void
   reset: () => void
@@ -38,6 +55,11 @@ const initialState: CreateMockApiSeedState = {
   enablePagination: false,
   pageParam: 'page',
   limitParam: 'limit',
+  enableSort: false,
+  sortParam: '_sort',
+  orderParam: '_order',
+  enableSearch: false,
+  searchParam: 'q',
 }
 
 export const useCreateMockApiStore = create<CreateMockApiState>((set) => ({
@@ -47,7 +69,7 @@ export const useCreateMockApiStore = create<CreateMockApiState>((set) => ({
 
   addField: () => set((state) => ({
     fields: [...state.fields, {
-      id: generateUUID(),
+      id: generateId(),
       name: '',
       type: 'string',
       fakerMethod: 'none',
@@ -64,15 +86,15 @@ export const useCreateMockApiStore = create<CreateMockApiState>((set) => ({
   changeFieldType: (id, newType) => set((state) => ({
     fields: mapFieldTree(state.fields, (field) => {
       if (field.id === id) {
-        const allowedModules = FAKER_BY_TYPE[newType as keyof typeof FAKER_BY_TYPE] || {}
-        let updatedFakerMethod = field.fakerMethod
-        if (field.fakerMethod && field.fakerMethod !== "none") {
-          const [mod, method] = field.fakerMethod.split(".")
-          const isAllowed = mod && method ? (allowedModules as any)[mod]?.includes(method) : false
-          if (!isAllowed) {
-            updatedFakerMethod = "none"
-          }
-        }
+        // 타입을 바꾸면 이전 fakerMethod가 유효하지 않을 수 있다.
+        // 판정은 카탈로그 옆(fakerMethods.ts)에 있는 것을 쓴다 — 여기서 직접
+        // 조회하면 카탈로그에 없는 타입에서 {} 폴백으로 모든 메서드를 거부한다.
+        const updatedFakerMethod = isFakerMethodAllowed(
+          newType,
+          field.fakerMethod ?? "",
+        )
+          ? field.fakerMethod
+          : "none"
         return {
           ...field,
           type: newType,
@@ -100,7 +122,7 @@ export const useCreateMockApiStore = create<CreateMockApiState>((set) => ({
             fields: [
               ...(field.fields || []),
               {
-                id: generateUUID(),
+                id: generateId(),
                 name: '',
                 type: 'string',
                 fakerMethod: 'none',
@@ -115,6 +137,11 @@ export const useCreateMockApiStore = create<CreateMockApiState>((set) => ({
   setEnablePagination: (enablePagination) => set({ enablePagination }),
   setPageParam: (pageParam) => set({ pageParam }),
   setLimitParam: (limitParam) => set({ limitParam }),
+  setEnableSort: (enableSort) => set({ enableSort }),
+  setSortParam: (sortParam) => set({ sortParam }),
+  setOrderParam: (orderParam) => set({ orderParam }),
+  setEnableSearch: (enableSearch) => set({ enableSearch }),
+  setSearchParam: (searchParam) => set({ searchParam }),
 
   hydrate: (seed) => set({ ...initialState, ...seed }),
   reset: () => set(initialState),

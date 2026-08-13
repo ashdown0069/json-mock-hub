@@ -1,4 +1,5 @@
-import { FieldSchema } from "@/types/schema"
+import { FieldSchema } from "@workspace/types"
+import type { MockApiOptions } from "@workspace/types"
 
 export interface FileItem {
   id: string
@@ -11,17 +12,10 @@ export interface FileItem {
   updatedAt?: Date
   schema?: Record<string, unknown>
   json?: unknown
-  options?: {
-    pagination?: boolean
-    paginationParams?: {
-      pageParam: string
-      limitParam: string
-    }
-  }
+  options?: MockApiOptions
   fieldDefs?: FieldSchema[] | null
 }
 
-//react-arborist 용 변환 타입
 export interface FileTree {
   id: string
   name: string
@@ -34,13 +28,7 @@ export interface FileTree {
   updatedAt?: Date
   schema?: Record<string, unknown>
   json?: unknown
-  options?: {
-    pagination?: boolean
-    paginationParams?: {
-      pageParam: string
-      limitParam: string
-    }
-  }
+  options?: MockApiOptions
   fieldDefs?: FieldSchema[] | null
   children?: FileTree[] // react-arborist 재귀 중첩 구조
 }

@@ -2,17 +2,16 @@
 // Since QueryClientProvider relies on useContext under the hood, we have to put 'use client' on top
 import {
   defaultShouldDehydrateQuery,
-  MutationCache,
   QueryClient,
   QueryClientProvider,
   environmentManager,
 } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
-import { toast } from "sonner"
-import axios from "axios"
-import type { customAxiosError } from "@/lib/axios"
 
-function makeQueryClient() {
+// 에러 토스트는 각 mutation 훅의 onError(useApiErrorHandler)가 전담한다.
+// 전역 mutationCache.onError를 두면 개별 onError와 무관하게 항상 실행되어
+// 토스트가 중복으로 뜨고, 전역에서는 next-intl 훅을 쓸 수 없어 로케일도 무시된다.
+export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -29,19 +28,6 @@ function makeQueryClient() {
           query.state.status === "pending",
       },
     },
-    mutationCache: new MutationCache({
-      // 개별 mutation이 onError를 정의하지 않은 경우의 최종 방어선
-      onError: (error) => {
-        if (typeof window === "undefined") return
-
-        let message = "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
-        if (axios.isAxiosError(error)) {
-          const axiosError = error as customAxiosError
-          message = axiosError.response?.data?.message ?? message
-        }
-        toast.error(message, { position: "top-center" })
-      },
-    }),
   })
 }
 

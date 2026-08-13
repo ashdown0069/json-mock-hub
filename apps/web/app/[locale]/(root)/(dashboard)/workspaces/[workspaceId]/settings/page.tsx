@@ -6,12 +6,10 @@ import {
 } from "@tanstack/react-query"
 import { MembersSection } from "@/features/workspace-settings/components/MembersSection"
 import { PermissionsSection } from "@/features/workspace-settings/components/PermissionsSection"
-import { ApiKeySection } from "@/features/workspace-settings/components/ApiKeySection"
 import { GeneralSettingsSection } from "@/features/workspace-settings/components/GeneralSettingsSection"
 import { prefetchMembers } from "@/features/workspace-settings/api/members.server"
 import { prefetchRoles } from "@/features/workspace-settings/api/roles.server"
-import { prefetchWorkspaceApiKey } from "@/features/workspace-settings/api/apiKey.server"
-import { prefetchWorkspace } from "@/features/workspace/api/getWorkspace.server"
+import { fetchWorkspace } from "@/features/workspace/api/getWorkspace.server"
 
 export default async function SettingsPage({
   params,
@@ -24,10 +22,9 @@ export default async function SettingsPage({
   const queryClient = new QueryClient()
 
   await Promise.all([
-    prefetchWorkspace(queryClient, workspaceId),
+    fetchWorkspace(queryClient, workspaceId).catch(() => null),
     prefetchMembers(queryClient, workspaceId),
     prefetchRoles(queryClient, workspaceId),
-    prefetchWorkspaceApiKey(queryClient, workspaceId),
   ])
 
   return (
@@ -46,9 +43,6 @@ export default async function SettingsPage({
 
           {/* member 역할 공통 권한 체크박스 */}
           <PermissionsSection workspaceId={workspaceId} />
-
-          {/* MCP 등 외부 클라이언트용 API 키 */}
-          <ApiKeySection workspaceId={workspaceId} />
         </div>
       </div>
     </HydrationBoundary>

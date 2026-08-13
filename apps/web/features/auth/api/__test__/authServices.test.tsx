@@ -1,3 +1,7 @@
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}))
+
 import React from "react"
 import { renderHook, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -75,7 +79,7 @@ describe("인증 서비스", () => {
         email: "test@example.com",
         password: "password123",
       })
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["currentUser"] })
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["auth"] })
     })
 
     it("useLogIn 훅은 로그인 실패 시 에러 상태를 반환해야 한다", async () => {
@@ -138,7 +142,7 @@ describe("인증 서비스", () => {
         nickname: "tester",
         password: "123456",
       })
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["currentUser"] })
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["auth"] })
     })
 
     it("useSignup 훅은 회원가입 실패 시 에러 상태를 반환해야 한다", async () => {
