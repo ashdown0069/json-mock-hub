@@ -1,6 +1,6 @@
 import { resolveMockApiParams } from "@workspace/types"
 import type { FileBrowserItemRes } from "./api-client"
-import { normalizePath } from "./resolvePath"
+import { normalizePath } from "./resolve"
 
 // 들여쓰기로 경로를 재구성하다 한 단계만 어긋나도 삭제·갱신이 엉뚱한 항목에 간다.
 // 다른 도구가 받는 값과 정확히 같은 문자열을 각 줄에 직접 찍는다.

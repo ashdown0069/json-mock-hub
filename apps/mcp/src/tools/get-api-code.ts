@@ -1,6 +1,5 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import type { PrimitiveSchemaDefinition } from "@modelcontextprotocol/sdk/types.js"
 import type { ApiClient } from "../api-client"
 import type { McpConfig } from "../config"
 import { findFullItemByPath } from "../resolve"
@@ -11,10 +10,9 @@ import { buildCodeSections } from "./code-sections"
 import { withApiErrors } from "../tool-errors"
 import {
   CODE_OPTION_SPEC,
-  sanitizeCodeOptions,
   codeOptionZodShape,
-  codeOptionElicitProperties,
   codeOptionFallbackText,
+  elicitCodeOptions,
   type CodeOptions,
   type CodeOptionKey,
 } from "./code-options"
@@ -89,31 +87,6 @@ export function registerGetApiCode(
   client: ApiClient,
   config: McpConfig
 ) {
-  // 클라이언트가 elicitation을 지원하면 선택 UI를 띄우고, 아니면 null을 돌려 폴백시킨다
-  const elicit: ElicitFn = async (missing) => {
-    const caps = server.server.getClientCapabilities()
-    if (!caps?.elicitation) return null
-
-    const allProps = codeOptionElicitProperties()
-    const props: Record<string, PrimitiveSchemaDefinition> = {}
-    for (const key of missing) {
-      if (allProps[key]) props[key] = allProps[key]
-    }
-
-    let result
-    try {
-      result = await server.server.elicitInput({
-        message: "코드 생성 옵션을 선택하세요.",
-        requestedSchema: { type: "object", properties: props, required: missing },
-      })
-    } catch {
-      // 타임아웃·미지원·거부 — 호출부의 안내 폴백에 맡긴다
-      return null
-    }
-    if (result.action !== "accept" || !result.content) return null
-    return sanitizeCodeOptions(result.content as Record<string, unknown>)
-  }
-
   const zodShape = codeOptionZodShape()
 
   server.registerTool(
@@ -134,6 +107,11 @@ export function registerGetApiCode(
         validation: zodShape.validation.describe("검증 라이브러리 (none은 생성 안 함)"),
       },
     },
-    async (args) => withApiErrors(() => handleGetApiCode(client, config, args, elicit))
+    async (args) =>
+      withApiErrors(() =>
+        handleGetApiCode(client, config, args, (missing) =>
+          elicitCodeOptions(server, missing)
+        )
+      )
   )
 }

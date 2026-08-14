@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import type { PrimitiveSchemaDefinition } from "@modelcontextprotocol/sdk/types.js"
 
 /**
@@ -101,3 +102,35 @@ export function codeOptionFallbackText(): string {
   })
   return lines.join("\n")
 }
+
+/**
+ * MCP 클라이언트의 elicitation 기능으로 사용자에게 빠진 코드 옵션을 물어 값을 받아옵니다.
+ * 미지원 클라이언트이거나 취소/타임아웃 시 null을 반환합니다.
+ */
+export async function elicitCodeOptions(
+  server: McpServer,
+  missing: CodeOptionKey[]
+): Promise<Partial<CodeOptions> | null> {
+  const caps = server.server.getClientCapabilities()
+  if (!caps?.elicitation) return null
+
+  const allProps = codeOptionElicitProperties()
+  const props: Record<string, PrimitiveSchemaDefinition> = {}
+  for (const key of missing) {
+    if (allProps[key]) props[key] = allProps[key]
+  }
+
+  let result
+  try {
+    result = await server.server.elicitInput({
+      message: "코드 생성 옵션을 선택하세요.",
+      requestedSchema: { type: "object", properties: props, required: missing },
+    })
+  } catch {
+    // 타임아웃·미지원·거부 — 호출부의 안내 폴백에 맡긴다
+    return null
+  }
+  if (result.action !== "accept" || !result.content) return null
+  return sanitizeCodeOptions(result.content as Record<string, unknown>)
+}
+

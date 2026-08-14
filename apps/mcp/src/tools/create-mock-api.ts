@@ -15,9 +15,6 @@ import { schemaObjectInput, SCHEMA_VALUE_TYPES_HINT, applyFakerHints } from "../
 import { toolText, toolError, type ToolResult } from "../tool-result"
 import { withApiErrors } from "../tool-errors"
 import { findItemByPath, normalizePath } from "../resolve"
-
-// item-name.ts로 옮겼다. rename-mock-api가 이 경로로 import하고 있어 re-export를 남긴다.
-export { ITEM_NAME_REGEX } from "../item-name"
 import { ITEM_NAME_REGEX } from "../item-name"
 
 interface CreateArgs {

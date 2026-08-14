@@ -1,6 +1,6 @@
 import type { ApiClient, FileBrowserItemRes } from "./api-client"
 import { ITEM_NAME_REGEX } from "./item-name"
-import { findItemByPath, normalizePath } from "./resolvePath"
+import { findItemByPath, normalizePath } from "./resolve"
 
 export type EnsureFolderResult =
   | {

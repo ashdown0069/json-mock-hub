@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import type { ApiClient } from "../api-client"
-import { ITEM_NAME_REGEX } from "./create-mock-api"
+import { ITEM_NAME_REGEX } from "../item-name"
 import { findItemByPath } from "../resolve"
 import { toolText, toolError, type ToolResult } from "../tool-result"
 import { withApiErrors } from "../tool-errors"

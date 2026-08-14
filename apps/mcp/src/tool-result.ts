@@ -1,10 +1,10 @@
-import { ApiError } from "./api-client"
-import { AmbiguousPathError } from "./resolvePath"
+import { ApiError } from "./api-error"
+import { AmbiguousPathError } from "./resolve"
 
 // MCP 도구 핸들러의 공용 반환 타입 — toolText/toolError 어느 쪽이 와도 호출부에서
 // isError 유무와 무관하게 하나의 타입으로 다룰 수 있도록 한다
 export type ToolResult =
-  | { content: { type: "text"; text: string }[] }
+  | { isError?: false; content: { type: "text"; text: string }[] }
   | { isError: true; content: { type: "text"; text: string }[] }
 
 export function toolText(text: string): ToolResult {

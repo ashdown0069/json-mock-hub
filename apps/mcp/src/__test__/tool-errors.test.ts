@@ -1,6 +1,6 @@
 import { withApiErrors } from "../tool-errors"
 import { toolText, formatApiError } from "../tool-result"
-import { AmbiguousPathError } from "../resolvePath"
+import { AmbiguousPathError } from "../resolve"
 import { ApiError } from "../api-client"
 
 describe("withApiErrors", () => {

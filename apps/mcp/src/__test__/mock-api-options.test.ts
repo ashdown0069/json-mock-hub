@@ -1,5 +1,4 @@
 import { buildMockApiOptions } from "../mock-api-options"
-import { DEFAULT_MOCK_PARAMS } from "@workspace/types"
 
 describe("buildMockApiOptions", () => {
   it("이전 옵션이 없으면 전부 꺼진 상태에서 시작한다", () => {
