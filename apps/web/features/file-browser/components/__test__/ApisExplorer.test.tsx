@@ -4,8 +4,11 @@ jest.mock("next-intl", () => ({
 
 // TreeActionButtons가 사용하는 Tooltip은 TooltipProvider 컨텍스트가 필요하다.
 // TreeActionButtons.test.tsx와 동일한 방식으로 모킹한다.
-jest.mock("@/components/Tooltip/Tooltip", () => ({
+jest.mock("@workspace/ui/components/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 const createItemMock = jest.fn()

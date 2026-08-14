@@ -1,5 +1,5 @@
 import { SidebarProvider } from "@workspace/ui/components/sidebar"
-import { TooltipProvider } from "@workspace/ui/components/tooltip"
+
 export default async function Layout({
   children,
 }: {
@@ -7,7 +7,8 @@ export default async function Layout({
 }) {
   return (
     <SidebarProvider className="">
-      <TooltipProvider>{children}</TooltipProvider>
+      {children}
     </SidebarProvider>
   )
 }
+

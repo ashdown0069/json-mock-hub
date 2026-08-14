@@ -3,12 +3,13 @@ import { TreeActionButtons } from "../TreeActionButtons"
 import { useMyPermissions } from "@/hooks/useMyPermissions"
 
 // Tooltip 컴포넌트 모킹 (포탈이나 애니메이션 등으로 인한 테스트 번거로움 방지)
-jest.mock("@/components/Tooltip/Tooltip", () => ({
-  Tooltip: ({ children, tooltipText }: { children: React.ReactNode; tooltipText: string }) => (
-    <div data-testid="tooltip" data-text={tooltipText}>
-      {children}
-    </div>
+jest.mock("@workspace/ui/components/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
   ),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 jest.mock("@/hooks/useWorkspaceBasePath", () => ({
   useWorkspaceBasePath: () => ({ workspaceId: "ws1" }),
@@ -68,7 +69,7 @@ describe("TreeActionButtons", () => {
     expect(button).toBeDisabled()
 
     // 툴팁 텍스트에 권한 없음 메시지가 노출되는지 검증
-    const tooltip = screen.getByTestId("tooltip")
-    expect(tooltip.getAttribute("data-text")).toBe("No permission")
+    const tooltip = screen.getByTestId("tooltip-content")
+    expect(tooltip).toHaveTextContent("No permission")
   })
 })

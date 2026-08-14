@@ -53,6 +53,6 @@ export function buildTree(flatItems: FileItem[]): FileTree[] {
       }
     }
   }
-  console.log("roots build tree", roots)
+
   return roots
 }
