@@ -58,5 +58,6 @@ apps/scraper
 docs
 *.pdf
 
-# 주석 정비 가드의 임시 스냅샷 (scripts/comment-guard.mjs)
-.comment-guard
+.comment-guard
+.playwright-mcp
+apps/test
