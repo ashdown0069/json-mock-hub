@@ -1,10 +1,8 @@
 import {
   Controller,
   Get,
-  Post,
   Delete,
   Param,
-  Body,
   UseGuards,
 } from '@nestjs/common';
 import { MembershipService } from './membership.service';

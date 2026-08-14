@@ -19,8 +19,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { ConfigService } from '@nestjs/config';
 import { COOKIE_KEYS } from '../constant/cookies';
-import { Serialize } from '../interceptors/serialize.interceptor';
-import { GetUserDto } from '../users/dto/res/get-user.dto';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { authCookieOptions } from './cookie-options';
 

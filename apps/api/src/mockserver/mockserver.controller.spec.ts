@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import { NotFoundException, HttpException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { MockserverController } from './mockserver.controller';
 import { MockserverService } from './mockserver.service';

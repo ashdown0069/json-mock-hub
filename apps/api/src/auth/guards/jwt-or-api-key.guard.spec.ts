@@ -1,4 +1,4 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { JwtOrApiKeyGuard } from './jwt-or-api-key.guard';
 import { ApiKeyService } from '../../workspaces/api-key.service';
 import { JwtAuthGuard } from './jwt-auth.guard';

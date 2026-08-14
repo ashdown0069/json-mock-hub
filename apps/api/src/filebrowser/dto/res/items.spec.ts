@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { Types } from 'mongoose';
 import { FilebrowserItems } from './items';
-import { ItemOptionsDto } from '../req/create-item';
 
 /**
  * 인터셉터와 동일한 옵션으로 변환하는 헬퍼
