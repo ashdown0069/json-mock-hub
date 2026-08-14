@@ -1,10 +1,10 @@
 "use client"
+
 import React from "react"
 import { useGetWorkspaceList } from "../api/getWorkspaceList"
 import { useTranslations } from "next-intl"
-import WorkspacesGrid from "./WorkspacesGrid"
+import { WorkspaceCard } from "./WorkspaceCard"
 import CreateWorkspace from "./CreateWorkspaceDialog/CreateWorkspace"
-
 
 export const Workspaces = () => {
   const { data: workspaces, isLoading, isError } = useGetWorkspaceList()
@@ -39,9 +39,12 @@ export const Workspaces = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <WorkspacesGrid workspaces={workspaces} />
+          {workspaces.map((workspace) => (
+            <WorkspaceCard key={workspace.id} {...workspace} />
+          ))}
         </div>
       )}
     </div>
   )
 }
+

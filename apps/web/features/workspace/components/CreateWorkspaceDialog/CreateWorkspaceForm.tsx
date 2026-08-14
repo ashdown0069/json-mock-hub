@@ -1,9 +1,16 @@
 "use client"
 
+import React from "react"
 import { UseFormReturn } from "react-hook-form"
 import { DialogClose } from "@workspace/ui/components/dialog"
-import { ConfirmButton, DestructiveButton } from "@/components/Button/Button"
-import { FormInputField } from "@/components/Form/FormInputField"
+import { Button } from "@workspace/ui/components/button"
+import { Input } from "@workspace/ui/components/input"
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+} from "@workspace/ui/components/field"
 import { useTranslations } from "next-intl"
 import { CreateWorkspaceFormTypes } from "./CreateWorkspaceSchema"
 
@@ -19,46 +26,84 @@ export function CreateWorkspaceForm({
   onSubmit,
 }: CreateWorkspaceFormProps) {
   const t = useTranslations("Workspaces")
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = form
 
   return (
-    <form
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="flex flex-col space-y-8"
-    >
-      <FormInputField
-        control={form.control}
-        name="name"
-        label={t("create.name")}
-      />
-      <FormInputField
-        control={form.control}
-        name="description"
-        label={t("create.description")}
-      />
-      <FormInputField
-        control={form.control}
-        name="password"
-        label={t("create.password")}
-        type="password"
-      />
-      <FormInputField
-        control={form.control}
-        name="passwordConfirm"
-        label={t("create.confirm")}
-        type="password"
-      />
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col space-y-6">
+      <FieldGroup>
+        <Field data-invalid={!!errors.name}>
+          <FieldLabel htmlFor="ws-create-name">{t("create.name")}</FieldLabel>
+          <Input
+            id="ws-create-name"
+            placeholder={t("create.name")}
+            aria-invalid={!!errors.name}
+            {...register("name")}
+          />
+          <FieldError errors={[errors.name]} />
+        </Field>
 
-      <div className="flex w-full gap-3">
+        <Field data-invalid={!!errors.description}>
+          <FieldLabel htmlFor="ws-create-description">{t("create.description")}</FieldLabel>
+          <Input
+            id="ws-create-description"
+            placeholder={t("create.description")}
+            aria-invalid={!!errors.description}
+            {...register("description")}
+          />
+          <FieldError errors={[errors.description]} />
+        </Field>
+
+        <Field data-invalid={!!errors.password}>
+          <FieldLabel htmlFor="ws-create-password">{t("create.password")}</FieldLabel>
+          <Input
+            id="ws-create-password"
+            type="password"
+            placeholder={t("create.password")}
+            aria-invalid={!!errors.password}
+            {...register("password")}
+          />
+          <FieldError errors={[errors.password]} />
+        </Field>
+
+        <Field data-invalid={!!errors.passwordConfirm}>
+          <FieldLabel htmlFor="ws-create-confirm">{t("create.confirm")}</FieldLabel>
+          <Input
+            id="ws-create-confirm"
+            type="password"
+            placeholder={t("create.confirm")}
+            aria-invalid={!!errors.passwordConfirm}
+            {...register("passwordConfirm")}
+          />
+          <FieldError errors={[errors.passwordConfirm]} />
+        </Field>
+      </FieldGroup>
+
+      <div className="flex w-full gap-3 pt-2">
         <DialogClose asChild>
-          <DestructiveButton className="flex-1" TextType="cancel" />
+          <Button type="button" variant="outline" className="flex-1 cursor-pointer">
+            {t("cancel")}
+          </Button>
         </DialogClose>
-        <ConfirmButton
-          className="flex-1"
-          TextType="create"
-          isLoading={isLoading}
+        <Button
           type="submit"
-        />
+          disabled={isLoading}
+          className="flex-1 cursor-pointer"
+        >
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              {t("loading")}
+            </span>
+          ) : (
+            t("createWorkspace")
+          )}
+        </Button>
       </div>
     </form>
   )
 }
+

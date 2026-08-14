@@ -3,7 +3,7 @@ import React from "react"
 import { useBoolean } from "usehooks-ts"
 import {
   CreateWorkspaceFormTypes,
-  useCreateWorkspaceSchema,
+  getCreateWorkspaceSchema,
 } from "./CreateWorkspaceSchema"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -14,7 +14,7 @@ import { useCreateWorkspace } from "../../api/createWorkspace"
 
 export default function CreateWorkspace() {
   const t = useTranslations("Workspaces")
-  const createWorkspaceSchema = useCreateWorkspaceSchema()
+  const createWorkspaceSchema = getCreateWorkspaceSchema(t)
   const createWorkspaceMutation = useCreateWorkspace({
     defaultMsg: t("createError"),
   })

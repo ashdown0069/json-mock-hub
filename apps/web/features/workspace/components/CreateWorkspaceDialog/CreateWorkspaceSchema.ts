@@ -1,10 +1,7 @@
-"use client"
-import { useTranslations } from "next-intl"
 import { z } from "zod"
 
-export function useCreateWorkspaceSchema() {
-  const t = useTranslations("Workspaces")
-  const createWorkspaceFormSchema = z
+export function getCreateWorkspaceSchema(t: (key: string) => string) {
+  return z
     .object({
       name: z.string().min(3, { message: t("error.name.min") }),
       description: z.string().optional(),
@@ -19,10 +16,9 @@ export function useCreateWorkspaceSchema() {
       message: t("error.password.notMatch"),
       path: ["passwordConfirm"],
     })
-
-  return createWorkspaceFormSchema
 }
 
 export type CreateWorkspaceFormTypes = z.infer<
-  ReturnType<typeof useCreateWorkspaceSchema>
+  ReturnType<typeof getCreateWorkspaceSchema>
 >
+

@@ -2,10 +2,10 @@ const mockUseGetWorkspaceList = jest.fn()
 jest.mock("../../api/getWorkspaceList", () => ({
   useGetWorkspaceList: () => mockUseGetWorkspaceList(),
 }))
-jest.mock("../WorkspacesGrid", () => ({
+jest.mock("../WorkspaceCard", () => ({
   __esModule: true,
-  default: ({ workspaces }: { workspaces: Array<{ id: string; name: string }> }) => (
-    <div data-testid="workspaces-grid">grid-{workspaces.length}</div>
+  WorkspaceCard: ({ id, name }: { id: string; name: string }) => (
+    <div data-testid="workspace-card" data-id={id}>{name}</div>
   ),
 }))
 jest.mock("../CreateWorkspaceDialog/CreateWorkspace", () => ({
@@ -29,7 +29,7 @@ describe("Workspaces", () => {
     render(<Workspaces />)
 
     expect(screen.getByText("loading")).toBeInTheDocument()
-    expect(screen.queryByTestId("workspaces-grid")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("workspace-card")).not.toBeInTheDocument()
   })
 
   it("조회 실패 시 loadError 문구를 표시한다", () => {
@@ -37,7 +37,7 @@ describe("Workspaces", () => {
     render(<Workspaces />)
 
     expect(screen.getByText("loadError")).toBeInTheDocument()
-    expect(screen.queryByTestId("workspaces-grid")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("workspace-card")).not.toBeInTheDocument()
   })
 
   it("데이터가 없거나(undefined) 빈 배열이면 emptyTitle/emptyDescription을 표시한다", () => {
@@ -46,7 +46,7 @@ describe("Workspaces", () => {
 
     expect(screen.getByText("emptyTitle")).toBeInTheDocument()
     expect(screen.getByText("emptyDescription")).toBeInTheDocument()
-    expect(screen.queryByTestId("workspaces-grid")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("workspace-card")).not.toBeInTheDocument()
   })
 
   it("실패 상태를 빈 목록(emptyTitle)으로 위장하지 않는다", () => {
@@ -56,13 +56,13 @@ describe("Workspaces", () => {
     expect(screen.queryByText("emptyTitle")).not.toBeInTheDocument()
   })
 
-  it("목록이 1개 이상이면 WorkspacesGrid를 렌더한다", () => {
+  it("목록이 1개 이상이면 WorkspaceCard 목록을 렌더한다", () => {
     mockUseGetWorkspaceList.mockReturnValue({
       data: [{ id: "ws1", name: "첫 워크스페이스" }],
     })
     render(<Workspaces />)
 
-    expect(screen.getByTestId("workspaces-grid")).toHaveTextContent("grid-1")
+    expect(screen.getByTestId("workspace-card")).toHaveTextContent("첫 워크스페이스")
     expect(screen.queryByText("emptyTitle")).not.toBeInTheDocument()
   })
 })
