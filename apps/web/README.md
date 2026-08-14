@@ -1,114 +1,107 @@
 # JSON Mock Hub — Web (Frontend)
 
-스키마를 정의하면 곧바로 호출 가능한 **Mock API**를 만들어 주는 서비스의 프론트엔드입니다.
-스키마 빌더 · 실시간 파일 트리 · 클라이언트 코드 생성 · 다국어 · 권한(RBAC) · AI(MCP) 연동을 다룹니다.
+JSON Mock Hub의 프론트엔드 애플리케이션으로, 스키마 시각적 빌더, 파일 트리 탐색기, 실시간 협업(SSE), 멀티 타겟 코드 자동 생성 패널 및 워크스페이스 관리 대시보드를 제공합니다.
 
-> 모노레포(Turborepo)의 `apps/web`. 백엔드는 [`apps/api`](../api), AI 연동은 `apps/mcp`.
+> **모노레포 위치:** `apps/web` · **백엔드 문서:** [`apps/api`](../api/README.md) · **MCP 서버:** [`apps/mcp`](../mcp/README.md)
 
 ---
 
-## 기술 스택
+## 🛠️ 기술 스택
 
 | 영역 | 사용 기술 |
 | :--- | :--- |
-| 프레임워크 | **Next.js 15 (App Router)**, **React 19** |
-| 서버 상태 | **TanStack Query v5** (query key 팩토리, 전역 `MutationCache.onError`, staleTime 전략) |
-| 클라이언트 상태 | **Zustand v5** (`useShallow` 셀렉터, devtools) |
-| 폼/검증 | **react-hook-form** + **zod** |
-| UI | **shadcn/ui** (공용 `@workspace/ui`), **Tailwind CSS v4**, lucide-react |
-| 트리/DnD | **react-arborist**, @dnd-kit |
-| 코드 하이라이트 | **shiki** |
-| 국제화 | **next-intl** (ko/en, `localePrefix: as-needed`) |
-| 테스트 | **Jest** + React Testing Library |
+| **Framework** | **Next.js 15** (App Router, Turbopack) |
+| **Core** | **React 19**, TypeScript 5.9 |
+| **상태 관리 & 서버 상태** | **TanStack Query v5** (캐싱/동기화), **Zustand** (클라이언트 전역 상태) |
+| **폼 & 유효성 검증** | **React Hook Form**, **Zod** (`@hookform/resolvers`) |
+| **UI & Styling** | **Tailwind CSS v4**, **shadcn/ui** (`@workspace/ui`), Radix UI, Lucide Icons, Sonner, Vaul |
+| **트리 & 코드 하이라이팅** | **react-arborist** (가상화 트리), **Shiki** (구문 강조) |
+| **다국어 (i18n)** | **next-intl** (한국어/영어 지원) |
+| **테스트** | **Jest**, **React Testing Library** (RTL), `@testing-library/user-event` |
+| **공유 패키지** | `@workspace/types`, `@workspace/codegen`, `@workspace/mockgen`, `@workspace/ui` |
 
 ---
 
-## 핵심 기능
+## ✨ 핵심 기능
 
-- **스키마 빌더** — 필드/타입/중첩 구조를 UI로 정의하고, faker 기반 목 데이터를 미리보기.
-- **파일 트리 탐색기** — react-arborist로 폴더/Mock API를 트리로 관리(인라인 rename, 드래그 이동, 권한별 액션).
-- **실시간 동기화** — **SSE**로 다른 세션의 생성/이동/삭제를 실시간 반영.
-- **클라이언트 코드 생성** — 저장된 스키마로 TypeScript 타입 · fetch/axios 클라이언트 · TanStack Query 훅 · zod/yup/joi 검증 코드를 shiki로 렌더.
-- **권한(RBAC)** — owner/member 역할과 세부 권한(canCreate/canRename/canUpdate/canDelete/canMove)에 따라 UI 게이팅.
-- **다국어** — 한국어/영어. 기본 로케일(ko)은 URL 접두사 생략.
-- **MCP 연동 가이드** — AI 클라이언트(Claude 등)에서 Mock API를 다루는 설치·사용법 페이지.
+- **스키마 시각적 에디터 (`features/mock-api`)** — 필드 추가/수정, 타입 선택, Faker Mock 규칙 매핑, 중첩(Object/Array) 스키마 정의 및 실시간 가상 데이터 생성 미리보기.
+- **가상화 파일 브라우저 (`features/file-browser`)** — `react-arborist` 기반으로 대규모 Mock API 및 폴더 트리를 렌더링하며, 인라인 이름 변경, 드래그앤드롭 폴더 이동, SSE 실시간 동기화 지원.
+- **멀티 타겟 코드 생성 (`features/code-gen`)** — 정의된 스키마로부터 TypeScript 인터페이스, Fetch/Axios 클라이언트, TanStack Query 훅, Zod/Yup/Joi 검증 스키마를 즉시 생성 및 복사.
+- **워크스페이스 & RBAC 대시보드 (`features/workspace`, `features/workspace-settings`)** — 워크스페이스 생성/초대/참여, 역할(Owner/Member) 및 5대 세부 권한(Create/Rename/Update/Delete/Move) 제어, API 키 발급/관리.
+- **실시간 SSE 동기화** — 백엔드 SSE 스트림을 구독하여 동시 작업자의 생성/이동/수정/삭제 액션을 새로고침 없이 즉각 반영.
+- **다국어 지원** — `next-intl` 기반으로 한국어(`ko`)와 영어(`en`) 로케일 라우팅 및 메시지 완벽 지원.
 
 ---
 
-## 아키텍처
+## 🏛️ 아키텍처 및 디렉토리 구조
 
-### Feature-Sliced 구조
-도메인별로 `api / components / hooks / store / schema / types`를 한 폴더에 모읍니다.
+`features/` 도메인 단위 모듈 분리(Feature-Driven Architecture)를 채택하여 관심사를 명확히 분리하였습니다.
 
 ```
 apps/web/
-├── app/[locale]/                 # App Router (route groups로 인증/대시보드/탐색기 분리)
-│   └── (root)/(dashboard)/workspaces/[workspaceId]/
-│       ├── (explorer)/apis|code  # 좌측 트리 + 상세/코드 패널
-│       ├── settings               # 멤버·권한·API 키
-│       └── mcp                    # MCP 설치·사용법
-├── features/
-│   ├── file-browser/             # 트리, SSE, 이동/생성 훅
-│   ├── mock-api/                 # 스키마 빌더, 생성 다이얼로그, 상세
-│   ├── code-gen/                 # 코드 생성 패널
-│   ├── workspace / workspace-settings / auth / dashboard / mcp-guide / landing
-├── hooks/                        # useWorkspaceBasePath, useMyPermissions ...
-├── lib/                          # axios(인터셉터), queryKeys, localePath ...
-└── messages/                     # ko.json / en.json
+├── app/
+│   └── [locale]/                 # App Router (i18n 로케일 라우트)
+│       ├── (auth)/login|register # 인증 페이지 (Route Group)
+│       ├── (dashboard)/          # 워크스페이스 메인 및 설정
+│       │   ├── [workspaceId]/
+│       │   │   ├── (explorer)/   # 트리 탐색기 + Mock 상세/코드 패널
+│       │   │   ├── settings/     # 워크스페이스 권한/멤버/API 키
+│       │   │   └── mcp/          # MCP 연동 가이드
+│       │   └── workspaces/       # 워크스페이스 선택/생성
+│       └── layout.tsx            # 전역 레이아웃 (Providers)
+├── features/                     # 도메인별 응집 모듈
+│   ├── auth/                     # 로그인, 회원가입, OAuth 콜백
+│   ├── code-gen/                 # 코드 생성 패널, 타겟별 프리뷰
+│   ├── dashboard/                # 요청 로그, 통계 그래프
+│   ├── file-browser/             # react-arborist 트리, 드래그앤드롭, SSE 구독 훅
+│   ├── landing/                  # 서비스 소개 랜딩 페이지
+│   ├── mcp-guide/                # MCP 설치 및 Claude 연동 가이드
+│   ├── mock-api/                 # 스키마 빌더 폼, Mock 상세, 생성 다이얼로그
+│   ├── workspace/                # 워크스페이스 목록, 생성, 참여 모달
+│   └── workspace-settings/       # 멤버 관리, 역할/권한 수정, API 키 관리
+├── hooks/                        # 공통 훅 (useWorkspaceBasePath, useMyPermissions ...)
+├── lib/                          # axios(인터셉터/토큰갱신), queryKeys, localePath ...
+├── messages/                     # 다국어 리소스 (ko.json, en.json)
+└── proxy.ts                      # 서브도메인 라우팅 및 프록시 미들웨어
 ```
-
-### 설계 포인트 (면접 대비 요약)
-- **데이터 계층**: `lib/queryKeys.ts`의 쿼리키 팩토리로 캐시 키를 일원화하고, `QueryProvider`에서 전역 mutation 에러를 토스트로 처리해 무음 실패를 제거.
-- **인증**: `lib/axios.ts`의 인터셉터가 401 시 refresh 토큰으로 재발급하고 대기열(경쟁 상태)을 제어.
-- **상태 분리**: Zustand 스토어는 `useShallow`로 필요한 슬라이스만 구독해 불필요한 리렌더를 차단.
-- **경로 규칙**: `localePath`/`useWorkspaceBasePath`로 로케일 접두사 규칙을 한 곳에서 관리.
 
 ---
 
-## 실행 방법
+## 🎯 주요 설계 포인트
+
+1. **401 토큰 갱신 큐잉 (Token Refresh Queue)** — `axios-auth-refresh` 및 인터셉터를 활용하여 Access Token 만료 시 중복 갱신 요청을 방지하고, 대기 중인 모든 요청을 큐에 적재 후 일괄 재시도합니다.
+2. **동기화 탄력성 (SSE Resiliency)** — 파일 브라우저의 실시간 변경을 감지하고, 네트워크 단절 시 지수 백오프 기반 재연결 및 낙관적 UI 업데이트(Optimistic Update)를 수행합니다.
+3. **타입 안전성 (Type Safety)** — `@workspace/types`를 공유하여 API 스키마, 권한 플래그, Mock 계약의 타입을 프론트엔드 전반에서 컴파일 타임에 검증합니다.
+
+---
+
+## 🚀 실행 방법
 
 ### 요구사항
-- Node.js 20+
-- 실행 중인 백엔드([`apps/api`](../api))
+- Node.js >= 20.0.0
+- 실행 중인 `apps/api` 백엔드 서버
 
 ### 환경 변수 (`apps/web/.env.local`)
-| 변수 | 설명 | 예시 |
-| :--- | :--- | :--- |
-| `NEXT_PUBLIC_BACKEND_URL` | API 서버 주소(axios baseURL) | `http://localhost:4001` |
-| `NEXT_PUBLIC_MOCK_DOMAIN` | Mock API 서빙 도메인 | `localhost:4001` |
+```env
+NEXT_PUBLIC_BACKEND_URL=http://localhost:4001
+NEXT_PUBLIC_APP_DOMAIN=localhost:4000
+```
 
 ### 명령어
 ```bash
-# 모노레포 루트에서
-npm install
+# 개발 서버 실행 (Turbopack, 포트 4000)
+npm run dev -w apps/web
 
-# 개발 서버 (포트 4000, Turbopack)
-npm run dev -w apps/web        # 또는 turbo dev
-
-# 타입체크 / 린트 / 테스트
+# 타입 체크
 npm run typecheck -w apps/web
+
+# 린트 검사
 npm run lint -w apps/web
-npm run test -w apps/web       # Jest + RTL
+
+# 단위/통합 테스트 (Jest + RTL)
+npm run test -w apps/web
 
 # 프로덕션 빌드
 npm run build -w apps/web
+npm run start -w apps/web
 ```
-
-앱은 http://localhost:4000 에서 뜹니다.
-
----
-
-## 테스트
-
-Jest + React Testing Library로 컴포넌트·훅·유틸을 검증합니다. next-intl/shiki 등 ESM 의존은 테스트에서 목킹합니다.
-
-```bash
-npm run test -w apps/web
-npm run test:coverage -w apps/web
-```
-
----
-
-## 공용 패키지
-
-`@workspace/ui`(shadcn 컴포넌트), `@workspace/types`(스키마 도메인 타입), `@workspace/mockgen`(목 데이터 생성), `@workspace/codegen`(클라이언트 코드 생성)을 웹·API·MCP가 공유합니다.
