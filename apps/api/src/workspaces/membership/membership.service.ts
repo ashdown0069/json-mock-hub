@@ -35,34 +35,38 @@ export class MembershipService {
 
   async removeMember(workspaceId: string, userId: string) {
     const wsObjectId = new Types.ObjectId(workspaceId);
+    const userObjectId = new Types.ObjectId(userId);
 
-    const target = await this.membershipModel
-      .findOne({
-        workspace: wsObjectId,
-        user: new Types.ObjectId(userId),
-        isDeleted: null,
-      })
-      .exec();
+    return this.transactionService.withTransaction(async (session) => {
+      // 1. { isDeleted: null } 조건으로 원자적 soft delete 수행
+      //    동시에 중복 추방 요청이 들어와도 단 1개의 요청만 문서를 매칭하여 수정한다.
+      const target = await this.membershipModel
+        .findOneAndUpdate(
+          {
+            workspace: wsObjectId,
+            user: userObjectId,
+            isDeleted: null,
+          },
+          { $set: { isDeleted: new Date() } },
+          { session, new: false },
+        )
+        .exec();
 
-    if (!target) {
-      throw new NotFoundException('Membership not found');
-    }
+      if (!target) {
+        throw new NotFoundException('Membership not found');
+      }
 
-    // owner를 추방하면 WorkspaceOwnerGuard를 통과할 수 있는 사용자가 사라진다.
-    // 복구 엔드포인트도 워크스페이스 삭제도 owner를 요구하므로 데이터가 영구 고립된다.
-    if (target.role === 'owner') {
-      throw new BadRequestException({
-        code: 'workspace.member.cannot_remove_owner',
-        message: '소유자는 추방할 수 없습니다.',
-      });
-    }
+      // owner를 추방하면 WorkspaceOwnerGuard를 통과할 수 있는 사용자가 사라진다.
+      // 복구 엔드포인트도 워크스페이스 삭제도 owner를 요구하므로 데이터가 영구 고립된다.
+      // 트랜잭션 내에서 예외가 발생하므로 위 soft-delete 쓰기는 자동 롤백된다.
+      if (target.role === 'owner') {
+        throw new BadRequestException({
+          code: 'workspace.member.cannot_remove_owner',
+          message: '소유자는 추방할 수 없습니다.',
+        });
+      }
 
-    // soft delete와 멤버 수 감소는 함께 성공하거나 함께 실패해야 한다.
-    // 분리돼 있으면 두 번째 쓰기 실패 시 membersCount가 영구히 어긋난다.
-    await this.transactionService.withTransaction(async (session) => {
-      target.isDeleted = new Date();
-      await target.save({ session });
-
+      // 2. 실제로 멤버가 soft-delete된 경우에만 membersCount를 1 차감한다.
       await this.workspaceModel
         .updateOne(
           { _id: wsObjectId },
@@ -70,8 +74,9 @@ export class MembershipService {
           { session },
         )
         .exec();
-    });
 
-    return target;
+      target.isDeleted = new Date();
+      return target;
+    });
   }
 }
