@@ -434,46 +434,106 @@ export class FilebrowserService {
     workspaceId: string,
   ): Promise<{ isSuccess: boolean; item: FileBrowserItem | undefined }> {
     const wsObjectId = new Types.ObjectId(workspaceId);
-    const item = await this.findOwnedItem(body.itemId, wsObjectId);
-    if (!item) throw new NotFoundException('Item not found');
 
-    // 이름이 바뀌면 아래에서 item.path를 덮어쓰므로 지금 값을 붙잡아 둔다
-    const oldPath = item.path;
+    // 1. 이름 변경이 없는 경우 (대부분의 mock 데이터/스키마/옵션 수정)
+    //    단일 문서에 대해 Atomic $set update를 수행하여 Lost Update(Read-Modify-Save)를 원천 차단한다.
+    if (!body.name) {
+      const update: Record<string, unknown> = {};
+      if (body.schema !== undefined) update.schema = body.schema as any;
+      if (body.json !== undefined) update.json = body.json;
+      if (body.options !== undefined) update.options = body.options as any;
+      if (body.fieldDefs !== undefined) update.fieldDefs = body.fieldDefs;
 
-    if (body.schema !== undefined) item.schema = body.schema as any;
-    if (body.json !== undefined) item.json = body.json;
-    if (body.options !== undefined) item.options = body.options as any;
-    if (body.fieldDefs !== undefined) item.fieldDefs = body.fieldDefs;
+      const item = await this.itemModel
+        .findOneAndUpdate(
+          { _id: body.itemId, workspace: wsObjectId },
+          { $set: update },
+          { new: true },
+        )
+        .exec();
 
-    if (body.name && body.name !== item.name) {
-      await this.assertNameAvailable(
-        wsObjectId,
-        item.parentId,
-        body.name,
-        item.itemType,
-        item._id as Types.ObjectId,
-      );
+      if (!item) throw new NotFoundException('Item not found');
 
-      const parentPath = item.path.substring(0, item.path.lastIndexOf('/'));
-      item.name = body.name;
-      item.path =
-        parentPath === '' ? `/${body.name}` : `${parentPath}/${body.name}`;
+      await this.mockStateService.resetMany(workspaceId, [item.path]);
+      return { isSuccess: true, item };
     }
 
-    await item.save();
+    // 2. 이름 변경이 포함된 경우
+    //    트랜잭션으로 조회, 중복 검사, 경로 계산, 하위 폴더 경로 bulkWrite를 원자적으로 묶는다.
+    const { changedPaths, updatedItem } = await this.txService.withTransaction(
+      async (session) => {
+        const item = await this.findOwnedItem(body.itemId, wsObjectId, session);
+        if (!item) throw new NotFoundException('Item not found');
 
-    // 저장이 확정된 뒤에 오버레이를 버린다. 순서를 뒤집으면 save가 실패했을 때
-    // 문서는 그대로인데 사용자의 mock 편집 상태만 사라진다.
-    //
-    // 옛 경로도 함께 버린다. 남겨 두면 TTL(1시간) 안에 같은 이름을 다시 만든
-    // 항목이 무관한 이전 편집 상태를 물려받는다.
-    //
-    // NOTE: 이 메서드는 폴더 이름이 바뀌어도 하위 항목의 path를 갱신하지 않는다
-    // (renameItem은 bulkWrite로 갱신한다). 그 비대칭은 별개 과제로 남아 있으므로,
-    // 여기서는 이 항목 자신의 경로만 폐기한다.
-    await this.mockStateService.resetMany(workspaceId, [oldPath, item.path]);
+        const oldPath = item.path;
+        const paths: string[] = [oldPath];
 
-    return { isSuccess: true, item };
+        const update: Record<string, unknown> = {};
+        if (body.schema !== undefined) update.schema = body.schema as any;
+        if (body.json !== undefined) update.json = body.json;
+        if (body.options !== undefined) update.options = body.options as any;
+        if (body.fieldDefs !== undefined) update.fieldDefs = body.fieldDefs;
+
+        if (body.name !== item.name) {
+          await this.assertNameAvailable(
+            wsObjectId,
+            item.parentId,
+            body.name,
+            item.itemType,
+            item._id as Types.ObjectId,
+            session,
+          );
+
+          const parentPath = item.path.substring(0, item.path.lastIndexOf('/'));
+          const newPath =
+            parentPath === '' ? `/${body.name}` : `${parentPath}/${body.name}`;
+
+          update.name = body.name;
+          update.path = newPath;
+          paths.push(newPath);
+
+          if (item.itemType === 'Folder') {
+            const descendants = await this.itemModel.find(
+              { workspace: wsObjectId, path: { $regex: `^${oldPath}/` } },
+              null,
+              { session },
+            );
+
+            const bulkOps = [];
+            for (const desc of descendants) {
+              const replacedPath = desc.path.replace(
+                new RegExp(`^${oldPath}`),
+                newPath,
+              );
+              paths.push(desc.path, replacedPath);
+              bulkOps.push({
+                updateOne: {
+                  filter: { _id: desc._id },
+                  update: { $set: { path: replacedPath } },
+                },
+              });
+            }
+
+            if (bulkOps.length > 0) {
+              await this.itemModel.bulkWrite(bulkOps, { session });
+            }
+          }
+        }
+
+        const resultItem = await this.itemModel
+          .findOneAndUpdate(
+            { _id: item._id, workspace: wsObjectId },
+            { $set: update },
+            { session, new: true },
+          )
+          .exec();
+
+        return { changedPaths: paths, updatedItem: resultItem ?? undefined };
+      },
+    );
+
+    await this.mockStateService.resetMany(workspaceId, changedPaths);
+    return { isSuccess: true, item: updatedItem };
   }
 
   async resetMockState(

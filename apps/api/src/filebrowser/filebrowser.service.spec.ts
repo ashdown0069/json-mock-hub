@@ -29,6 +29,7 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     findById: jest.fn(),
+    findOneAndUpdate: jest.fn(),
     exists: jest.fn(),
     create: jest.fn(),
     deleteOne: jest.fn(),
@@ -41,6 +42,12 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
     // getItems의 find().lean().exec() 체이닝 목
     leanMock.mockReturnValue({ exec: execMock });
     mockItemModel.find.mockReturnValue({ lean: leanMock });
+    // exists의 session() 체이닝 및 thenable 목
+    mockItemModel.exists.mockImplementation(() => {
+      const p = Promise.resolve(null) as any;
+      p.session = jest.fn().mockResolvedValue(null);
+      return p;
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -136,14 +143,19 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
         json: null,
         options: null,
         fieldDefs: null,
-        save: jest.fn().mockResolvedValue(true),
       };
-      // updateItem은 이제 findOwnedItem(findOne)으로 workspace 스코프 조회한다
       mockItemModel.findOne.mockResolvedValue(mockItemInstance);
+      mockItemModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockItemInstance),
+      });
     });
 
     it('이름이 바뀔 때 중복 검사를 수행하며, 중복이 있을 경우 BadRequestException을 던지고 저장하지 않는다', async () => {
-      mockItemModel.exists.mockResolvedValue({ _id: new Types.ObjectId() });
+      mockItemModel.exists.mockImplementation(() => {
+        const p = Promise.resolve({ _id: new Types.ObjectId() }) as any;
+        p.session = jest.fn().mockResolvedValue({ _id: new Types.ObjectId() });
+        return p;
+      });
 
       await expect(
         service.updateItem(
@@ -156,11 +168,17 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
       ).rejects.toThrow(BadRequestException);
 
       expect(mockItemModel.exists).toHaveBeenCalled();
-      expect(mockItemInstance.save).not.toHaveBeenCalled();
     });
 
-    it('이름이 바뀔 때 중복이 없을 경우 path를 새로 계산하여 업데이트하고 저장한다', async () => {
-      mockItemModel.exists.mockResolvedValue(null);
+    it('이름이 바뀔 때 중복이 없을 경우 path를 새로 계산하여 원자적으로 업데이트한다', async () => {
+      const updatedMock = {
+        ...mockItemInstance,
+        name: 'new-name.json',
+        path: '/new-name.json',
+      };
+      mockItemModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(updatedMock),
+      });
 
       const result = await service.updateItem(
         {
@@ -171,9 +189,19 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
       );
 
       expect(result.isSuccess).toBe(true);
-      expect(mockItemInstance.name).toBe('new-name.json');
-      expect(mockItemInstance.path).toBe('/new-name.json');
-      expect(mockItemInstance.save).toHaveBeenCalled();
+      expect(mockItemModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          _id: mockItemInstance._id,
+          workspace: new Types.ObjectId(MOCK_WORKSPACE_ID),
+        },
+        expect.objectContaining({
+          $set: expect.objectContaining({
+            name: 'new-name.json',
+            path: '/new-name.json',
+          }),
+        }),
+        expect.objectContaining({ session: FAKE_SESSION, new: true }),
+      );
     });
 
     it('이름이 변경되지 않았을 경우 중복 검사를 수행하지 않고 필드들만 업데이트하여 저장한다', async () => {
@@ -182,20 +210,27 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
       const result = await service.updateItem(
         {
           itemId: mockItemInstance._id.toString(),
-          name: 'old-name.json', // 변경 없음
           fieldDefs: [{ id: 'f1', name: 'title', type: 'string' }],
           json: { updated: true },
         } as any,
         MOCK_WORKSPACE_ID,
       );
 
-      expect(result.isSuccess).toBe(true);
       expect(mockItemModel.exists).not.toHaveBeenCalled();
-      expect(mockItemInstance.fieldDefs).toEqual([
-        { id: 'f1', name: 'title', type: 'string' },
-      ]);
-      expect(mockItemInstance.json).toEqual({ updated: true });
-      expect(mockItemInstance.save).toHaveBeenCalled();
+      expect(result.isSuccess).toBe(true);
+      expect(mockItemModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          _id: mockItemInstance._id.toString(),
+          workspace: new Types.ObjectId(MOCK_WORKSPACE_ID),
+        },
+        {
+          $set: {
+            fieldDefs: [{ id: 'f1', name: 'title', type: 'string' }],
+            json: { updated: true },
+          },
+        },
+        { new: true },
+      );
     });
   });
 
@@ -568,58 +603,74 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
     });
   });
 
-  describe('updateItem (부수효과 순서)', () => {
-    it('저장이 끝난 뒤에 mock 오버레이를 초기화한다', async () => {
-      const order: string[] = [];
-      const item = {
+  describe('updateItem (원자적 업데이트 및 부수효과 순서)', () => {
+    it('이름 변경이 없을 때 findOneAndUpdate로 필요한 필드만 원자적으로 $set 업데이트한다', async () => {
+      const updatedItem = {
         _id: new Types.ObjectId(),
         name: 'a.json',
-        itemType: 'File',
         path: '/a.json',
-        parentId: null,
-        save: jest.fn(async () => {
-          order.push('save');
-          return true;
-        }),
+        json: { count: 2 },
       };
-      const itemModel = { findOne: jest.fn().mockResolvedValue(item) } as any;
-      const mockState = {
-        resetMany: jest.fn(async () => {
-          order.push('reset');
+      const itemModel = {
+        findOneAndUpdate: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(updatedItem),
         }),
       } as any;
+      const mockState = { resetMany: jest.fn().mockResolvedValue(undefined) } as any;
 
       const svc = new FilebrowserService(itemModel, {} as any, mockState);
-      await svc.updateItem(
-        { itemId: item._id.toString(), json: { a: 1 } } as any,
+      const res = await svc.updateItem(
+        { itemId: updatedItem._id.toString(), json: { count: 2 } } as any,
         MOCK_WORKSPACE_ID,
       );
 
-      expect(order).toEqual(['save', 'reset']);
+      expect(itemModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          _id: updatedItem._id.toString(),
+          workspace: new Types.ObjectId(MOCK_WORKSPACE_ID),
+        },
+        { $set: { json: { count: 2 } } },
+        { new: true },
+      );
+      expect(res).toEqual({ isSuccess: true, item: updatedItem });
+      expect(mockState.resetMany).toHaveBeenCalledWith(MOCK_WORKSPACE_ID, ['/a.json']);
     });
 
     it('저장이 실패하면 mock 오버레이를 건드리지 않는다', async () => {
-      const item = {
-        _id: new Types.ObjectId(),
-        name: 'a.json',
-        itemType: 'File',
-        path: '/a.json',
-        parentId: null,
-        save: jest.fn(async () => {
-          throw new Error('저장 실패');
+      const itemModel = {
+        findOneAndUpdate: jest.fn().mockReturnValue({
+          exec: jest.fn().mockRejectedValue(new Error('DB 저장 실패')),
         }),
-      };
-      const itemModel = { findOne: jest.fn().mockResolvedValue(item) } as any;
+      } as any;
       const mockState = { resetMany: jest.fn() } as any;
 
       const svc = new FilebrowserService(itemModel, {} as any, mockState);
 
       await expect(
         svc.updateItem(
-          { itemId: item._id.toString(), json: { a: 1 } } as any,
+          { itemId: new Types.ObjectId().toString(), json: { a: 1 } } as any,
           MOCK_WORKSPACE_ID,
         ),
-      ).rejects.toThrow('저장 실패');
+      ).rejects.toThrow('DB 저장 실패');
+      expect(mockState.resetMany).not.toHaveBeenCalled();
+    });
+
+    it('대상 아이템이 없으면 NotFoundException을 던진다', async () => {
+      const itemModel = {
+        findOneAndUpdate: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(null),
+        }),
+      } as any;
+      const mockState = { resetMany: jest.fn() } as any;
+
+      const svc = new FilebrowserService(itemModel, {} as any, mockState);
+
+      await expect(
+        svc.updateItem(
+          { itemId: new Types.ObjectId().toString(), json: { a: 1 } } as any,
+          MOCK_WORKSPACE_ID,
+        ),
+      ).rejects.toThrow('Item not found');
       expect(mockState.resetMany).not.toHaveBeenCalled();
     });
   });
@@ -921,10 +972,11 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
         path: '/users',
         itemType: 'File',
         parentId: null,
-        save: jest.fn().mockResolvedValue(undefined),
       };
       mockItemModel.findOne.mockResolvedValueOnce(item);
-      mockItemModel.exists.mockResolvedValue(null);
+      mockItemModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ ...item, name: 'people', path: '/people' }),
+      });
 
       await service.updateItem(
         { itemId: item._id.toString(), name: 'people' } as never,
@@ -944,19 +996,20 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
         path: '/users',
         itemType: 'File',
         parentId: null,
-        save: jest.fn().mockResolvedValue(undefined),
       };
-      mockItemModel.findOne.mockResolvedValueOnce(item);
+      mockItemModel.findOneAndUpdate.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(item),
+      });
 
       await service.updateItem(
         { itemId: item._id.toString(), json: [{ id: 1 }] } as never,
         MOCK_WORKSPACE_ID,
       );
 
-      // 스키마·데이터가 바뀌었으므로 편집 상태는 무효다. 중복은 resetMany가 걸러낸다.
+      // 스키마·데이터가 바뀌었으므로 편집 상태는 무효다.
       expect(mockStateService.resetMany).toHaveBeenCalledWith(
         MOCK_WORKSPACE_ID,
-        ['/users', '/users'],
+        ['/users'],
       );
     });
   });
