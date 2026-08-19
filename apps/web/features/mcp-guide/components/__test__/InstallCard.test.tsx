@@ -30,7 +30,8 @@ jest.mock("next-intl", () => {
 // CodeBlock이 내부적으로 사용하는 Shiki(ESM 전용 패키지)는 Jest 변환 대상이 아니므로 모킹한다.
 jest.mock("../../../mock-api/lib/shiki", () => ({
   getHighlighter: jest.fn().mockResolvedValue({
-    codeToHtml: (code: string) => `<pre class="shiki"><code>${code}</code></pre>`,
+    codeToHtml: (code: string) =>
+      `<pre class="shiki"><code>${code}</code></pre>`,
   }),
 }))
 
@@ -52,7 +53,10 @@ function renderWithKey() {
     data: { apiKey: "mock_test_key", issuedAt: "2026-07-28T00:00:00Z" },
     isLoading: false,
   })
-  mockedUseReissueApiKey.mockReturnValue({ mutate: mockMutate, isPending: false })
+  mockedUseReissueApiKey.mockReturnValue({
+    mutate: mockMutate,
+    isPending: false,
+  })
   render(<InstallCard workspaceId="ws-xyz" />)
 }
 
@@ -82,8 +86,12 @@ describe("InstallCard", () => {
   it("붙여넣기용 JSON에 mcpServers 블록과 워크스페이스 값을 채운다", () => {
     renderWithKey()
     expect(screen.getByText(/"mcpServers"/)).toBeInTheDocument()
-    expect(screen.getByText(/"MOCK_HUB_API_KEY": "mock_test_key"/)).toBeInTheDocument()
-    expect(screen.getByText(/"MOCK_HUB_WORKSPACE_ID": "ws-xyz"/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/"MOCK_HUB_API_KEY": "mock_test_key"/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/"MOCK_HUB_WORKSPACE_ID": "ws-xyz"/)
+    ).toBeInTheDocument()
   })
 
   it("JSON 문법이 깨지지 않도록 Windows 경로 표기법을 안내한다", () => {
@@ -100,14 +108,11 @@ describe("InstallCard", () => {
 
   it("CLI 명령에 워크스페이스 ID와 API 키를 채워 넣는다", () => {
     renderWithKey()
-    expect(screen.getByText(/--env MOCK_HUB_API_KEY=mock_test_key/)).toBeInTheDocument()
-    expect(screen.getByText(/--env MOCK_HUB_WORKSPACE_ID=ws-xyz/)).toBeInTheDocument()
-  })
-
-  it("API 키 취급 주의 문구를 보여준다", () => {
-    renderWithKey()
     expect(
-      screen.getByText(messages.WorkspaceMcp.install.securityNote)
+      screen.getByText(/--env MOCK_HUB_API_KEY=mock_test_key/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/--env MOCK_HUB_WORKSPACE_ID=ws-xyz/)
     ).toBeInTheDocument()
   })
 
@@ -134,8 +139,14 @@ describe("InstallCard", () => {
   })
 
   it("키를 불러오는 동안에는 두 설치 방법을 모두 렌더하지 않는다", () => {
-    mockedUseWorkspaceApiKey.mockReturnValue({ data: undefined, isLoading: true })
-    mockedUseReissueApiKey.mockReturnValue({ mutate: mockMutate, isPending: false })
+    mockedUseWorkspaceApiKey.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    })
+    mockedUseReissueApiKey.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    })
     render(<InstallCard workspaceId="ws-xyz" />)
 
     expect(screen.queryByText(/claude mcp add/)).not.toBeInTheDocument()
@@ -143,8 +154,14 @@ describe("InstallCard", () => {
   })
 
   it("키 조회에 실패하면 설치 안내 대신 비멤버 안내로 대체한다", () => {
-    mockedUseWorkspaceApiKey.mockReturnValue({ data: undefined, isLoading: false })
-    mockedUseReissueApiKey.mockReturnValue({ mutate: mockMutate, isPending: false })
+    mockedUseWorkspaceApiKey.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    })
+    mockedUseReissueApiKey.mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    })
     render(<InstallCard workspaceId="ws-xyz" />)
 
     expect(
@@ -154,7 +171,9 @@ describe("InstallCard", () => {
     expect(screen.queryByText(/"mcpServers"/)).not.toBeInTheDocument()
     // 키가 없으면 재발급 대상도 없다
     expect(
-      screen.queryByRole("button", { name: messages.WorkspaceMcp.apiKey.reissue })
+      screen.queryByRole("button", {
+        name: messages.WorkspaceMcp.apiKey.reissue,
+      })
     ).not.toBeInTheDocument()
   })
 })

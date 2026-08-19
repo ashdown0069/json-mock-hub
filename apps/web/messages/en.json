@@ -218,7 +218,6 @@
         "title": "Method 2. Claude Code CLI",
         "description": "Run the command below in your terminal. The config is stored only in your personal file (~/.claude.json), so the API key never lands in the repository."
       },
-      "securityNote": "The API key acts with exactly the permissions you have in this workspace. Never commit it. If it leaks, press the reissue button below — the previous key is revoked immediately.",
       "note": "The config is filled with the API address of the environment you are currently connected to."
     },
     "apiKey": {
@@ -247,16 +246,46 @@
       "validation": "Validation: zod / yup / joi / none"
     },
     "tools": {
-      "create_mock_api": { "desc": "Generate mock data from a schema, create a mock API, and return the URL", "example": "Create a products mock API with id, name, price fields, 10 items." },
-      "create_folder": { "desc": "Create a folder for mock APIs (intermediate folders included)", "example": "Create the shop/v1 folder." },
-      "list_mock_apis": { "desc": "List folders and mock APIs by path", "example": "What's in this workspace right now?" },
-      "describe_mock_api": { "desc": "Inspect the stored schema, enabled options, faker settings, and current data", "example": "What does the products schema look like now?" },
-      "update_mock_api": { "desc": "Regenerate a mock API's schema and data by path (name/location kept)", "example": "Add an email field to the products schema and update it." },
-      "rename_mock_api": { "desc": "Rename an item by path (URL path is recomputed)", "example": "Rename products to items." },
-      "move_mock_api": { "desc": "Move an item to another folder by path", "example": "Move users into the shop folder." },
-      "delete_mock_api": { "desc": "Delete an item by path (folders include children)", "example": "Delete shop/users." },
-      "reset_mock_state": { "desc": "Discard runtime edits made through the mock server and restore the original data", "example": "Reset the products state." },
-      "get_api_code": { "desc": "Reference code (types, client, react-query, validation)", "example": "Give me products integration code in ts, fetch+query, zod." }
+      "create_mock_api": {
+        "desc": "Generate mock data from a schema, create a mock API, and return the URL",
+        "example": "Create a products mock API with id, name, price fields, 10 items."
+      },
+      "create_folder": {
+        "desc": "Create a folder for mock APIs (intermediate folders included)",
+        "example": "Create the shop/v1 folder."
+      },
+      "list_mock_apis": {
+        "desc": "List folders and mock APIs by path",
+        "example": "What's in this workspace right now?"
+      },
+      "describe_mock_api": {
+        "desc": "Inspect the stored schema, enabled options, faker settings, and current data",
+        "example": "What does the products schema look like now?"
+      },
+      "update_mock_api": {
+        "desc": "Regenerate a mock API's schema and data by path (name/location kept)",
+        "example": "Add an email field to the products schema and update it."
+      },
+      "rename_mock_api": {
+        "desc": "Rename an item by path (URL path is recomputed)",
+        "example": "Rename products to items."
+      },
+      "move_mock_api": {
+        "desc": "Move an item to another folder by path",
+        "example": "Move users into the shop folder."
+      },
+      "delete_mock_api": {
+        "desc": "Delete an item by path (folders include children)",
+        "example": "Delete shop/users."
+      },
+      "reset_mock_state": {
+        "desc": "Discard runtime edits made through the mock server and restore the original data",
+        "example": "Reset the products state."
+      },
+      "get_api_code": {
+        "desc": "Reference code (types, client, react-query, validation)",
+        "example": "Give me products integration code in ts, fetch+query, zod."
+      }
     }
   },
   "JoinWorkspace": {

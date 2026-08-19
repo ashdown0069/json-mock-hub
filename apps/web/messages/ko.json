@@ -218,7 +218,6 @@
         "title": "방법 2. Claude Code CLI",
         "description": "터미널에서 아래 명령을 실행합니다. 설정이 개인 파일(~/.claude.json)에만 저장되어 저장소에 API 키가 남지 않습니다."
       },
-      "securityNote": "API 키는 이 워크스페이스에서 내가 가진 권한과 동일한 범위로 동작합니다. 저장소에 커밋하지 마세요. 유출된 경우 아래 재발급 버튼을 누르면 기존 키는 즉시 무효화됩니다.",
       "note": "설정에는 현재 접속 중인 환경의 API 주소가 채워집니다."
     },
     "apiKey": {
@@ -247,16 +246,46 @@
       "validation": "검증: zod / yup / joi / none"
     },
     "tools": {
-      "create_mock_api": { "desc": "스키마로 mock 데이터를 만들어 mock API 생성 + 호출 URL 반환", "example": "products mock API 만들어줘. id·이름·가격 필드로 10개." },
-      "create_folder": { "desc": "mock API를 담을 폴더 생성 (중간 폴더도 함께)", "example": "shop/v1 폴더 만들어줘." },
-      "list_mock_apis": { "desc": "폴더·mock API 목록을 경로로 조회", "example": "지금 워크스페이스에 뭐 있어?" },
-      "describe_mock_api": { "desc": "저장된 스키마·활성 옵션·faker 설정·현재 데이터 조회", "example": "products 스키마가 지금 어떻게 돼 있어?" },
-      "update_mock_api": { "desc": "경로의 mock API 스키마·데이터를 새로 생성해 갱신(이름·위치 유지)", "example": "products 스키마에 email 필드 추가해서 갱신해줘." },
-      "rename_mock_api": { "desc": "경로로 항목 이름 변경 (URL 경로도 갱신)", "example": "products를 items로 바꿔줘." },
-      "move_mock_api": { "desc": "경로로 항목을 다른 폴더로 이동", "example": "users를 shop 폴더로 옮겨줘." },
-      "delete_mock_api": { "desc": "경로로 항목 삭제 (폴더는 하위 포함)", "example": "shop/users 지워줘." },
-      "reset_mock_state": { "desc": "mock 서버로 편집한 런타임 상태를 원본으로 되돌림", "example": "products 상태 초기화해줘." },
-      "get_api_code": { "desc": "연동 코드(타입·클라이언트·react-query·검증) 참고 생성", "example": "products 연동 코드 줘. ts, fetch+query, zod로." }
+      "create_mock_api": {
+        "desc": "스키마로 mock 데이터를 만들어 mock API 생성 + 호출 URL 반환",
+        "example": "products mock API 만들어줘. id·이름·가격 필드로 10개."
+      },
+      "create_folder": {
+        "desc": "mock API를 담을 폴더 생성 (중간 폴더도 함께)",
+        "example": "shop/v1 폴더 만들어줘."
+      },
+      "list_mock_apis": {
+        "desc": "폴더·mock API 목록을 경로로 조회",
+        "example": "지금 워크스페이스에 뭐 있어?"
+      },
+      "describe_mock_api": {
+        "desc": "저장된 스키마·활성 옵션·faker 설정·현재 데이터 조회",
+        "example": "products 스키마가 지금 어떻게 돼 있어?"
+      },
+      "update_mock_api": {
+        "desc": "경로의 mock API 스키마·데이터를 새로 생성해 갱신(이름·위치 유지)",
+        "example": "products 스키마에 email 필드 추가해서 갱신해줘."
+      },
+      "rename_mock_api": {
+        "desc": "경로로 항목 이름 변경 (URL 경로도 갱신)",
+        "example": "products를 items로 바꿔줘."
+      },
+      "move_mock_api": {
+        "desc": "경로로 항목을 다른 폴더로 이동",
+        "example": "users를 shop 폴더로 옮겨줘."
+      },
+      "delete_mock_api": {
+        "desc": "경로로 항목 삭제 (폴더는 하위 포함)",
+        "example": "shop/users 지워줘."
+      },
+      "reset_mock_state": {
+        "desc": "mock 서버로 편집한 런타임 상태를 원본으로 되돌림",
+        "example": "products 상태 초기화해줘."
+      },
+      "get_api_code": {
+        "desc": "연동 코드(타입·클라이언트·react-query·검증) 참고 생성",
+        "example": "products 연동 코드 줘. ts, fetch+query, zod로."
+      }
     }
   },
   "JoinWorkspace": {

@@ -94,7 +94,9 @@ export function InstallCard({ workspaceId }: InstallCardProps) {
             <Separator />
 
             <section className="space-y-2">
-              <h3 className="text-sm font-semibold">{t("install.cli.title")}</h3>
+              <h3 className="text-sm font-semibold">
+                {t("install.cli.title")}
+              </h3>
               <p className="text-sm text-muted-foreground">
                 {t("install.cli.description")}
               </p>
@@ -109,10 +111,6 @@ export function InstallCard({ workspaceId }: InstallCardProps) {
             {t("apiKeyUnavailable")}
           </p>
         )}
-
-        <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-          {t("install.securityNote")}
-        </p>
         <p className="text-xs text-muted-foreground">{t("install.note")}</p>
 
         {/* 재발급하면 위 두 안내의 키가 동시에 바뀌므로 같은 카드에 둔다 */}
