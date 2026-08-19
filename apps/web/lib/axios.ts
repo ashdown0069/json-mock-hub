@@ -62,7 +62,6 @@ export const refreshAccessToken = async (): Promise<boolean> => {
   }
 }
 
-
 export type customAxiosError = AxiosError<{ code?: string }>
 
 export const customAxiosError = (error: unknown): error is customAxiosError => {

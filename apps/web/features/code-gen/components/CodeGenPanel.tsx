@@ -53,8 +53,10 @@ export function CodeGenPanel() {
   // Rules of Hooks: item이 없어도 훅 호출 순서를 지키기 위해 ctx를 null로 폴백한다.
   const ctx = useMemo<CodeGenContext | null>(
     () =>
-      item ? buildCodeGenContext(item, { baseUrl: getMockApiBaseUrl(workspaceId) }) : null,
-    [item, workspaceId],
+      item
+        ? buildCodeGenContext(item, { baseUrl: getMockApiBaseUrl(workspaceId) })
+        : null,
+    [item, workspaceId]
   )
 
   const shikiLang = lang === "ts" ? "typescript" : "javascript"
@@ -67,7 +69,10 @@ export function CodeGenPanel() {
     () => (ctx ? buildClientSnippet(ctx, clientLib, lang) : ""),
     [ctx, clientLib, lang]
   )
-  const queryCode = useMemo(() => (ctx ? buildQuerySnippet(ctx, lang) : ""), [ctx, lang])
+  const queryCode = useMemo(
+    () => (ctx ? buildQuerySnippet(ctx, lang) : ""),
+    [ctx, lang]
+  )
 
   if (!item || !ctx) return null
 
@@ -109,18 +114,10 @@ export function CodeGenPanel() {
           />
         </TabsContent>
         <TabsContent value="client">
-          <CodeBlock
-            code={clientCode}
-            lang={shikiLang}
-            className="max-h-140"
-          />
+          <CodeBlock code={clientCode} lang={shikiLang} className="max-h-140" />
         </TabsContent>
         <TabsContent value="query">
-          <CodeBlock
-            code={queryCode}
-            lang={shikiLang}
-            className="max-h-140"
-          />
+          <CodeBlock code={queryCode} lang={shikiLang} className="max-h-140" />
         </TabsContent>
       </Tabs>
     </div>

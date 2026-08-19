@@ -11,7 +11,7 @@ import {
 import { NodeRendererProps } from "react-arborist"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
-import { FileItem, FileTree } from "../types"
+import { FileTree } from "../types"
 import { useFileBrowser } from "../store/useFileBrowser"
 import { TreeActionButtons } from "./TreeActionButtons"
 import { Input } from "@workspace/ui/components/input"
