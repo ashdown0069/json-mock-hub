@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { MatchesProperty } from '../../../common/validators/matches-property.validator';
+import { MatchesProperty } from '../../validators/matches-property.validator';
 
 export class CreateWorkspaceDto {
   @IsString()

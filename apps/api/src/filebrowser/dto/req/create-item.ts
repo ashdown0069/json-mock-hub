@@ -12,7 +12,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { IsUniqueFieldNames } from '../../../common/validators/unique-field-names.validator';
+import { IsUniqueFieldNames } from '../../validators/unique-field-names.validator';
 
 // 프론트(apps/web/lib/validateItemName.ts)와 동일 규칙: 한글/영문/숫자/하이픈/언더바
 export const ITEM_NAME_REGEX = /^[a-zA-Z0-9가-힣_-]+$/;
