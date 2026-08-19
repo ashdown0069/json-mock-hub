@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { axiosInstance, type customAxiosError } from "@/lib/axios"
 import { workspaceKeys } from "@/lib/queryKeys"
+import { mapWorkspace } from "./getWorkspaceList"
 import type { Workspace } from "../types"
 
 export async function getWorkspace(workspaceId: string): Promise<Workspace> {
   const { data } = await axiosInstance.get<Workspace>(`/workspaces/${workspaceId}`)
-  return data
+  return mapWorkspace(data)
 }
 
 export function useGetWorkspace(workspaceId: string) {

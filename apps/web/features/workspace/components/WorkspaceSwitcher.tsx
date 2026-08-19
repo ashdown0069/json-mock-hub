@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Link } from "@/i18n/routing"
-import { useParams } from "next/navigation"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +15,7 @@ import { useGetWorkspaceList } from "../api/getWorkspaceList"
 import { useWorkspaceBasePath } from "@/hooks/useWorkspaceBasePath"
 
 export function WorkspaceSwitcher() {
-  const params = useParams()
-  const workspaceId = (params.workspaceId as string) || ""
-  const { lobbyPath } = useWorkspaceBasePath()
+  const { workspaceId, lobbyPath } = useWorkspaceBasePath()
   const { data: workspaces, isLoading } = useGetWorkspaceList()
 
   // 로케일 접두사가 없는 논리 경로. 접두사는 @/i18n/routing의 Link가 붙인다.
