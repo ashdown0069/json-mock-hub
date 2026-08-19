@@ -3,7 +3,7 @@ import { MessageEvent } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import { getModelToken } from '@nestjs/mongoose';
 import { MockStateController } from './mock-state.controller';
-import { MockserverService } from './mockserver.service';
+import { MockStateService } from './mock-state.service';
 import { MockStateEvent, MockStateEventService } from './mock-state-event.service';
 import { Workspace } from '../database/schema/workspace.schema';
 import { WorkspaceMembership } from '../database/schema/workspace-membership.schema';
@@ -12,7 +12,7 @@ import { WorkspaceRole } from '../database/schema/workspace-role.schema';
 describe('MockStateController', () => {
   let controller: MockStateController;
 
-  const mockMockserverService = {
+  const mockMockStateService = {
     getEffectiveJson: jest.fn().mockResolvedValue([{ id: 1 }]),
   };
 
@@ -22,13 +22,13 @@ describe('MockStateController', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockMockserverService.getEffectiveJson.mockResolvedValue([{ id: 1 }]);
+    mockMockStateService.getEffectiveJson.mockResolvedValue([{ id: 1 }]);
     mockMockStateEvent.subscribe.mockReturnValue(new Subject<MockStateEvent>());
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MockStateController],
       providers: [
-        { provide: MockserverService, useValue: mockMockserverService },
+        { provide: MockStateService, useValue: mockMockStateService },
         { provide: MockStateEventService, useValue: mockMockStateEvent },
         { provide: getModelToken(Workspace.name), useValue: {} },
         { provide: getModelToken(WorkspaceMembership.name), useValue: {} },
@@ -83,7 +83,7 @@ describe('MockStateController', () => {
     it('workspaceId와 path를 그대로 서비스에 위임한다', async () => {
       const result = await controller.getEffective('ws-1', '/users');
 
-      expect(mockMockserverService.getEffectiveJson).toHaveBeenCalledWith(
+      expect(mockMockStateService.getEffectiveJson).toHaveBeenCalledWith(
         'ws-1',
         '/users',
       );

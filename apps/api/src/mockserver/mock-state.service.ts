@@ -2,17 +2,26 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import type { Redis } from 'ioredis';
 import { REDIS_CLIENT } from '../constant/tokens';
 import { DistributedLockService } from '../redis/distributed-lock.service';
 import { MockStateEventService } from './mock-state-event.service';
 import {
+  FileBrowserItem,
+  FileBrowserItemDocument,
+} from '../database/schema/file-browser-item.schema';
+import {
   CollectionOverlay,
+  applyOverlay,
   createEmptyOverlay,
   normalizeOverlay,
 } from './mock-state.util';
+import { normalizeMockPath } from './mockserver.util';
 
 const OVERLAY_TTL_SECONDS = 3600; // 1시간 후 샌드박스 자동 초기화
 
@@ -49,9 +58,41 @@ export class MockStateService {
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @InjectModel(FileBrowserItem.name)
+    private readonly itemModel: Model<FileBrowserItemDocument>,
     private readonly lockService: DistributedLockService,
     private readonly stateEvent: MockStateEventService,
   ) {}
+
+  /**
+   * 대시보드 미리보기 및 MockStateController용 실효 컬렉션 조회
+   */
+  async getEffectiveJson(
+    workspaceId: string,
+    path: string,
+  ): Promise<unknown[]> {
+    const wsObjectId = new Types.ObjectId(workspaceId);
+    const normalizedPath = normalizeMockPath(path);
+
+    const item = await this.itemModel
+      .findOne({
+        workspace: wsObjectId,
+        path: normalizedPath,
+        itemType: 'File',
+      })
+      .lean()
+      .exec();
+
+    if (!item) {
+      throw new NotFoundException({
+        message: `경로 "${normalizedPath}"에 해당하는 Mock API 파일을 찾을 수 없습니다.`,
+      });
+    }
+
+    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
+    const overlay = await this.getOverlay(workspaceId, normalizedPath);
+    return applyOverlay(baseJson, overlay);
+  }
 
   private key(workspaceId: string, path: string): string {
     return `mock:state:${workspaceId}:${path}`;

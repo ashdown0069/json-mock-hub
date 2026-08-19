@@ -1,16 +1,19 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { getModelToken } from '@nestjs/mongoose';
 import { MockStateService } from './mock-state.service';
 import { REDIS_CLIENT } from '../constant/tokens';
 import { createEmptyOverlay } from './mock-state.util';
 import { DistributedLockService } from '../redis/distributed-lock.service';
 import { MockStateEventService } from './mock-state-event.service';
+import { FileBrowserItem } from '../database/schema/file-browser-item.schema';
 
 describe('MockStateService', () => {
   let service: MockStateService;
   let redis: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
   let lockService: { tryAcquire: jest.Mock; release: jest.Mock };
   let stateEvent: { publish: jest.Mock; publishMany: jest.Mock };
+  let mockItemModel: { findOne: jest.Mock };
 
   beforeEach(async () => {
     redis = { get: jest.fn(), set: jest.fn(), del: jest.fn() };
@@ -22,10 +25,18 @@ describe('MockStateService', () => {
       publish: jest.fn().mockResolvedValue(undefined),
       publishMany: jest.fn().mockResolvedValue(undefined),
     };
+    mockItemModel = {
+      findOne: jest.fn().mockReturnValue({
+        lean: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(null),
+        }),
+      }),
+    };
     const module = await Test.createTestingModule({
       providers: [
         MockStateService,
         { provide: REDIS_CLIENT, useValue: redis },
+        { provide: getModelToken(FileBrowserItem.name), useValue: mockItemModel },
         { provide: DistributedLockService, useValue: lockService },
         { provide: MockStateEventService, useValue: stateEvent },
       ],
@@ -234,6 +245,48 @@ describe('MockStateService', () => {
       }));
 
       expect(stateEvent.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getEffectiveJson', () => {
+    it('파일이 존재하지 않으면 NotFoundException을 던진다', async () => {
+      mockItemModel.findOne.mockReturnValue({
+        lean: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue(null),
+        }),
+      });
+
+      await expect(
+        service.getEffectiveJson('64b8f0f0f0f0f0f0f0f0f0f0', '/users'),
+      ).rejects.toThrow();
+    });
+
+    it('base JSON과 Redis 오버레이를 병합하여 반환한다', async () => {
+      mockItemModel.findOne.mockReturnValue({
+        lean: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            json: [{ id: 1, name: 'Alice' }],
+          }),
+        }),
+      });
+
+      redis.get.mockResolvedValue(
+        JSON.stringify({
+          created: [{ id: 2, name: 'Bob' }],
+          updated: {},
+          deleted: [],
+        }),
+      );
+
+      const result = await service.getEffectiveJson(
+        '64b8f0f0f0f0f0f0f0f0f0f0',
+        '/users',
+      );
+
+      expect(result).toEqual([
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+      ]);
     });
   });
 });

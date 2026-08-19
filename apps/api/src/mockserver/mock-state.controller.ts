@@ -12,7 +12,7 @@ import { interval, merge, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { JwtOrApiKeyGuard } from '../auth/guards/jwt-or-api-key.guard';
 import { WorkspacePermissionGuard } from '../workspaces/guards/workspace-permission.guard';
-import { MockserverService } from './mockserver.service';
+import { MockStateService } from './mock-state.service';
 import { MockStateEventService } from './mock-state-event.service';
 
 // 프록시/LB 유휴 타임아웃(보통 60초)보다 짧게 유지 (filebrowser SSE와 동일 값)
@@ -23,7 +23,7 @@ const HEARTBEAT_INTERVAL_MS = 25_000;
 @Controller(':workspaceId/mockstate')
 export class MockStateController {
   constructor(
-    private readonly mockserverService: MockserverService,
+    private readonly mockStateService: MockStateService,
     private readonly mockStateEvent: MockStateEventService,
   ) {}
 
@@ -48,6 +48,6 @@ export class MockStateController {
     @Param('workspaceId') workspaceId: string,
     @Query('path') path: string,
   ) {
-    return this.mockserverService.getEffectiveJson(workspaceId, path);
+    return this.mockStateService.getEffectiveJson(workspaceId, path);
   }
 }

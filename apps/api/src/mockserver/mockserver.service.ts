@@ -38,37 +38,13 @@ export class MockserverService {
 
   /**
    * 대시보드 미리보기용 — 저장된 base JSON에 현재 Redis 오버레이를 병합한
-   * "실효 컬렉션"을 반환합니다. CRUD 요청과 동일한 applyOverlay 규칙을 쓰므로
-   * 실제 mock 응답과 항상 같은 값을 보여줍니다.
+   * "실효 컬렉션"을 반환합니다. MockStateService로 위임합니다.
    */
   async getEffectiveJson(
     workspaceId: string,
     path: string,
   ): Promise<unknown[]> {
-    const wsObjectId = new Types.ObjectId(workspaceId);
-    const normalizedPath = normalizeMockPath(path);
-
-    const item = await this.itemModel
-      .findOne({
-        workspace: wsObjectId,
-        path: normalizedPath,
-        itemType: 'File',
-      })
-      .lean()
-      .exec();
-
-    if (!item) {
-      throw new NotFoundException({
-        message: `경로 "${normalizedPath}"에 해당하는 Mock API 파일을 찾을 수 없습니다.`,
-      });
-    }
-
-    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
-    const overlay = await this.mockStateService.getOverlay(
-      workspaceId,
-      normalizedPath,
-    );
-    return applyOverlay(baseJson, overlay);
+    return this.mockStateService.getEffectiveJson(workspaceId, path);
   }
 
   /**

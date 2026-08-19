@@ -2,15 +2,8 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { HttpModule } from '@nestjs/axios';
 import { APP_GUARD } from '@nestjs/core';
-import { CommonModule } from './common/common.module';
-import * as https from 'https';
-import * as http from 'http';
-import CacheableLookup from 'cacheable-lookup';
-import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './redis/redis.module';
-import { AopModule } from '@toss/nestjs-aop';
 import { FilebrowserModule } from './filebrowser/filebrowser.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { UsersModule } from './users/users.module';
@@ -21,30 +14,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
 
 import { CsrfHeaderGuard } from './auth/guards/csrf-header.guard';
 import { validateEnv } from './config/env.validation';
-
-const cacheable = new CacheableLookup();
-
-const httpAgent = new http.Agent({
-  keepAlive: true,
-  maxSockets: 200,
-  maxFreeSockets: 20,
-  maxTotalSockets: 200,
-  scheduling: 'lifo',
-  timeout: 20000, // connection timeout
-  keepAliveMsecs: 1000,
-});
-const httpsAgent = new https.Agent({
-  keepAlive: true,
-  maxSockets: 200,
-  maxFreeSockets: 20,
-  maxTotalSockets: 200,
-  scheduling: 'lifo',
-  timeout: 20000, // connection timeout
-  keepAliveMsecs: 1000,
-});
-
-cacheable.install(httpAgent);
-cacheable.install(httpsAgent);
 
 @Module({
   imports: [
@@ -60,7 +29,7 @@ cacheable.install(httpsAgent);
           name: 'rate-limit',
           ttl: 60000, // 1m
           limit: 60,
-          blockDuration: 60 * 60 * 1000, //1h
+          blockDuration: 60 * 60 * 1000, // 1h
         },
         {
           // mock 서버 쓰기 전용 한도.
@@ -72,10 +41,6 @@ cacheable.install(httpsAgent);
         },
       ],
     }),
-    HttpModule,
-    CommonModule,
-    ScheduleModule.forRoot(),
-    AopModule,
     MockserverModule,
     DashboardModule,
     FilebrowserModule,

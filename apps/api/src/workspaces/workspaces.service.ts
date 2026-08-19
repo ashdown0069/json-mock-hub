@@ -53,7 +53,7 @@ export class WorkspacesService {
 
   async create(createWorkspaceDto: CreateWorkspaceDto, userId: string) {
     return this.transactionService.withTransaction(async (session) => {
-      // 1. Create Workspace — API 키는 생성 시점에 무조건 발급된다 (키 없는 상태 없음)
+      // 1. Create Workspace
       // passwordConfirm은 검증 전용 필드이므로 저장 대상에서 제외한다
       const { passwordConfirm: _passwordConfirm, ...workspaceFields } =
         createWorkspaceDto;
@@ -64,8 +64,6 @@ export class WorkspacesService {
             ...workspaceFields,
             password: password,
             owner: userId,
-            apiKey: this.apiKeyService.generateKey(),
-            apiKeyIssuedAt: new Date(),
           },
         ],
         { session },

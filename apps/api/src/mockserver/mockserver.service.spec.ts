@@ -16,6 +16,7 @@ describe('MockserverService', () => {
     reset: jest.Mock;
     resetMany: jest.Mock;
     mutate: jest.Mock;
+    getEffectiveJson: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -25,6 +26,7 @@ describe('MockserverService', () => {
       setOverlay: jest.fn().mockResolvedValue(undefined),
       reset: jest.fn().mockResolvedValue(undefined),
       resetMany: jest.fn().mockResolvedValue(undefined),
+      getEffectiveJson: jest.fn().mockResolvedValue([{ id: 1 }]),
       // 실제 구현과 같은 순서로 동작하게: 저장된 오버레이를 콜백에 넘기고
       // overlay가 있을 때만 저장한다
       mutate: jest.fn(async (_ws: string, _path: string, fn: any) => {
@@ -478,25 +480,22 @@ describe('MockserverService', () => {
   });
 
   describe('getEffectiveJson', () => {
-    it('base JSON에 오버레이를 병합해 반환한다', async () => {
-      mockFindOneResult({ path: '/users', json: [{ id: 1 }, { id: 2 }] });
-      mockStateService.getOverlay.mockResolvedValue({
-        created: [{ id: 3 }],
-        updated: {},
-        deleted: ['1'],
-      });
+    it('MockStateService로 getEffectiveJson 호출을 위임한다', async () => {
+      mockStateService.getEffectiveJson.mockResolvedValue([{ id: 2 }, { id: 3 }]);
 
       const result = await service.getEffectiveJson(WORKSPACE_ID, '/users');
 
       expect(result).toEqual([{ id: 2 }, { id: 3 }]);
-      expect(mockStateService.getOverlay).toHaveBeenCalledWith(
+      expect(mockStateService.getEffectiveJson).toHaveBeenCalledWith(
         WORKSPACE_ID,
         '/users',
       );
     });
 
-    it('해당 경로의 파일이 없으면 404를 던진다', async () => {
-      mockFindOneResult(null);
+    it('MockStateService가 에러를 던지면 그대로 전파한다', async () => {
+      mockStateService.getEffectiveJson.mockRejectedValue(
+        new NotFoundException('파일 없음'),
+      );
 
       await expect(
         service.getEffectiveJson(WORKSPACE_ID, '/missing'),
