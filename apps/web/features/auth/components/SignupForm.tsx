@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useTranslations } from "next-intl"
-import { useRouter } from "@/i18n/routing"
+import { Link, useRouter } from "@/i18n/routing"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@workspace/ui/components/button"
@@ -145,16 +145,12 @@ export function SignupForm() {
         {/* 하단 로그인 링크 */}
         <p className="text-center text-sm text-muted-foreground">
           {t("hasAccount")}{" "}
-          <a
+          <Link
             href="/"
             className="text-primary font-bold hover:underline"
-            onClick={(e) => {
-              e.preventDefault()
-              router.push("/")
-            }}
           >
             {t("signIn")}
-          </a>
+          </Link>
         </p>
       </div>
     </div>
