@@ -5,7 +5,7 @@ import {
   QueryClient,
 } from "@tanstack/react-query"
 import { Workspaces } from "@/features/workspace/components/Workspaces"
-import WorkspacesHeader from "@/features/workspace/components/WorkspacesHeader"
+import { Header } from "@/components/Header"
 import { prefetchWorkspaceList } from "@/features/workspace/api/getWorkspaceList.server"
 
 const WorkspacesPage = async () => {
@@ -16,7 +16,7 @@ const WorkspacesPage = async () => {
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main className="w-full bg-slate-50">
-        <WorkspacesHeader />
+        <Header />
         <div className="mx-auto w-full max-w-5xl space-y-8 p-5">
           <Workspaces />
         </div>
