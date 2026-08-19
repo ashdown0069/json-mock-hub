@@ -12,7 +12,6 @@ import {
   CollectionOverlay,
   createEmptyOverlay,
   normalizeOverlay,
-  OVERLAY_VERSION,
 } from './mock-state.util';
 
 const OVERLAY_TTL_SECONDS = 3600; // 1시간 후 샌드박스 자동 초기화
@@ -77,9 +76,7 @@ export class MockStateService {
   ): Promise<void> {
     await this.redis.set(
       this.key(workspaceId, path),
-      // 버전 표식을 함께 쓴다. 표식이 없는 값은 구버전 코드가 쓴 것으로 보고
-      // getOverlay가 교정하므로, 빠뜨리면 정상 상태가 찌꺼기로 오인된다.
-      JSON.stringify({ ...overlay, v: OVERLAY_VERSION }),
+      JSON.stringify(overlay),
       'EX',
       OVERLAY_TTL_SECONDS,
     );

@@ -14,33 +14,15 @@ export function createEmptyOverlay(): CollectionOverlay {
 }
 
 /**
- * 저장된 오버레이의 규약 버전.
+ * 저장소에서 읽은 값을 CollectionOverlay 불변식에 맞게 기본 형태를 보정한다.
  *
- * 이 표식이 붙은 값은 "deleted는 base 행 전용"이라는 현재 규약으로 쓰인 것이다.
- * 표식이 없으면 구버전 코드가 쓴 값이며 normalizeOverlay가 교정한다.
- * 직렬화 계층(MockStateService)에서만 붙였다 떼며, CollectionOverlay 자체에는
- * 넣지 않는다 — 버전은 저장 방식의 문제이지 리듀서가 알 일이 아니다.
- */
-export const OVERLAY_VERSION = 2;
-
-/**
- * 저장소에서 읽은 값을 CollectionOverlay 불변식에 맞게 교정한다.
- *
- * 1. 형태 보정 — 필드가 없거나 타입이 어긋난 값을 빈 값으로 대체한다. 보정하지
- *    않으면 applyOverlay가 overlay.deleted.map에서 TypeError로 죽는다.
- * 2. 구버전 교정 — 버전 표식이 없는 값에 한해, created 행의 id가 deleted에
- *    있으면 그 생성 행을 버린다. 구버전 코드는 생성 행을 지울 때 created에
- *    남긴 채 deleted에만 넣었으므로, 그 조합은 "사용자가 지운 생성 행"이었다.
- *
- * 현재 규약에서는 같은 조합이 **정상 상태**라는 점이 중요하다. base에서 지운
- * id를 재사용해 만든 행이 정확히 그 모양이다(applyOverlay가 created에는
- * deleted를 적용하지 않는다). 그래서 표식이 있는 값에는 2번을 적용하면 안 된다.
- * 적용하면 방금 만든 행을 찌꺼기로 오인해 지워 버린다.
+ * 필드가 없거나 타입이 어긋난 값을 안전한 빈 값으로 대체한다. 보정하지
+ * 않으면 applyOverlay가 overlay.deleted.map에서 TypeError로 죽는다.
  */
 export function normalizeOverlay(value: unknown): CollectionOverlay {
   const raw = (
     typeof value === 'object' && value !== null ? value : {}
-  ) as Partial<CollectionOverlay> & { v?: unknown };
+  ) as Partial<CollectionOverlay>;
 
   const deleted = Array.isArray(raw.deleted) ? raw.deleted.map(String) : [];
 
@@ -55,17 +37,7 @@ export function normalizeOverlay(value: unknown): CollectionOverlay {
       ? (raw.updated as Record<string, Row>)
       : {};
 
-  // 현재 규약으로 쓰인 값은 그대로 신뢰한다
-  if (raw.v === OVERLAY_VERSION) {
-    return { created, updated, deleted };
-  }
-
-  const deletedSet = new Set(deleted);
-  return {
-    created: created.filter((row) => !deletedSet.has(String(row.id))),
-    updated,
-    deleted,
-  };
+  return { created, updated, deleted };
 }
 
 /**

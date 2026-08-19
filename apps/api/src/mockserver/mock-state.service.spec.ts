@@ -2,7 +2,7 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MockStateService } from './mock-state.service';
 import { REDIS_CLIENT } from '../constant/tokens';
-import { createEmptyOverlay, OVERLAY_VERSION } from './mock-state.util';
+import { createEmptyOverlay } from './mock-state.util';
 import { DistributedLockService } from '../redis/distributed-lock.service';
 import { MockStateEventService } from './mock-state-event.service';
 
@@ -46,22 +46,6 @@ describe('MockStateService', () => {
     expect(await service.getOverlay('ws1', '/users')).toEqual(overlay);
   });
 
-  it('구버전 오버레이(created와 deleted에 같은 id)를 교정해 반환한다', () => {
-    // TTL 1시간 동안 남는 구버전 값이 지운 행을 되살리지 않게 한다
-    redis.get.mockResolvedValue(
-      JSON.stringify({
-        created: [{ id: 3, name: 'park' }],
-        updated: {},
-        deleted: ['3'],
-      }),
-    );
-
-    return expect(service.getOverlay('ws1', '/users')).resolves.toEqual({
-      created: [],
-      updated: {},
-      deleted: ['3'],
-    });
-  });
 
   it('손상된 형태(배열)를 빈 오버레이로 교정한다', () => {
     redis.get.mockResolvedValue('[]');
@@ -71,15 +55,13 @@ describe('MockStateService', () => {
     );
   });
 
-  it('setOverlay는 버전 표식을 붙여 TTL 3600초로 직렬화 저장한다', async () => {
+  it('setOverlay는 오버레이를 TTL 3600초로 직렬화 저장한다', async () => {
     const overlay = createEmptyOverlay();
     await service.setOverlay('ws1', '/users', overlay);
 
-    // 표식을 빠뜨리면 getOverlay가 이 값을 구버전으로 오인해,
-    // 지운 id를 재사용해 만든 정상 행을 찌꺼기로 지운다
     expect(redis.set).toHaveBeenCalledWith(
       'mock:state:ws1:/users',
-      JSON.stringify({ ...overlay, v: OVERLAY_VERSION }),
+      JSON.stringify(overlay),
       'EX',
       3600,
     );
@@ -178,7 +160,7 @@ describe('MockStateService', () => {
 
       expect(redis.set).toHaveBeenCalledWith(
         'mock:state:ws1:/users',
-        JSON.stringify({ ...next, v: OVERLAY_VERSION }),
+        JSON.stringify(next),
         'EX',
         3600,
       );

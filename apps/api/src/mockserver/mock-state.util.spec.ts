@@ -1,7 +1,6 @@
 import {
   createEmptyOverlay,
   normalizeOverlay,
-  OVERLAY_VERSION,
   applyOverlay,
   computeNextId,
   applyCreate,
@@ -244,44 +243,6 @@ describe('normalizeOverlay', () => {
     expect(normalizeOverlay(overlay)).toEqual(overlay);
   });
 
-  it('표식이 없으면(구버전) created의 id가 deleted에 있는 생성 행을 버린다', () => {
-    // 구버전 코드는 생성 행을 지울 때 created에 남긴 채 deleted에만 넣었다.
-    // 교정하지 않으면 배포 직후 TTL(1시간) 동안 사용자가 지운 행이 되살아난다.
-    const legacy = {
-      created: [{ id: 3, name: 'park' }],
-      updated: {},
-      deleted: ['3'],
-    };
-
-    expect(normalizeOverlay(legacy).created).toEqual([]);
-  });
-
-  it('표식이 있으면 created의 id가 deleted에 있어도 그대로 둔다', () => {
-    // 현재 규약에서 이 조합은 정상 상태다 — base에서 지운 id를 재사용해
-    // 만든 행이 정확히 이 모양이다. 여기서 지우면 방금 만든 행이 사라진다.
-    const current = {
-      created: [{ id: 1, name: 'again' }],
-      updated: {},
-      deleted: ['1'],
-      v: OVERLAY_VERSION,
-    };
-
-    expect(normalizeOverlay(current).created).toEqual([
-      { id: 1, name: 'again' },
-    ]);
-  });
-
-  it('표식은 결과에 남기지 않는다', () => {
-    // v는 저장 방식의 문제이지 리듀서가 알 일이 아니다
-    const result = normalizeOverlay({
-      created: [],
-      updated: {},
-      deleted: [],
-      v: OVERLAY_VERSION,
-    });
-
-    expect(result).toEqual({ created: [], updated: {}, deleted: [] });
-  });
 
   it('null이면 빈 오버레이를 돌려준다', () => {
     expect(normalizeOverlay(null)).toEqual({

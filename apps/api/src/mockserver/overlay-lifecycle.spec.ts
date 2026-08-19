@@ -105,40 +105,6 @@ describe('오버레이 수명주기 (실제 MockStateService 경유)', () => {
     expect(listed.body).toEqual([{ name: 'again', id: 1 }]);
   });
 
-  it('저장한 오버레이에는 버전 표식이 붙는다', async () => {
-    await service.resolveRequest(
-      WORKSPACE_ID,
-      '/api/users',
-      'POST',
-      {},
-      { name: 'park' },
-    );
-
-    // 표식이 없으면 normalizeOverlay가 이 값을 구버전으로 오인한다
-    expect(JSON.parse(store.get(overlayKey)!)).toMatchObject({ v: 2 });
-  });
-
-  it('구버전 오버레이(표식 없음)는 지운 생성 행을 되살리지 않는다', async () => {
-    // 구버전 코드는 생성 행을 지울 때 created에 남긴 채 deleted에만 넣었다
-    store.set(
-      overlayKey,
-      JSON.stringify({
-        created: [{ id: 3, name: 'park' }],
-        updated: {},
-        deleted: ['3'],
-      }),
-    );
-
-    const listed = await service.resolveRequest(
-      WORKSPACE_ID,
-      '/api/users',
-      'GET',
-      {},
-      null,
-    );
-
-    expect(listed.body).toEqual([{ id: 1, name: 'kim' }]);
-  });
 
   it('생성 → 삭제 → 재생성을 반복해도 컬렉션이 망가지지 않는다', async () => {
     for (let i = 0; i < 3; i += 1) {
