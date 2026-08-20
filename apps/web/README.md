@@ -50,7 +50,7 @@ apps/web/
 │       │   └── workspaces/       # 워크스페이스 선택/생성
 │       └── layout.tsx            # 전역 레이아웃 (Providers)
 ├── features/                     # 도메인별 응집 모듈
-│   ├── auth/                     # 로그인, 회원가입, OAuth 콜백
+│   ├── auth/                     # 로그인, 회원가입
 │   ├── code-gen/                 # 코드 생성 패널, 타겟별 프리뷰
 │   ├── dashboard/                # 요청 로그, 통계 그래프
 │   ├── file-browser/             # react-arborist 트리, 드래그앤드롭, SSE 구독 훅
