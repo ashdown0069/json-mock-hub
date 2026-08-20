@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { WorkspaceMemberGuard } from 'src/workspaces/guards/workspace-member.guard';
+import { WorkspaceAccessGuard } from 'src/workspaces/guards/workspace-access.guard';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { SkipThrottle } from '@nestjs/throttler';
 import { DashboardService } from './dashboard.service';
@@ -12,7 +12,7 @@ import { GetRequestLogsDto } from './dto/res/request-logs.dto';
 // 대시보드는 15초 폴링 x 다중 탭으로 전역 스로틀(60req/60s, 차단 1h)을 넘길 수 있어 예외 처리.
 // JwtAuthGuard + WorkspaceMemberGuard 뒤의 읽기 전용 엔드포인트라 남용 리스크가 낮다.
 @SkipThrottle()
-@UseGuards(JwtAuthGuard, WorkspaceMemberGuard)
+@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
 @Controller(':workspaceId/dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}

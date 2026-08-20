@@ -7,12 +7,14 @@ import {
 } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { WorkspaceOwnerGuard } from '../guards/workspace-owner.guard';
+import { WorkspaceAccessGuard } from '../guards/workspace-access.guard';
+import { RequireOwner } from '../guards/require-owner.decorator';
 import { GetMemberDto } from './dto/res/get-member.dto';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
 
 // 멤버 조회·추가·추방은 settings(owner 전용) 기능이므로 전부 owner 가드 적용
-@UseGuards(JwtAuthGuard, WorkspaceOwnerGuard)
+@RequireOwner()
+@UseGuards(JwtAuthGuard, WorkspaceAccessGuard)
 @Controller('workspaces/:workspaceId/members')
 export class MembershipController {
   constructor(private readonly membershipService: MembershipService) {}

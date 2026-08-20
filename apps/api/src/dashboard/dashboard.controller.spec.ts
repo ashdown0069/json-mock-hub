@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { Workspace } from '../database/schema/workspace.schema';
 import { WorkspaceMembership } from '../database/schema/workspace-membership.schema';
+import { WorkspaceRole } from '../database/schema/workspace-role.schema';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 
@@ -26,6 +27,10 @@ describe('DashboardController', () => {
         },
         {
           provide: getModelToken(WorkspaceMembership.name),
+          useValue: {},
+        },
+        {
+          provide: getModelToken(WorkspaceRole.name),
           useValue: {},
         },
       ],

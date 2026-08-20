@@ -24,12 +24,17 @@ import {
   REQUIRE_PERMISSION_KEY,
   WorkspacePermissionKey,
 } from './require-permission.decorator';
+import { REQUIRE_OWNER_KEY } from './require-owner.decorator';
 
-// 멤버십 검증 + @RequirePermission 메타데이터의 권한 플래그 검사.
-// - owner는 무조건 통과 (모든 권한 보유)
-// - 메타데이터가 없는 핸들러는 멤버 검증만 수행 (getItems, SSE 구독 등 읽기 경로)
+// 판정 흐름:
+// 1. API Key 요청이면 발급 워크스페이스와 URL의 :workspaceId 일치 여부 대조
+// 2. resolveMembershipOrThrow로 멤버십 검증 (멤버가 아니면 여기서 예외)
+// 3. owner 역할이면 무조건 통과 (모든 권한 보유)
+// 4. @RequireOwner() 메타데이터가 있으면 → 403 (owner가 아니므로)
+// 5. @RequirePermission(...) 메타데이터가 있으면 → WorkspaceRole 문서로 세부 권한 검사
+// 6. 두 메타데이터 모두 없으면 → 멤버이므로 통과
 @Injectable()
-export class WorkspacePermissionGuard implements CanActivate {
+export class WorkspaceAccessGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     @InjectModel(Workspace.name)
@@ -43,9 +48,7 @@ export class WorkspacePermissionGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
 
-    // API 키 인증은 발급된 워크스페이스로만 스코프를 제한한다.
-    // ApiKeyService.verify가 이미 workspaceId로 조회하지만, 이 가드가 다른 경로에
-    // 재사용될 때를 대비한 이중 방어다.
+    // 1. API 키 인증은 발급된 워크스페이스로만 스코프를 제한한다.
     if (
       req.user?.viaApiKey &&
       req.user.apiKeyWorkspaceId !== req.params?.workspaceId
@@ -56,6 +59,7 @@ export class WorkspacePermissionGuard implements CanActivate {
       });
     }
 
+    // 2. 멤버십 검증
     const { workspaceObjectId, role } = await resolveMembershipOrThrow(
       this.workspaceModel,
       this.membershipModel,
@@ -63,10 +67,26 @@ export class WorkspacePermissionGuard implements CanActivate {
       req.user?.sub,
     );
 
+    // 3. owner는 무조건 통과
     if (role === 'owner') {
       return true;
     }
 
+    // 4. @RequireOwner() 검사
+    const requireOwner = this.reflector.getAllAndOverride<boolean | undefined>(
+      REQUIRE_OWNER_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    // @RequireOwner() 푯말이 붙어있는데 일반 멤버인 경우 -> 403 에러 발생
+    if (requireOwner) {
+      throw new ForbiddenException({
+        code: 'workspace.access.owner_only',
+        message: '워크스페이스 소유자만 사용할 수 있습니다.',
+      });
+    }
+
+    // 5. @RequirePermission(...) 검사
     const permission = this.reflector.getAllAndOverride<
       WorkspacePermissionKey | undefined
     >(REQUIRE_PERMISSION_KEY, [context.getHandler(), context.getClass()]);

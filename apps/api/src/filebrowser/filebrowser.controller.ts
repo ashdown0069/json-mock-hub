@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { JwtOrApiKeyGuard } from '../auth/guards/jwt-or-api-key.guard';
-import { WorkspacePermissionGuard } from '../workspaces/guards/workspace-permission.guard';
+import { WorkspaceAccessGuard } from '../workspaces/guards/workspace-access.guard';
 import { RequirePermission } from '../workspaces/guards/require-permission.decorator';
 import { interval, merge, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -39,7 +39,7 @@ const HEARTBEAT_INTERVAL_MS = 25_000;
 // 이 컨트롤러는 JwtOrApiKeyGuard가 지키는 인증 전용 경로라 미인증 남용 벡터가
 // 아니므로, 한도를 올리고 차단을 1분으로 줄인다.
 @Throttle({ 'rate-limit': { limit: 300, ttl: 60_000, blockDuration: 60_000 } })
-@UseGuards(JwtOrApiKeyGuard, WorkspacePermissionGuard)
+@UseGuards(JwtOrApiKeyGuard, WorkspaceAccessGuard)
 @Controller(':workspaceId/filebrowser')
 export class FilebrowserController {
   constructor(

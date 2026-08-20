@@ -11,7 +11,7 @@ import {
 import { interval, merge, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { JwtOrApiKeyGuard } from '../auth/guards/jwt-or-api-key.guard';
-import { WorkspacePermissionGuard } from '../workspaces/guards/workspace-permission.guard';
+import { WorkspaceAccessGuard } from '../workspaces/guards/workspace-access.guard';
 import { MockStateService } from './mock-state.service';
 import { MockStateEventService } from './mock-state-event.service';
 
@@ -19,7 +19,7 @@ import { MockStateEventService } from './mock-state-event.service';
 const HEARTBEAT_INTERVAL_MS = 25_000;
 
 // WorkspacePermissionGuard: 멤버십 검증만 수행 (읽기 전용 경로라 @RequirePermission 없음)
-@UseGuards(JwtOrApiKeyGuard, WorkspacePermissionGuard)
+@UseGuards(JwtOrApiKeyGuard, WorkspaceAccessGuard)
 @Controller(':workspaceId/mockstate')
 export class MockStateController {
   constructor(
