@@ -16,8 +16,8 @@ import { CreateWorkspaceDto } from './dto/req/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/req/update-workspace.dto';
 import { JoinWorkspaceDto } from './dto/req/join-workspace.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { WorkspaceOwnerGuard } from './guards/workspace-owner.guard';
-import { WorkspaceMemberGuard } from './guards/workspace-member.guard';
+import { WorkspaceAccessGuard } from './guards/workspace-access.guard';
+import { RequireOwner } from './guards/require-owner.decorator';
 import { GetWorkspaceDto } from './dto/res/get-workspace.dto';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { CurrentUserId } from '../auth/decorators/current-user-id.decorator';
@@ -51,6 +51,7 @@ export class WorkspacesController {
   }
 
   @Serialize(GetWorkspaceDto)
+  @UseGuards(WorkspaceAccessGuard)
   @Get(':workspaceId')
   async findOne(
     @Param('workspaceId') id: string,
@@ -60,6 +61,8 @@ export class WorkspacesController {
     return workspace;
   }
 
+  @RequireOwner()
+  @UseGuards(WorkspaceAccessGuard)
   @Patch(':workspaceId')
   async update(
     @Param('workspaceId') id: string,
@@ -74,7 +77,8 @@ export class WorkspacesController {
     return workspace;
   }
 
-  @UseGuards(WorkspaceOwnerGuard)
+  @RequireOwner()
+  @UseGuards(WorkspaceAccessGuard)
   @Delete(':workspaceId')
   async remove(
     @Param('workspaceId') id: string,
@@ -118,7 +122,7 @@ export class WorkspacesController {
   // 키가 멤버십에 귀속되므로 멤버는 자기 키만 조회한다. 남의 키를 읽을 경로는 없다.
   // 키로 들어온 요청은 키 주인의 role로 판정되므로(JwtOrApiKeyGuard),
   // member에게 키를 줘도 canCreate/canDelete 등 세분 권한이 그대로 적용된다.
-  @UseGuards(WorkspaceMemberGuard)
+  @UseGuards(WorkspaceAccessGuard)
   @Get(':workspaceId/api-key')
   async getMyApiKey(
     @Param('workspaceId') workspaceId: string,
@@ -128,7 +132,7 @@ export class WorkspacesController {
   }
 
   // 재발급 — 본인 키만 교체된다. 다른 멤버의 MCP 연동은 끊기지 않는다.
-  @UseGuards(WorkspaceMemberGuard)
+  @UseGuards(WorkspaceAccessGuard)
   @Post(':workspaceId/api-key')
   @HttpCode(HttpStatus.OK)
   async reissueMyApiKey(
