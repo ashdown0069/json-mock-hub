@@ -11,7 +11,9 @@ describe("parseSetCookieValue", () => {
   })
 
   it("대상 이름이 없으면 null을 반환한다", () => {
-    expect(parseSetCookieValue(["other=1; Path=/"], ACCESS_TOKEN_COOKIE)).toBeNull()
+    expect(
+      parseSetCookieValue(["other=1; Path=/"], ACCESS_TOKEN_COOKIE)
+    ).toBeNull()
   })
 
   it("URL 인코딩된 값을 디코딩한다", () => {
