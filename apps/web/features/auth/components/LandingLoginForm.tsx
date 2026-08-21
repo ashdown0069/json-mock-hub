@@ -114,35 +114,33 @@ export function LandingLoginForm() {
             </Button>
           </form>
 
-          {process.env.NODE_ENV === "development" && (
-            <div className="space-y-2 pt-2 border-t border-dashed border-border">
-              <p className="text-center text-xs font-semibold text-muted-foreground">
-                🧪 개발 테스트용 Quick Login
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleTestLogin("test@test.com", "123123")}
-                  disabled={isPending}
-                  className="w-full text-xs font-medium cursor-pointer"
-                >
-                  test@test.com
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleTestLogin("test2@test.com", "123123")}
-                  disabled={isPending}
-                  className="w-full text-xs font-medium cursor-pointer"
-                >
-                  test2@test.com
-                </Button>
-              </div>
+          <div className="space-y-2 pt-2 border-t border-dashed border-border">
+            <p className="text-center text-xs font-semibold text-muted-foreground">
+              🧪 테스트용 Quick Login
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => handleTestLogin("test@test.com", "123123")}
+                disabled={isPending}
+                className="w-full text-xs font-medium cursor-pointer"
+              >
+                test@test.com
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => handleTestLogin("test2@test.com", "123123")}
+                disabled={isPending}
+                className="w-full text-xs font-medium cursor-pointer"
+              >
+                test2@test.com
+              </Button>
             </div>
-          )}
+          </div>
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
