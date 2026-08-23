@@ -8,6 +8,7 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     image: jsonmockhub-api:latest
+    restart: unless-stopped
     deploy:
       replicas: 2
       restart_policy:
@@ -28,3 +29,27 @@ services:
       - MOCK_BASE_DOMAIN=${MOCK_BASE_DOMAIN}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - CROSS_SITE_COOKIES=${CROSS_SITE_COOKIES:-true}
+    networks:
+      - dokploy-network
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+
+      # {workspaceId}.도메인 wildcard 라우팅
+      # api.myrealm.cloud는 Dokploy Domains 탭이 이미 자동 처리 중이므로 여기서 건드리지 않음
+      - traefik.http.routers.jsonmockhub-wildcard-web.rule=HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.${MOCK_BASE_DOMAIN:-myrealm.cloud}`)
+      - traefik.http.routers.jsonmockhub-wildcard-web.entrypoints=web
+      - traefik.http.routers.jsonmockhub-wildcard-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.jsonmockhub-wildcard-web.priority=1
+      - traefik.http.routers.jsonmockhub-wildcard-web.service=jsonmockhub-wildcard
+
+      - traefik.http.routers.jsonmockhub-wildcard-websecure.rule=HostRegexp(`{subdomain:[a-zA-Z0-9-]+}.${MOCK_BASE_DOMAIN:-myrealm.cloud}`)
+      - traefik.http.routers.jsonmockhub-wildcard-websecure.entrypoints=websecure
+      - traefik.http.routers.jsonmockhub-wildcard-websecure.tls=true
+      - traefik.http.routers.jsonmockhub-wildcard-websecure.priority=1
+      - traefik.http.services.jsonmockhub-wildcard.loadbalancer.server.port=8001
+
+networks:
+  dokploy-network:
+    external: true
