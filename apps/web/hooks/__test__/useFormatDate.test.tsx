@@ -53,6 +53,20 @@ describe("useFormatDate", () => {
     expect(result.current("")).toBe("")
   })
 
+  it("includeTime 옵션이 true일 경우 24시간제 시간(시:분:초)을 포함하여 반환한다", () => {
+    const { result } = renderHook(() => useFormatDate({ includeTime: true }), {
+      wrapper: wrapper("ko"),
+    })
+
+    const formatted = result.current("2026-07-16T14:30:45.000Z")
+    expect(formatted).toContain("2026")
+    expect(formatted).toContain("7")
+    expect(formatted).toContain("16")
+    expect(formatted).toContain("14")
+    expect(formatted).toContain("30")
+    expect(formatted).toContain("45")
+  })
+
   it("파싱할 수 없는 날짜 문자열은 빈 문자열을 반환한다", () => {
     const { result } = renderHook(() => useFormatDate(), {
       wrapper: wrapper("ko"),

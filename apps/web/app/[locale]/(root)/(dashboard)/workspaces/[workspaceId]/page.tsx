@@ -33,12 +33,14 @@ export default async function DashboardPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="min-h-full flex-1 bg-slate-50/50 p-8">
-        <div className="mb-8 flex items-center justify-between">
+      <div className="flex h-full flex-1 flex-col overflow-hidden bg-slate-50/50 p-6 md:p-8">
+        <div className="mb-6 flex shrink-0 items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">{titleText}</h1>
         </div>
 
-        <DashboardStatsCards workspaceId={workspaceId} />
+        <div className="shrink-0">
+          <DashboardStatsCards workspaceId={workspaceId} />
+        </div>
         <RequestLogTable workspaceId={workspaceId} />
       </div>
     </HydrationBoundary>
