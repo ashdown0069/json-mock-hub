@@ -37,6 +37,7 @@
   "Workspaces": {
     "title": "워크스페이스",
     "createWorkspace": "새 워크스페이스 생성",
+    "cancel": "취소",
     "loading": "워크스페이스 목록을 불러오는 중입니다...",
     "loadError": "워크스페이스 목록을 불러오지 못했습니다. 다시 시도해 주세요.",
     "emptyTitle": "아직 워크스페이스가 없습니다",

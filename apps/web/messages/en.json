@@ -37,6 +37,7 @@
   "Workspaces": {
     "title": "Workspaces",
     "createWorkspace": "New Workspace",
+    "cancel": "Cancel",
     "loading": "Loading workspaces...",
     "loadError": "Failed to load workspaces. Please try again.",
     "emptyTitle": "No workspaces yet",
