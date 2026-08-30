@@ -1,14 +1,22 @@
 import React from "react"
+import { Logo } from "./Logo"
+import { LogoutButton } from "@/features/auth/components/LogoutButton"
 
-export function Header() {
+export interface HeaderProps {
+  showLogout?: boolean
+  rightSlot?: React.ReactNode
+}
+
+export function Header({ showLogout = false, rightSlot }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border/50 bg-white px-8 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border/60 bg-background/80 px-6 sm:px-8 backdrop-blur-md">
+      <Logo href="/" size="md" />
       <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
-          J
-        </div>
-        <span className="text-xl font-bold tracking-tight">JsonMockHub</span>
+        {rightSlot}
+        {showLogout && <LogoutButton />}
       </div>
     </header>
   )
 }
+
+
