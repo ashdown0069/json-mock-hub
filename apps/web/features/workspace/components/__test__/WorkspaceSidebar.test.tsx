@@ -1,3 +1,14 @@
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}))
+
+jest.mock("@/features/auth/api/logoutService", () => ({
+  useLogout: () => ({
+    mutate: jest.fn(),
+    isPending: false,
+  }),
+}))
+
 jest.mock("@/i18n/routing", () => ({
   Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
@@ -27,14 +38,25 @@ jest.mock("@workspace/ui/components/sidebar", () => ({
   ),
 }))
 
-describe("WorkspaceSidebar Settings 노출", () => {
+describe("WorkspaceSidebar Settings 및 툴팁 노출", () => {
   it("owner이면 Settings 메뉴가 보인다", () => {
     render(<WorkspaceSidebar isOwner />)
-    expect(screen.getByLabelText("Settings")).toBeInTheDocument()
+    expect(screen.getByLabelText("settings")).toBeInTheDocument()
   })
 
   it("member(비 owner)이면 Settings 메뉴가 보이지 않는다", () => {
     render(<WorkspaceSidebar isOwner={false} />)
-    expect(screen.queryByLabelText("Settings")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("settings")).not.toBeInTheDocument()
+  })
+
+  it("사이드바의 모든 7개 아이콘 메뉴(dashboard, mockApis, code, mcp, settings, backToWorkspaces, logout) 툴팁이 렌더링된다", () => {
+    render(<WorkspaceSidebar isOwner />)
+    expect(screen.getByLabelText("dashboard")).toBeInTheDocument()
+    expect(screen.getByLabelText("mockApis")).toBeInTheDocument()
+    expect(screen.getByLabelText("code")).toBeInTheDocument()
+    expect(screen.getByLabelText("mcp")).toBeInTheDocument()
+    expect(screen.getByLabelText("settings")).toBeInTheDocument()
+    expect(screen.getByLabelText("backToWorkspaces")).toBeInTheDocument()
+    expect(screen.getByLabelText("logout")).toBeInTheDocument()
   })
 })

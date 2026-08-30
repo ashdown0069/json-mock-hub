@@ -1,3 +1,14 @@
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => key,
+}))
+
+jest.mock("@/features/auth/api/logoutService", () => ({
+  useLogout: () => ({
+    mutate: jest.fn(),
+    isPending: false,
+  }),
+}))
+
 // next-intl의 실제 동작을 모사한 목이다.
 // - Link: href를 "로케일 없는 논리 경로"로 보고 접두사를 붙인다
 // - usePathname: 접두사를 뗀 경로를 돌려준다
@@ -54,8 +65,8 @@ describe("WorkspaceSidebar 로케일 접두사", () => {
   it("현재 경로에 해당하는 메뉴만 활성으로 표시한다", () => {
     const { getByLabelText } = render(<WorkspaceSidebar isOwner />)
 
-    expect(getByLabelText("Mock APIs")).toHaveAttribute("data-active", "true")
-    expect(getByLabelText("Dashboard")).toHaveAttribute("data-active", "false")
-    expect(getByLabelText("Code XML")).toHaveAttribute("data-active", "false")
+    expect(getByLabelText("mockApis")).toHaveAttribute("data-active", "true")
+    expect(getByLabelText("dashboard")).toHaveAttribute("data-active", "false")
+    expect(getByLabelText("code")).toHaveAttribute("data-active", "false")
   })
 })

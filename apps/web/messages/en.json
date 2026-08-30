@@ -1,4 +1,18 @@
 {
+  "Auth": {
+    "logout": "Logout",
+    "logoutSuccess": "Logged out successfully.",
+    "logoutError": "An error occurred while logging out."
+  },
+  "WorkspaceSidebar": {
+    "dashboard": "Dashboard",
+    "mockApis": "Mock APIs",
+    "code": "Code",
+    "mcp": "MCP",
+    "settings": "Settings",
+    "backToWorkspaces": "Back to Workspaces",
+    "logout": "Logout"
+  },
   "Error": {
     "title": "Something went wrong",
     "description": "This may be temporary. Please try again.",

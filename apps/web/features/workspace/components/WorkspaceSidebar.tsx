@@ -9,10 +9,21 @@ import {
   SidebarMenuButton,
   SidebarMenu,
 } from "@workspace/ui/components/sidebar"
-import { Settings, LayoutDashboard, LogOut, CodeXml, Route, Plug } from "lucide-react"
+import {
+  Settings,
+  LayoutDashboard,
+  LogOut,
+  CodeXml,
+  Route,
+  Plug,
+  Loader2,
+  Undo2,
+} from "lucide-react"
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher"
 import { Link, usePathname } from "@/i18n/routing"
 import { useWorkspaceBasePath } from "@/hooks/useWorkspaceBasePath"
+import { useLogout } from "@/features/auth/api/logoutService"
+import { useTranslations } from "next-intl"
 
 interface WorkspaceSidebarProps {
   isOwner?: boolean
@@ -23,6 +34,8 @@ export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
   // 논리 경로인 basePath와 같은 좌표계에서 비교할 수 있다.
   const pathname = usePathname()
   const { basePath, lobbyPath } = useWorkspaceBasePath()
+  const { mutate: handleLogout, isPending: isLoggingOut } = useLogout()
+  const t = useTranslations("WorkspaceSidebar")
 
   const isDashboardActive = pathname === basePath
   const isApisActive = pathname.startsWith(`${basePath}/apis`)
@@ -42,7 +55,7 @@ export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
         <SidebarMenu className="items-center gap-4">
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="Dashboard"
+              tooltip={t("dashboard")}
               className="h-10 w-10 justify-center"
               isActive={isDashboardActive}
               asChild
@@ -54,7 +67,7 @@ export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="Mock APIs"
+              tooltip={t("mockApis")}
               className="h-10 w-10 justify-center"
               isActive={isApisActive}
               asChild
@@ -66,7 +79,7 @@ export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="Code XML"
+              tooltip={t("code")}
               className="h-10 w-10 justify-center"
               isActive={isCodeActive}
               asChild
@@ -78,7 +91,7 @@ export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="MCP"
+              tooltip={t("mcp")}
               className="h-10 w-10 justify-center"
               isActive={isMcpActive}
               asChild
@@ -91,11 +104,11 @@ export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="flex items-center pb-4">
-        <SidebarMenu className="items-center">
+        <SidebarMenu className="items-center gap-2">
           {isOwner && (
             <SidebarMenuItem>
               <SidebarMenuButton
-                tooltip="Settings"
+                tooltip={t("settings")}
                 className="h-10 w-10 justify-center"
                 isActive={isSettingsActive}
                 asChild
@@ -106,15 +119,32 @@ export function WorkspaceSidebar({ isOwner = false }: WorkspaceSidebarProps) {
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
+          {/* 1. 워크스페이스 로비(/workspaces)로 돌아가기 버튼 */}
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="Exit Workspace"
+              tooltip={t("backToWorkspaces")}
               className="h-10 w-10 justify-center"
               asChild
             >
               <Link href={lobbyPath}>
-                <LogOut size={20} />
+                <Undo2 size={20} />
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {/* 2. 실제 계정 로그아웃 버튼 */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip={t("logout")}
+              className="h-10 w-10 cursor-pointer justify-center text-muted-foreground hover:text-destructive"
+              onClick={() => handleLogout()}
+              disabled={isLoggingOut}
+              aria-label={t("logout")}
+            >
+              {isLoggingOut ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <LogOut size={20} />
+              )}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
