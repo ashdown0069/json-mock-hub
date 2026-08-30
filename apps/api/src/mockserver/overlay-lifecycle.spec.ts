@@ -20,7 +20,12 @@ describe('오버레이 수명주기 (실제 MockStateService 경유)', () => {
   let store: Map<string, string>;
 
   const WORKSPACE_ID = '683dea0000000000000000ab';
-  const ITEM = { path: '/users', json: [{ id: 1, name: 'kim' }], options: null };
+  const ITEM = {
+    path: '/users',
+    json: [{ id: 1, name: 'kim' }],
+    fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+    options: null,
+  };
 
   beforeEach(async () => {
     store = new Map();

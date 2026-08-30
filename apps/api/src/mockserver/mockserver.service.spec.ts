@@ -226,6 +226,7 @@ describe('MockserverService', () => {
   it('존재하지 않는 id에 대한 PUT 요청은 404를 반환한다 (GET과 일관성)', async () => {
     const mockItem = {
       json: [{ id: 1, name: 'kim' }],
+      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
       options: null,
     };
     findOneMock.mockReturnValueOnce({
@@ -249,6 +250,7 @@ describe('MockserverService', () => {
   it('PUT 병합 응답은 저장된 id의 타입(숫자)을 보존한다', async () => {
     const mockItem = {
       json: [{ id: 1, name: 'kim' }],
+      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
       options: null,
     };
     findOneMock.mockReturnValueOnce({
@@ -276,6 +278,7 @@ describe('MockserverService', () => {
     const mockItem = {
       path: '/users',
       json: [{ id: 1, name: 'kim' }],
+      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
       options: null,
     };
     findOneMock.mockReturnValue({
@@ -321,9 +324,182 @@ describe('MockserverService', () => {
     expect(mockStateService.setOverlay).toHaveBeenCalled();
   });
 
+  describe('런타임 Body 검증 및 부작용 격리', () => {
+    const sampleItem = {
+      path: '/users',
+      json: [{ id: 1, name: 'kim', age: 20 }],
+      fieldDefs: [
+        { id: '1', name: 'name', type: 'string' },
+        { id: '2', name: 'age', type: 'number' },
+      ],
+      options: null,
+    };
+
+    it('POST: body가 없거나 빈 객체({})이면 400을 반환하고 mutate를 호출하지 않는다', async () => {
+      mockFindOneResult(sampleItem);
+
+      const nullRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        null,
+      );
+      expect(nullRes.status).toBe(400);
+      expect((nullRes.body as any).code).toBe('mock.invalid_request_body');
+
+      const emptyRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        {},
+      );
+      expect(emptyRes.status).toBe(400);
+
+      expect(mockStateService.mutate).not.toHaveBeenCalled();
+      expect(mockStateService.setOverlay).not.toHaveBeenCalled();
+    });
+
+    it('POST: 필수 필드가 누락되거나 타입이 불일치하면 400을 반환한다', async () => {
+      mockFindOneResult(sampleItem);
+
+      const missingRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        { name: 'lee' }, // age 누락
+      );
+      expect(missingRes.status).toBe(400);
+      expect((missingRes.body as any).message).toContain('age');
+
+      const typeMismatchRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        { name: 'lee', age: 'invalid' },
+      );
+      expect(typeMismatchRes.status).toBe(400);
+      expect((typeMismatchRes.body as any).message).toContain('age');
+
+      expect(mockStateService.mutate).not.toHaveBeenCalled();
+    });
+
+    it('POST: 최상위에 id가 포함되거나 스키마 외 필드가 포함되면 400을 반환한다', async () => {
+      mockFindOneResult(sampleItem);
+
+      const idRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        { id: 99, name: 'lee', age: 30 },
+      );
+      expect(idRes.status).toBe(400);
+      expect((idRes.body as any).message).toContain('id');
+
+      const extraRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        { name: 'lee', age: 30, extra: 'bad' },
+      );
+      expect(extraRes.status).toBe(400);
+      expect((extraRes.body as any).message).toContain('extra');
+
+      expect(mockStateService.mutate).not.toHaveBeenCalled();
+    });
+
+    it('PUT: 빈 객체({}) 또는 필수 필드 누락 시 400을 반환하고 mutate를 호출하지 않는다', async () => {
+      findOneMock.mockReturnValueOnce({
+        lean: () => ({ exec: () => Promise.resolve(null) }),
+      });
+      findOneMock.mockReturnValueOnce({
+        lean: () => ({ exec: () => Promise.resolve(sampleItem) }),
+      });
+
+      const emptyRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users/1',
+        'PUT',
+        {},
+        {},
+      );
+      expect(emptyRes.status).toBe(400);
+      expect(mockStateService.mutate).not.toHaveBeenCalled();
+    });
+
+    it('PATCH: 스키마 필드 중 1개만 전달되어도 200 성공하고 mutate를 호출한다', async () => {
+      findOneMock.mockReturnValueOnce({
+        lean: () => ({ exec: () => Promise.resolve(null) }),
+      });
+      findOneMock.mockReturnValueOnce({
+        lean: () => ({ exec: () => Promise.resolve(sampleItem) }),
+      });
+
+      const patchRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users/1',
+        'PATCH',
+        {},
+        { age: 35 },
+      );
+
+      expect(patchRes.status).toBe(200);
+      expect(mockStateService.mutate).toHaveBeenCalled();
+    });
+
+    it('fieldDefs가 없으면 schema를 폴백으로 사용하여 검증한다', async () => {
+      const legacyItem = {
+        path: '/users',
+        json: [{ id: 1, title: 'hello' }],
+        schema: { id: 'number', title: 'string' },
+        options: null,
+      };
+      mockFindOneResult(legacyItem);
+
+      const validRes = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        { title: 'new' },
+      );
+      expect(validRes.status).toBe(201);
+    });
+
+    it('fieldDefs와 schema가 모두 없으면 400으로 쓰기를 거절한다', async () => {
+      const emptySchemaItem = {
+        path: '/users',
+        json: [{ id: 1 }],
+        options: null,
+      };
+      mockFindOneResult(emptySchemaItem);
+
+      const res = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/users',
+        'POST',
+        {},
+        { anything: 'val' },
+      );
+      expect(res.status).toBe(400);
+    });
+  });
+
   describe('쓰기 경로의 임계구역', () => {
+    const itemWithFieldDefs = {
+      path: '/users',
+      json: [{ id: 1 }],
+      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+      options: null,
+    };
+
     it('POST는 mutate 안에서 오버레이를 갱신한다', async () => {
-      mockFindOneResult({ path: '/users', json: [{ id: 1 }], options: null });
+      mockFindOneResult(itemWithFieldDefs);
 
       const result = await service.resolveRequest(
         WORKSPACE_ID,
@@ -344,7 +520,7 @@ describe('MockserverService', () => {
     });
 
     it('POST 콜백은 락 안에서 읽은 오버레이로 실효 컬렉션을 다시 계산한다', async () => {
-      mockFindOneResult({ path: '/users', json: [{ id: 1 }], options: null });
+      mockFindOneResult(itemWithFieldDefs);
       // 락을 잡은 뒤 다른 요청이 이미 id 2를 만들어 둔 상황
       mockStateService.getOverlay.mockResolvedValue({
         created: [{ id: 2, name: 'other' }],
@@ -371,7 +547,15 @@ describe('MockserverService', () => {
       });
       findOneMock.mockReturnValueOnce({
         lean: () =>
-          ({ exec: () => Promise.resolve({ path: '/users', json: [{ id: 1 }], options: null }) } as any),
+          ({
+            exec: () =>
+              Promise.resolve({
+                path: '/users',
+                json: [{ id: 1 }],
+                fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+                options: null,
+              }),
+          } as any),
       });
 
       const result = await service.resolveRequest(
@@ -392,7 +576,14 @@ describe('MockserverService', () => {
       });
       findOneMock.mockReturnValueOnce({
         lean: () =>
-          ({ exec: () => Promise.resolve({ path: '/users', json: [{ id: 1 }], options: null }) } as any),
+          ({
+            exec: () =>
+              Promise.resolve({
+                path: '/users',
+                json: [{ id: 1 }],
+                options: null,
+              }),
+          } as any),
       });
 
       const result = await service.resolveRequest(
@@ -408,7 +599,12 @@ describe('MockserverService', () => {
     });
 
     it('생성 행 상한을 넘으면 429를 반환한다', async () => {
-      mockFindOneResult({ path: '/users', json: [], options: null });
+      mockFindOneResult({
+        path: '/users',
+        json: [],
+        fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+        options: null,
+      });
       mockStateService.getOverlay.mockResolvedValue({
         created: Array.from({ length: 500 }, (_, i) => ({ id: i + 1 })),
         updated: {},
@@ -427,25 +623,15 @@ describe('MockserverService', () => {
       expect(mockStateService.setOverlay).not.toHaveBeenCalled();
     });
 
-    it('이미 있는 id로 POST하면 409를 반환하고 저장하지 않는다', async () => {
-      mockFindOneResult({ path: '/users', json: [{ id: 1 }], options: null });
-
-      const result = await service.resolveRequest(
-        WORKSPACE_ID,
-        '/api/users',
-        'POST',
-        {},
-        { id: 1, name: '덮어씀' },
-      );
-
-      expect(result.status).toBe(409);
-      expect(mockStateService.setOverlay).not.toHaveBeenCalled();
-    });
-
     it('DELETE로 지운 id를 POST로 다시 만들면 201이고 조회된다', async () => {
       // 조사에서 확인한 버그의 회귀 방지. 지운 id가 재발급되면서
       // 201을 주고도 GET에 나타나지 않던 시나리오다.
-      mockFindOneResult({ path: '/users', json: [{ id: 1 }], options: null });
+      mockFindOneResult({
+        path: '/users',
+        json: [{ id: 1 }],
+        fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+        options: null,
+      });
       mockStateService.getOverlay.mockResolvedValue({
         created: [],
         updated: {},

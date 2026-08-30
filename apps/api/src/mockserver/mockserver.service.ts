@@ -22,6 +22,11 @@ import {
   MAX_OVERLAY_CREATED_ROWS,
   type ApplyCreateResult,
 } from './mock-state.util';
+import {
+  resolveValidationFields,
+  validateMockBody,
+  type MockWriteMethod,
+} from './mock-body-validator.util';
 
 export interface MockResponse {
   status: number;
@@ -141,7 +146,23 @@ export class MockserverService {
       }
 
       if (upperMethod === 'POST') {
-        const bodyObj = (typeof reqBody === 'object' && reqBody !== null ? reqBody : {}) as Record<string, unknown>;
+        const validationFields = resolveValidationFields(
+          item.fieldDefs,
+          item.schema,
+        );
+        const validation = validateMockBody(reqBody, validationFields, 'post');
+
+        if (!validation.ok) {
+          return {
+            status: 400,
+            body: {
+              code: validation.code ?? 'mock.invalid_request_body',
+              message: validation.message ?? '유효하지 않은 요청 본문입니다.',
+            },
+          };
+        }
+
+        const bodyObj = reqBody as Record<string, unknown>;
 
         const outcome = await this.mockStateService.mutate<ApplyCreateResult>(
           workspaceId,
@@ -188,8 +209,24 @@ export class MockserverService {
       }
 
       if (upperMethod === 'PUT' || upperMethod === 'PATCH') {
-        const bodyObj = (typeof reqBody === 'object' && reqBody !== null ? reqBody : {}) as Record<string, unknown>;
-        const mode = upperMethod === 'PUT' ? 'put' : 'patch';
+        const mode: MockWriteMethod = upperMethod === 'PUT' ? 'put' : 'patch';
+        const validationFields = resolveValidationFields(
+          item.fieldDefs,
+          item.schema,
+        );
+        const validation = validateMockBody(reqBody, validationFields, mode);
+
+        if (!validation.ok) {
+          return {
+            status: 400,
+            body: {
+              code: validation.code ?? 'mock.invalid_request_body',
+              message: validation.message ?? '유효하지 않은 요청 본문입니다.',
+            },
+          };
+        }
+
+        const bodyObj = reqBody as Record<string, unknown>;
 
         const updated = await this.mockStateService.mutate(
           workspaceId,
