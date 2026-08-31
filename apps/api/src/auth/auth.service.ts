@@ -112,59 +112,6 @@ export class AuthService {
     await this.usersService.updateRefreshToken(userId, null);
   }
 
-  // Google OAuth 콜백에서 호출된다. 계정 동일성의 기준은 providerId가 아니라 이메일이다 —
-  // 비밀번호로 먼저 가입한 사용자가 나중에 같은 이메일로 구글 로그인하면 새 계정이
-  // 생기지 않고 기존 계정에 provider 정보가 붙는다.
-  async validateOAuthLogin(
-    email: string,
-    nickname: string,
-    providerId: string,
-    provider: 'google',
-  ) {
-    let user = await this.usersService.findByEmail(email);
-
-    if (user) {
-      // 1. 기존 계정: provider 정보가 실제로 달라졌을 때만 갱신한다.
-      //    무조건 쓰면 로그인할 때마다 불필요한 DB 쓰기가 발생한다.
-      if (user.provider !== provider || user.providerId !== providerId) {
-        user = await this.usersService.updateProvider(
-          user._id.toString(),
-          provider,
-          providerId,
-        );
-      }
-    } else {
-      // 2. 신규 계정: password를 null로 만든다. users.schema.ts의 password는
-      //    nullable이며, 비밀번호 없이 존재하는 계정은 OAuth 전용 계정을 뜻한다.
-      //    nickname이 비어 오면 이메일 로컬파트를 표시명으로 쓴다.
-      user = await this.usersService.create({
-        email,
-        nickname: nickname || email.split('@')[0] || email,
-        password: null,
-      });
-
-      // 3. CreateUserDto에 provider·providerId가 없어 create()로는 채울 수 없다.
-      //    생성 직후 별도 쓰기로 연결한다.
-      user = await this.usersService.updateProvider(
-        user._id.toString(),
-        provider,
-        providerId,
-      );
-    }
-
-    return user;
-  }
-
-  async generateTokensForUser(user: any) {
-    const tokens = await this.generateTokens(
-      user._id.toString(),
-      user.email,
-      user.nickname,
-    );
-    await this.updateRefreshToken(user._id.toString(), tokens.refreshToken);
-    return tokens;
-  }
-
   // access와 refresh는 페이로드가 같고 서명 시크릿·만료만 다르다.
   // 시크릿을 분리해 두었기 때문에 access 시크릿이 유출돼도 refresh 토큰을 위조할 수 없다.
   // 두 시크릿의 존재는 부팅 시 validateEnv(app.module.ts)가 보장한다.

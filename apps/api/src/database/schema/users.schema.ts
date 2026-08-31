@@ -16,11 +16,8 @@ export class User {
   @Prop({ type: String, default: null })
   password: string | null;
 
-  @Prop({ type: String, enum: ['local', 'google'], default: 'local' })
-  provider: 'local' | 'google';
-
-  @Prop({ type: String, required: false, index: true })
-  providerId?: string;
+  @Prop({ type: String, default: 'local' })
+  provider: string;
 
   @Prop({ type: String })
   dbRefreshToken: string | null;

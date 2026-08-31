@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../database/schema/users.schema';
@@ -30,20 +30,5 @@ export class UsersService {
     await this.userModel
       .updateOne({ _id: id }, { dbRefreshToken: hashedToken })
       .exec();
-  }
-
-  async updateProvider(
-    id: string,
-    provider: 'local' | 'google',
-    providerId: string,
-  ): Promise<UserDocument> {
-    const user = await this.userModel
-      .findOneAndUpdate({ _id: id }, { provider, providerId }, { new: true })
-      .exec();
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
   }
 }

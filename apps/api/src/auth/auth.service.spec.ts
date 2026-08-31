@@ -10,7 +10,6 @@ describe('AuthService', () => {
     findById: jest.Mock;
     create: jest.Mock;
     updateRefreshToken: jest.Mock;
-    updateProvider: jest.Mock;
   };
   let jwtService: { signAsync: jest.Mock };
   let configService: { get: jest.Mock };
@@ -22,7 +21,6 @@ describe('AuthService', () => {
       findById: jest.fn(),
       create: jest.fn(),
       updateRefreshToken: jest.fn().mockResolvedValue(undefined),
-      updateProvider: jest.fn(),
     };
     // Promise.all의 배열은 왼쪽부터 평가되므로 1회차가 access, 2회차가 refresh다.
     jwtService = {
@@ -46,8 +44,7 @@ describe('AuthService', () => {
     nickname: 'nick',
     password: null,
     dbRefreshToken: null,
-    provider: undefined,
-    providerId: undefined,
+    provider: 'local',
     ...over,
   });
 
@@ -101,7 +98,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('비밀번호가 없는 OAuth 전용 계정은 비밀번호 로그인을 거부한다', async () => {
+    it('비밀번호가 없는 계정은 비밀번호 로그인을 거부한다', async () => {
       usersService.findByEmail.mockResolvedValue(userDoc({ password: null }));
 
       await expect(
@@ -176,60 +173,6 @@ describe('AuthService', () => {
       await service.logout('u1');
 
       expect(usersService.updateRefreshToken).toHaveBeenCalledWith('u1', null);
-    });
-  });
-
-  describe('validateOAuthLogin', () => {
-    it('provider 정보가 그대로면 불필요한 쓰기를 하지 않는다', async () => {
-      usersService.findByEmail.mockResolvedValue(
-        userDoc({ provider: 'google', providerId: 'g1' }),
-      );
-
-      await service.validateOAuthLogin('a@b.com', 'nick', 'g1', 'google');
-
-      expect(usersService.updateProvider).not.toHaveBeenCalled();
-      expect(usersService.create).not.toHaveBeenCalled();
-    });
-
-    it('같은 이메일의 기존 계정에 provider를 붙이고 새 계정을 만들지 않는다', async () => {
-      usersService.findByEmail.mockResolvedValue(userDoc());
-      usersService.updateProvider.mockResolvedValue(
-        userDoc({ provider: 'google', providerId: 'g1' }),
-      );
-
-      await service.validateOAuthLogin('a@b.com', 'nick', 'g1', 'google');
-
-      expect(usersService.create).not.toHaveBeenCalled();
-      expect(usersService.updateProvider).toHaveBeenCalledWith(
-        'u1',
-        'google',
-        'g1',
-      );
-    });
-
-    it('신규 OAuth 계정은 password를 null로 만든다', async () => {
-      usersService.findByEmail.mockResolvedValue(null);
-      usersService.create.mockResolvedValue(userDoc());
-      usersService.updateProvider.mockResolvedValue(userDoc());
-
-      await service.validateOAuthLogin('a@b.com', 'nick', 'g1', 'google');
-
-      expect(usersService.create).toHaveBeenCalledWith({
-        email: 'a@b.com',
-        nickname: 'nick',
-        password: null,
-      });
-    });
-
-    it('nickname이 비어 오면 이메일 로컬파트를 표시명으로 쓴다', async () => {
-      usersService.findByEmail.mockResolvedValue(null);
-      usersService.create.mockResolvedValue(userDoc());
-      usersService.updateProvider.mockResolvedValue(userDoc());
-
-      await service.validateOAuthLogin('someone@b.com', '', 'g1', 'google');
-
-      const [payload] = usersService.create.mock.calls[0];
-      expect(payload.nickname).toBe('someone');
     });
   });
 });

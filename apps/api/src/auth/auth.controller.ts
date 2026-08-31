@@ -7,7 +7,6 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  Get,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -16,42 +15,13 @@ import { LoginDto } from './dto/req/login.dto';
 import { Response, Request } from 'express';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { GoogleAuthGuard } from './guards/google-auth.guard';
-import { ConfigService } from '@nestjs/config';
 import { COOKIE_KEYS } from '../constant/cookies';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { authCookieOptions } from './cookie-options';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly configService: ConfigService,
-  ) {}
-
-  @Get('google')
-  @UseGuards(GoogleAuthGuard)
-  async googleAuth(@Req() req: Request) {}
-
-  @Get('google/callback')
-  @UseGuards(GoogleAuthGuard)
-  async googleAuthRedirect(
-    @Req() req: any,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    if (!req.user) {
-      return res.redirect(
-        `${this.configService.get<string>('CLIENT_URL', 'http://localhost:4000')}/login?error=OAuthFailed`,
-      );
-    }
-
-    const tokens = await this.authService.generateTokensForUser(req.user);
-    this.setTokensInCookies(res, tokens.accessToken, tokens.refreshToken);
-
-    return res.redirect(
-      this.configService.get<string>('CLIENT_URL', 'http://localhost:4000'),
-    );
-  }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
   async signup(@Body() signupDto: SignupDto) {

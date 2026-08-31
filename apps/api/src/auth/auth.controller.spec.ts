@@ -2,16 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Response, Request } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { ConfigService } from '@nestjs/config';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { COOKIE_KEYS } from '../constant/cookies';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: { login: jest.Mock; refreshTokens: jest.Mock };
-  let res: { cookie: jest.Mock; clearCookie: jest.Mock; redirect: jest.Mock };
+  let res: { cookie: jest.Mock; clearCookie: jest.Mock };
 
   const TOKENS = { accessToken: 'access-jwt', refreshToken: 'refresh-jwt' };
 
@@ -23,22 +21,18 @@ describe('AuthController', () => {
     res = {
       cookie: jest.fn(),
       clearCookie: jest.fn(),
-      redirect: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: authService },
-        { provide: ConfigService, useValue: { get: jest.fn() } },
       ],
     })
       // 쿠키 옵션 검증만 목표로 하므로 가드는 통과시킨다.
       .overrideGuard(JwtRefreshGuard)
       .useValue({ canActivate: () => true })
       .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(GoogleAuthGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
