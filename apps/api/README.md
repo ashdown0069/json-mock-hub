@@ -1,100 +1,98 @@
 # JSON Mock Hub — API (Backend)
 
-JSON Mock Hub의 백엔드 서비스로, 사용자 인증(JWT/Google OAuth/API Key), 다층 워크스페이스 권한 제어(RBAC), 파일 트리 및 스키마 관리, **서브도메인 기반 동적 Mock REST 서빙**, 실시간 협업(SSE), Redis 분산 락 및 요청 대기열을 담당합니다.
+JSON Mock Hub의 백엔드 서비스로, 사용자 인증(JWT/API Key), 다층 워크스페이스 권한 제어(RBAC), 계층형 파일 트리 관리, **서브도메인 기반 동적 Mock REST 서빙**, 실시간 협업(SSE) 을 담당합니다.
 
-> **모노레포 위치:** `apps/api` · **프론트엔드 문서:** [`apps/web`](../web/README.md) · **MCP 서버:** [`apps/mcp`](../mcp/README.md)
+> **모노레포 위치:** `apps/api` · [🏠 루트 문서](../../README.md) · [🌐 프론트엔드 문서](../web/README.md) · [🤖 MCP 서버](../mcp/README.md)
 
 ---
 
 ## 🛠️ 기술 스택
 
-| 영역 | 사용 기술 |
-| :--- | :--- |
-| **Framework** | **NestJS 10** (모듈형 아키텍처, Express 플랫폼) |
-| **Database & ODM** | **MongoDB** + **Mongoose 8** |
-| **캐시 & 분산 락** | **Redis** (`ioredis`, `@keyv/redis`), `@toss/nestjs-aop` 기반 락/캐시 데코레이터 |
-| **비동기 큐** | **BullMQ** (`@nestjs/bullmq`) |
-| **인증 & 보안** | **Passport** (JWT, Google OAuth 2.0, Local), 쿠키 기반 토큰 회전, `helmet`, `bcrypt` |
-| **검증 & 직렬화** | `class-validator`, `class-transformer`, 커스텀 `@Serialize` 인터셉터 |
-| **실시간 통신** | **Server-Sent Events (SSE)** (`@nestjs/event-emitter`, RxJS Subject) |
-| **속도 제한 & 스케줄링** | `@nestjs/throttler` (Rate Limiting), `@nestjs/schedule` (Cron Jobs) |
-| **공유 패키지** | `@workspace/types` |
+| 영역               | 사용 기술                                     | 설명                                                              |
+| :----------------- | :-------------------------------------------- | :---------------------------------------------------------------- |
+| **Framework**      | **NestJS 10**                                 | 모듈형 아키텍처, Express 플랫폼                                   |
+| **Database & ODM** | **MongoDB** + **Mongoose 8**                  | 계층 트리, 스키마, 사용자, 워크스페이스, 요청 로그 저장           |
+| **Redis**          | **ioredis**                                   | **Mock 쓰기 상태 오버레이(CRUD 격리 저장)**, 분산 락, SSE Pub/Sub |
+| **인증 & 보안**    | **Passport** (Local, JWT), `bcrypt`, `helmet` | Access/Refresh 보안 쿠키(RTR), CSRF 방어 가드                     |
+| **검증 & 직렬화**  | `class-validator`, `@Serialize` 인터셉터      | 요청 DTO 유효성 검증, 응답 DTO 직렬화 및 `_id` 정제               |
+| **실시간 통신**    | **Server-Sent Events (SSE)**                  | 파일 트리/Mock 상태 변경 실시간 브로드캐스트                      |
 
 ---
 
-## ✨ 핵심 기능
+## ✨ 핵심 기능 요약
 
-1. **인증 및 세션 보안**
-   - 로컬 회원가입/로그인 및 **Google OAuth 2.0** 소셜 로그인.
-   - JWT Access/Refresh 토큰을 **httpOnly / SameSite 보안 쿠키**로 발급하며 Refresh Token 회전(RTR) 적용.
-   - AI 및 외부 연동용 **워크스페이스 전용 API 키** (SHA-256 해시 저장, 발급 시 1회 노출).
-2. **다층 워크스페이스 권한 체계 (RBAC)**
-   - Owner / Member 역할 모델 및 5대 세부 권한 플래그(`create`, `rename`, `update`, `delete`, `move`).
-   - 비밀번호 기반 워크스페이스 참여 및 `WorkspacePermissionGuard` + `@RequirePermission` 데코레이터.
-3. **파일 브라우저 & 트리 관리**
-   - 폴더 및 Mock API의 계층형 트리 관리(생성, 이름 변경, 이동, 삭제).
-   - **폴더 이동 시 동일 이름 폴더 자동 병합** 및 MongoDB `bulkWrite`를 통한 경로(path)/depth 일괄 갱신.
-4. **서브도메인 기반 동적 Mock REST 서빙 (`mockserver`)**
-   - `{workspaceId}.도메인/api/*` 서브도메인 요청을 `@All('*')` 와일드카드로 수신.
-   - 저장된 JSON 스키마를 기반으로 목록 조회(필터링/페이징), 단건 상세 조회, 생성(POST), 수정(PUT/PATCH), 삭제(DELETE) 응답 생성.
-   - 인위적 지연(Delay) 및 에러 상태 코드 시뮬레이션 지원.
-5. **실시간 이벤트 브로드캐스팅 (SSE)**
-   - 파일 브라우저 내의 모든 CRUD 및 이동 이벤트를 워크스페이스 단위로 실시간 브로드캐스트.
-   - 프록시 타임아웃 방지를 위한 주기적 Heartbeat 전송.
-6. **동시성 및 데이터 무결성 제어**
-   - Redis 기반 분산 락(`@DistributedLock`)을 통해 동시 폴더 이동/수정 시 경쟁 상태(Race Condition) 방지.
+- **인증 & 보안 (`auth`)**: `bcrypt` 비밀번호 암호화, JWT Access/Refresh 토큰 쿠키 회전(RTR), 다중 인증 가드(`JwtOrApiKeyGuard`), 비안전 요청 CSRF 헤더 검증.
+- **워크스페이스 & RBAC (`workspaces`)**: Owner/Member 역할 모델, 5대 세부 권한(`canCreate`, `canRename`, `canUpdate`, `canDelete`, `canMove`), `WorkspaceAccessGuard` 다계층 인가
+- **파일 브라우저 (`filebrowser`)**: 계층형 폴더/Mock 트리 CRUD, 드래그앤드롭 이동 시 동일 이름 폴더 자동 병합, MongoDB `bulkWrite` 경로 갱신, SSE 실시간 변경 브로드캐스팅.
+- **동적 Mock REST 서빙 & Redis 상태 오버레이 (`mockserver`)**:
+  - 서브도메인(`{workspaceId}.도메인/api/*`) 와일드카드 수신.
+  - 클라이언트의 `POST`, `PUT`, `PATCH`, `DELETE` 요청 결과를 MongoDB 원본 대신 **Redis 상태 오버레이(State Overlay)**에 격리 저장.
+  - `GET` 요청 시 MongoDB 기본 스키마와 Redis 오버레이를 실시간 병합(`applyOverlay`)하여 실제 DB처럼 CRUD 상태가 유지되는 Mocking 제공 (초기화 API 지원).
 
 ---
 
-## 🏛️ 아키텍처 및 모듈 구성
+## 🏛️ 디렉토리 및 모듈 구성
 
 ```
 apps/api/src/
-├── auth/           # JWT, Google OAuth, Local 전략, JwtOrApiKeyGuard, @CurrentUserId
-├── workspaces/     # 워크스페이스 CRUD, 멤버십, 역할/권한 가드, API 키 발급
-├── filebrowser/    # 트리 아이템 CRUD, 이동/병합 알고리즘, SSE 이벤트 서비스
-├── mockserver/     # 서브도메인 파싱 및 동적 Mock REST 응답 엔진
-├── users/          # 사용자 프로필 및 계정 관리
-├── dashboard/      # 요청 로그 및 사용 통계
-├── redis/          # Redis 연결, 분산 락 서비스, AOP aspect (@toss/nestjs-aop)
-├── database/       # Mongoose 스키마 (Workspace, Membership, FileBrowserItem 등)
-├── common/         # 글로벌 필터, 인터셉터, Discord 알림 웹훅
-├── config/         # 환경 변수 유효성 검증 및 설정
-└── interceptors/   # @Serialize (응답 DTO 변환 및 _id -> id 정제)
+├── app.controller.ts            # GET / (Health check)
+├── app.module.ts                # 루트 모듈 (전역 가드, Throttler, Config)
+├── main.ts                      # 엔트리포인트 (Helmet, CORS, Cookie, ValidationPipe, Filter)
+├── auth/                        # JWT 쿠키 인증, Local 전략, CSRF 가드, @CurrentUserId
+├── workspaces/                  # 워크스페이스 CRUD, 참여, API 키, WorkspaceAccessGuard, RBAC
+├── filebrowser/                 # 계층 트리 CRUD, 노드 이동/병합, 파일 트리 SSE
+├── mockserver/                  # 서브도메인 /api/* Mock 서빙, 상태 오버레이, 상태 SSE, 요청 로깅
+├── users/                       # 사용자 프로필 (GET /users/me)
+├── dashboard/                   # 요청 로그 페이징 및 워크스페이스 통계
+├── redis/                       # ioredis 클라이언트 및 DistributedLockService (Lua script)
+├── database/                    # Mongoose 스키마 (User, Workspace, Membership, Role, Item, Log)
+├── filters/                     # AllExceptionsFilter (전역 예외 정규화 및 error code 매핑)
+├── interceptors/                # @Serialize (DTO 변환 및 _id -> id 정제)
+└── config/                      # env.validation.ts (부팅 시 필수 환경변수 검증)
 ```
 
 ---
 
-## 📡 주요 API 엔드포인트
+## 📡 REST API 엔드포인트 명세
 
-| 그룹 | Method | 엔드포인트 | 설명 |
-| :--- | :--- | :--- | :--- |
-| **Auth** | `POST` | `/auth/signup` · `/auth/login` · `/auth/logout` · `/auth/refresh` | 회원가입, 로그인, 로그아웃, 토큰 갱신 |
-| | `GET` | `/auth/google` · `/auth/google/callback` | Google OAuth 소셜 로그인 |
-| **Users** | `GET` | `/users/me` | 내 프로필 조회 |
-| **Workspaces** | `POST` / `GET` | `/workspaces` | 워크스페이스 생성 및 내 워크스페이스 목록 조회 |
-| | `GET`/`PATCH`/`DELETE` | `/workspaces/:id` | 워크스페이스 상세 조회, 수정, 삭제 |
-| | `POST` | `/workspaces/:id/join` | 비밀번호 기반 워크스페이스 참여 |
-| | `GET`/`PATCH`/`DELETE` | `/workspaces/:id/members/:memberId` | 멤버 목록, 권한 수정, 멤버 추방 |
-| | `POST`/`GET`/`DELETE` | `/workspaces/:id/api-key` | 워크스페이스 API 키 발급, 조회, 폐기 |
-| **File Browser** | `GET` | `/:workspaceId/filebrowser/getItems` | 워크스페이스 전체 파일 트리 조회 |
-| | `POST` | `/:workspaceId/filebrowser/createItem` | 폴더 또는 Mock API 생성 |
-| | `PATCH` | `/:workspaceId/filebrowser/renameItem` | 아이템 이름 변경 |
-| | `PATCH` | `/:workspaceId/filebrowser/moveItems` | 아이템(단건/복수) 이동 및 폴더 병합 |
-| | `PUT`/`DELETE` | `/:workspaceId/filebrowser` | 스키마 수정 및 아이템 삭제 |
-| | `GET` | `/:workspaceId/filebrowser/subscribe` | 실시간 파일 트리 SSE 스트림 구독 |
-| **Mock Serving** | `ALL` | `{workspaceId}.{MOCK_BASE_DOMAIN}/api/*` | 동적 Mock REST API 엔드포인트 서빙 |
+| 그룹                | Method             | 엔드포인트                                 | 가드 / 데코레이터                                                             | 설명                                         |
+| :------------------ | :----------------- | :----------------------------------------- | :---------------------------------------------------------------------------- | :------------------------------------------- |
+| **Auth**            | `POST`             | `/auth/signup`                             | -                                                                             | 회원가입                                     |
+|                     | `POST`             | `/auth/login`                              | Throttle (5회/분)                                                             | 로그인 및 Access/Refresh 보안 쿠키 발급      |
+|                     | `POST`             | `/auth/refresh`                            | `JwtRefreshGuard`                                                             | Refresh Token Rotation 기반 토큰 갱신        |
+|                     | `POST`             | `/auth/logout`                             | `JwtAuthGuard`                                                                | 세션 종료 및 쿠키 삭제                       |
+| **Users**           | `GET`              | `/users/me`                                | `JwtAuthGuard`                                                                | 현재 로그인 사용자 정보 조회                 |
+| **Workspaces**      | `POST` / `GET`     | `/workspaces`                              | `JwtAuthGuard`                                                                | 워크스페이스 생성 및 내 목록 조회            |
+|                     | `GET`              | `/workspaces/:workspaceId`                 | `JwtAuthGuard`, `WorkspaceAccessGuard`                                        | 워크스페이스 상세 조회                       |
+|                     | `PATCH` / `DELETE` | `/workspaces/:workspaceId`                 | `JwtAuthGuard`, `WorkspaceAccessGuard`, `@RequireOwner()`                     | 워크스페이스 수정 및 삭제                    |
+|                     | `POST`             | `/workspaces/:workspaceId/join`            | `JwtAuthGuard`                                                                | 비밀번호 기반 워크스페이스 참여              |
+|                     | `GET`              | `/workspaces/:workspaceId/membership`      | `JwtAuthGuard`                                                                | 내 멤버십 상태 확인                          |
+|                     | `GET` / `POST`     | `/workspaces/:workspaceId/api-key`         | `JwtAuthGuard`, `WorkspaceAccessGuard`                                        | API 키 조회 및 발급/재발급                   |
+| **Members & Roles** | `GET` / `DELETE`   | `/workspaces/:workspaceId/members`         | `JwtAuthGuard`, `WorkspaceAccessGuard`, `@RequireOwner()`                     | 멤버 목록 조회 및 멤버 추방 (`/:userId`)     |
+|                     | `GET` / `PATCH`    | `/workspaces/:workspaceId/roles`           | `JwtAuthGuard`, `WorkspaceAccessGuard`                                        | 역할 조회 및 5대 세부 권한 수정 (`/:roleId`) |
+| **File Browser**    | `GET`              | `/:workspaceId/filebrowser/subscribe`      | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`                                    | 파일 트리 실시간 SSE 스트림 구독             |
+|                     | `GET`              | `/:workspaceId/filebrowser/getItems`       | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`                                    | 전체 트리 조회 (`?view=tree\|full`)          |
+|                     | `GET`              | `/:workspaceId/filebrowser/items/:itemId`  | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`                                    | 특정 노드(폴더/Mock) 단건 상세 조회          |
+|                     | `POST`             | `/:workspaceId/filebrowser/createItem`     | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`, `@RequirePermission('canCreate')` | 폴더 또는 Mock API 생성                      |
+|                     | `PATCH`            | `/:workspaceId/filebrowser/moveItems`      | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`, `@RequirePermission('canMove')`   | 노드 이동 및 동일 이름 폴더 자동 병합        |
+|                     | `PATCH`            | `/:workspaceId/filebrowser/renameItem`     | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`, `@RequirePermission('canRename')` | 노드 이름 변경                               |
+|                     | `PUT`              | `/:workspaceId/filebrowser`                | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`, `@RequirePermission('canUpdate')` | Mock 스키마 및 설정 수정                     |
+|                     | `DELETE`           | `/:workspaceId/filebrowser`                | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`, `@RequirePermission('canDelete')` | 아이템(폴더 포함) 다중 삭제                  |
+|                     | `POST`             | `/:workspaceId/filebrowser/resetMockState` | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`, `@RequirePermission('canUpdate')` | Mock API 상태 오버레이 초기화                |
+| **Mock State**      | `GET`              | `/:workspaceId/mockstate/subscribe`        | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`                                    | Mock 상태 실시간 SSE 스트림                  |
+|                     | `GET`              | `/:workspaceId/mockstate/effective`        | `JwtOrApiKeyGuard`, `WorkspaceAccessGuard`                                    | 스키마 + 상태 오버레이가 반영된 최종 JSON    |
+| **Dashboard**       | `GET`              | `/:workspaceId/dashboard/stats`            | `JwtAuthGuard`, `WorkspaceAccessGuard`                                        | 워크스페이스 요청 통계 조회                  |
+|                     | `GET`              | `/:workspaceId/dashboard/logs`             | `JwtAuthGuard`, `WorkspaceAccessGuard`                                        | 호출 로그 페이징 조회 (`?page=1&limit=20`)   |
+| **Mock Server**     | `ALL`              | `{workspaceId}.{MOCK_BASE_DOMAIN}/api/*`   | 와일드카드 서브도메인 라우팅                                                  | 동적 Mock REST API 호출                      |
 
 ---
 
-## 🚀 실행 방법
+## 🚀 실행 및 테스트 방법
 
-### 요구사항
-- Node.js >= 20.0.0
-- MongoDB 인스턴스 (MongoDB 6.0+)
-- Redis 인스턴스 (Redis 7.0+)
+> 아래 명령어는 `apps/api` 디렉토리 내부에서 실행할 때 기준입니다.
 
-### 환경 변수 (`apps/api/.env.development`)
+### 환경 변수 (`.env.development`)
+
 ```env
 PORT=4001
 NODE_ENV=development
@@ -104,30 +102,27 @@ JWT_ACCESS_SECRET=your_jwt_access_secret_key
 JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:4001/auth/google/callback
 CLIENT_URL=http://localhost:4000
 CORS_ORIGIN_URL=http://localhost:4000
 MOCK_BASE_DOMAIN=localhost:4001
 ```
 
-### 명령어
+### 명령어 (`apps/api/` 경로 기준)
+
 ```bash
 # 개발 서버 실행 (Watch 모드)
-npm run dev -w apps/api
+npm run dev
 
 # 단위 테스트 실행 (Jest)
-npm run test -w apps/api
+npm test
 
-# E2E 테스트 실행
-npm run test:e2e -w apps/api
+# TypeScript 컴파일 검사
+npm run typecheck
 
-# 린트 및 코드 포맷팅
-npm run lint -w apps/api
-npm run format -w apps/api
+# 린트 검사
+npm run lint
 
 # 프로덕션 빌드 및 실행
-npm run build -w apps/api
-npm run start:prod -w apps/api
+npm run build
+npm run start:prod
 ```
