@@ -92,19 +92,27 @@ export function registerGetApiCode(
   server.registerTool(
     "get_api_code",
     {
-      title: "Mock API 연동 코드 참고",
+      title: "Mock API 연동 코드 생성",
       description:
-        "저장된 mock API의 스키마로부터 TS 타입·HTTP 클라이언트·react-query 훅·검증 스키마 완제품 코드를 생성해 반환합니다. " +
-        "반환된 코드는 '참고용 완제품'이므로 사용자가 요청한 부분만 발췌·각색해서 제시하세요. " +
-        "lang/clientMode/validation을 사용자가 이미 말했으면 인자로 넘기고, 정하지 않았으면 생략하세요(생략하면 사용자에게 선택 UI를 띄우거나, 미지원 클라이언트면 확인을 요청합니다).",
+        "지정된 Mock API의 스키마와 설정을 기반으로 프론트엔드 연동 완제품 코드(TypeScript 타입 정의, Fetch/Axios API 클라이언트 함수, TanStack Query 훅, Zod/Yup/Joi 유효성 검증 스키마)를 자동 생성합니다. " +
+        "클라이언트 연동 코드를 작성할 때 이 도구로 기준 코드를 조회한 후 필요한 부분을 조합해 사용하세요. " +
+        "lang/clientMode/validation 옵션을 생략하면 사용자에게 대화형 선택창(Elicitation)을 띄웁니다.",
       annotations: { readOnlyHint: true, destructiveHint: false },
       inputSchema: {
         path: z
           .string()
-          .describe("코드를 생성할 mock API 경로 (list_mock_apis로 확인, 예: /shop/users)"),
-        lang: zodShape.lang.describe("ts는 interface 타입까지 포함"),
-        clientMode: zodShape.clientMode.describe("HTTP 클라이언트 (+query는 TanStack Query 훅 포함)"),
-        validation: zodShape.validation.describe("검증 라이브러리 (none은 생성 안 함)"),
+          .describe(
+            "연동 코드를 추출할 Mock API 경로 (list_mock_apis로 확인, 예: /shop/users)"
+          ),
+        lang: zodShape.lang.describe(
+          "사용 언어 (ts: TypeScript 인터페이스/타입 포함, js: JavaScript)"
+        ),
+        clientMode: zodShape.clientMode.describe(
+          "HTTP 클라이언트 및 쿼리 훅 (fetch, fetch+query, axios, axios+query)"
+        ),
+        validation: zodShape.validation.describe(
+          "런타임 유효성 검증 라이브러리 (zod, yup, joi, none: 미생성)"
+        ),
       },
     },
     async (args) =>

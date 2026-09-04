@@ -105,16 +105,20 @@ export function registerDescribeMockApi(
     {
       title: "Mock API 상세 정보 조회",
       description:
-        "경로로 mock API의 저장된 스키마, Faker 메서드 설정, 활성화된 옵션(페이지네이션/정렬/검색), 호출 URL을 상세 조회합니다. " +
-        "update_mock_api를 호출하기 전에 기존 스키마를 확인하거나 mock API 구조를 파악할 때 사용하세요. " +
-        "includeData: true를 함께 지정하면 CUD 편집이 반영된 런타임 실효 데이터 샘플도 함께 받아옵니다.",
+        "경로로 특정 Mock API의 저장된 스키마 구조, 적용된 Faker 메서드, 활성 옵션(페이지네이션/정렬/검색), 실제 호출 URL을 상세 조회합니다. " +
+        "기존 Mock API에 필드를 추가/수정(update_mock_api)하기 전 기존 스키마를 확인할 때 필수적으로 사용하세요. " +
+        "includeData: true를 함께 지정하면 CUD 편집이 반영된 최신 런타임 실효 데이터 샘플도 함께 받아옵니다.",
       annotations: { readOnlyHint: true, destructiveHint: false },
       inputSchema: {
-        path: z.string().describe("조회할 mock API 경로 (예: /shop/users)"),
+        path: z
+          .string()
+          .describe("조회할 Mock API 리소스의 절대 경로 (폴더 제외, 예: /shop/users)"),
         includeData: z
           .boolean()
           .default(false)
-          .describe("true면 런타임 실효 데이터 샘플(앞 2건)도 함께 반환합니다."),
+          .describe(
+            "true로 지정 시 CUD(생성/수정/삭제) 작업이 반영된 최신 런타임 실효 데이터 샘플(앞 2건)을 함께 반환합니다."
+          ),
       },
     },
     async (args) =>

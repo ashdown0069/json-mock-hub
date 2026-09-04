@@ -75,7 +75,7 @@ export function codeOptionZodShape(): Record<CodeOptionKey, z.ZodTypeAny> {
   return shape
 }
 
-/** MCP elicitation 요청의 properties. enum과 enumNames가 항상 같은 길이다. */
+/** MCP elicitation 요청의 properties. TitledSingleSelectEnumSchema 표준(oneOf)을 준수한다. */
 export function codeOptionElicitProperties(): Record<
   string,
   PrimitiveSchemaDefinition
@@ -86,9 +86,12 @@ export function codeOptionElicitProperties(): Record<
     properties[key] = {
       type: "string",
       title: spec.title,
-      enum: spec.values.map(([value]) => value),
-      enumNames: spec.values.map(([, label]) => label),
-    } as PrimitiveSchemaDefinition
+      oneOf: spec.values.map(([value, label]) => ({
+        const: value,
+        title: label,
+      })),
+      default: spec.values[0][0],
+    }
   }
   return properties
 }

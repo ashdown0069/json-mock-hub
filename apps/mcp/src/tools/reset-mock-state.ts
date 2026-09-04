@@ -35,10 +35,10 @@ export function registerResetMockState(server: McpServer, client: ApiClient) {
   server.registerTool(
     "reset_mock_state",
     {
-      title: "Mock 런타임 상태 초기화",
+      title: "Mock API 런타임 상태 초기화",
       description:
-        "mock 서버로 생성·수정·삭제한 런타임 변경을 폐기하고 저장된 원본 데이터로 되돌립니다. " +
-        "저장된 스키마와 json은 바뀌지 않습니다. 데이터 자체를 새로 만들려면 update_mock_api를 사용하세요.",
+        "Mock API 서버를 호출(POST/PUT/PATCH/DELETE)하여 변경된 런타임 임시 데이터(Redis 오버레이)를 폐기하고 저장된 최초 Mock 원본 데이터 상태로 롤백합니다. " +
+        "저장된 스키마와 초기 json 데이터는 변경되지 않습니다. (데이터 자체를 새로 생성하려면 update_mock_api를 사용하세요.)",
       annotations: {
         // 폐기된 런타임 편집은 되돌릴 수 없다. 같은 인자로 다시 불러도 결과는 같다.
         readOnlyHint: false,
@@ -46,7 +46,9 @@ export function registerResetMockState(server: McpServer, client: ApiClient) {
         idempotentHint: true,
       },
       inputSchema: {
-        path: z.string().describe("초기화할 mock API 경로 (예: /shop/users)"),
+        path: z
+          .string()
+          .describe("런타임 변경 상태를 롤백할 Mock API 경로 (예: /shop/users)"),
       },
     },
     async (args) => withApiErrors(() => handleResetMockState(client, args))

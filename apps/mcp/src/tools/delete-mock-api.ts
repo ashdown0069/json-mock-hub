@@ -52,7 +52,7 @@ export function registerDeleteMockApi(server: McpServer, client: ApiClient) {
     {
       title: "Mock API 삭제",
       description:
-        "경로로 mock API 또는 폴더를 삭제합니다. 폴더를 삭제하면 하위 항목도 함께 삭제됩니다(복구 불가). 경로는 list_mock_apis로 확인하세요.",
+        "경로로 지정한 Mock API 또는 폴더를 영구 삭제합니다. [경고: 폴더를 삭제하면 그 안의 모든 하위 폴더와 Mock API가 재귀적으로 함께 영구 삭제되며 복구할 수 없습니다.] 경로는 list_mock_apis로 확인하세요.",
       annotations: {
         // 되돌릴 수 없는 삭제이므로 클라이언트가 자동 승인 대상으로 분류하지 않도록 명시한다
         destructiveHint: true,
@@ -60,7 +60,11 @@ export function registerDeleteMockApi(server: McpServer, client: ApiClient) {
         readOnlyHint: false,
       },
       inputSchema: {
-        path: z.string().describe("삭제할 항목 경로 (예: /shop/users)"),
+        path: z
+          .string()
+          .describe(
+            "삭제할 Mock API 또는 폴더의 절대 경로 (예: /shop/users 또는 /shop)"
+          ),
       },
     },
     async (args) => withApiErrors(() => handleDeleteMockApi(client, args))

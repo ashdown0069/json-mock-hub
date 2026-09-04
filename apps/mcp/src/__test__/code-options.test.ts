@@ -54,16 +54,26 @@ describe("파생 산출물", () => {
     }
   })
 
-  it("elicit properties의 enum과 enumNames 길이가 같다", () => {
+  it("elicit properties의 oneOf 항목에 const와 title이 모두 존재하고 값과 라벨이 매칭된다", () => {
     const properties = codeOptionElicitProperties()
 
-    for (const spec of Object.values(properties)) {
-      const { enum: values, enumNames } = spec as {
-        enum: string[]
-        enumNames: string[]
+    for (const [key, spec] of Object.entries(CODE_OPTION_SPEC)) {
+      const prop = properties[key] as {
+        type: string
+        title?: string
+        oneOf: Array<{ const: string; title: string }>
+        default?: string
       }
-      // 길이가 어긋나면 MCP 클라이언트가 라벨을 잘못 매칭한다
-      expect(values.length).toBe(enumNames.length)
+      expect(prop.type).toBe("string")
+      expect(prop.title).toBe(spec.title)
+      expect(prop.default).toBe(spec.values[0][0])
+      expect(prop.oneOf.length).toBe(spec.values.length)
+
+      prop.oneOf.forEach((item, index) => {
+        const [expectedValue, expectedLabel] = spec.values[index]!
+        expect(item.const).toBe(expectedValue)
+        expect(item.title).toBe(expectedLabel)
+      })
     }
   })
 

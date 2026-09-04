@@ -20,7 +20,8 @@ export function registerListMockApis(server: McpServer, client: ApiClient) {
     {
       title: "Mock API 목록 조회",
       description:
-        "워크스페이스의 폴더·mock API 목록을 경로로 조회합니다. create_mock_api의 parentPath나 삭제·이름변경·코드생성 대상 경로를 확인할 때 사용하세요.",
+        "워크스페이스 내의 모든 폴더 및 Mock API 계층 구조를 트리 경로 형태로 조회합니다. " +
+        "Mock API를 조회·수정·이동·삭제하거나 연동 코드를 생성하기 전, 대상의 정확한 경로(/path)를 확인하기 위해 가장 먼저 호출해야 하는 필수 탐색 도구입니다.",
       annotations: { readOnlyHint: true, destructiveHint: false },
       inputSchema: {},
     },

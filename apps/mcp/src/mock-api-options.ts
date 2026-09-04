@@ -63,7 +63,7 @@ export const mockApiOptionInputShape = {
     })
     .optional()
     .describe(
-      "지정하면 페이지네이션을 켜고 파라미터명을 설정합니다. 생략하면 기존 설정을 유지합니다."
+      `지정 시 페이지네이션을 활성화하고 쿼리 파라미터명을 설정합니다 (예: ?${DEFAULT_MOCK_PARAMS.pageParam}=1&${DEFAULT_MOCK_PARAMS.limitParam}=10, limit 최대 100). 생략 시 기존 설정을 유지합니다.`
     ),
   sort: z
     .object({
@@ -72,7 +72,7 @@ export const mockApiOptionInputShape = {
     })
     .optional()
     .describe(
-      `지정하면 정렬을 켭니다 (기본 ?${DEFAULT_MOCK_PARAMS.sortParam}=필드명&${DEFAULT_MOCK_PARAMS.orderParam}=asc|desc). 생략하면 기존 설정을 유지합니다.`
+      `지정 시 정렬 기능을 활성화합니다 (예: ?${DEFAULT_MOCK_PARAMS.sortParam}=필드명&${DEFAULT_MOCK_PARAMS.orderParam}=asc|desc). 생략 시 기존 설정을 유지합니다.`
     ),
   search: z
     .object({
@@ -80,7 +80,7 @@ export const mockApiOptionInputShape = {
     })
     .optional()
     .describe(
-      `지정하면 전문검색을 켭니다 (기본 ?${DEFAULT_MOCK_PARAMS.searchParam}=검색어). 생략하면 기존 설정을 유지합니다.`
+      `지정 시 전체 텍스트 검색을 활성화합니다 (예: ?${DEFAULT_MOCK_PARAMS.searchParam}=검색어). 생략 시 기존 설정을 유지합니다.`
     ),
 } as const
 
@@ -89,13 +89,13 @@ export const mockApiDisableInputShape = {
   disablePagination: z
     .boolean()
     .optional()
-    .describe("true일 때만 페이지네이션을 끕니다. 생략하면 기존 설정을 유지합니다."),
+    .describe("true로 지정할 때만 페이지네이션을 비활성화합니다. 생략 시 기존 설정을 유지합니다."),
   disableSort: z
     .boolean()
     .optional()
-    .describe("true일 때만 정렬을 끕니다. 생략하면 기존 설정을 유지합니다."),
+    .describe("true로 지정할 때만 정렬 기능을 비활성화합니다. 생략 시 기존 설정을 유지합니다."),
   disableSearch: z
     .boolean()
     .optional()
-    .describe("true일 때만 전문검색을 끕니다. 생략하면 기존 설정을 유지합니다."),
+    .describe("true로 지정할 때만 전문검색을 비활성화합니다. 생략 시 기존 설정을 유지합니다."),
 } as const

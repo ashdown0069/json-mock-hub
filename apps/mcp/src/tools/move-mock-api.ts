@@ -77,8 +77,8 @@ export function registerMoveMockApi(server: McpServer, client: ApiClient) {
     {
       title: "Mock API 이동",
       description:
-        "경로로 지정한 mock API 또는 폴더를 다른 폴더로 이동합니다. " +
-        "대상 폴더에 같은 이름의 폴더가 있으면 병합 확인을 요청하고(confirmMerge), 같은 이름의 mock API가 있으면 오류가 발생합니다. " +
+        "지정한 Mock API 또는 폴더를 다른 부모 폴더로 이동합니다. " +
+        "대상 폴더에 동일한 이름의 폴더가 이미 존재할 경우 폴더 병합(원본 폴더 삭제 후 내부 항목만 이동) 확인(confirmMerge: true)이 필요합니다. " +
         "루트로 이동하려면 destinationPath를 생략하거나 '/'로 지정하세요. 경로는 list_mock_apis로 확인하세요.",
       annotations: {
         // 대상에 동명 폴더가 있으면 서버가 원본 폴더 문서를 삭제한다(자식만 이동).
@@ -88,16 +88,20 @@ export function registerMoveMockApi(server: McpServer, client: ApiClient) {
         idempotentHint: false,
       },
       inputSchema: {
-        path: z.string().describe("이동할 항목 경로 (예: /shop/users)"),
+        path: z
+          .string()
+          .describe("이동시킬 원본 Mock API 또는 폴더 경로 (예: /shop/users)"),
         destinationPath: z
           .string()
           .default("/")
-          .describe("이동할 대상 폴더 경로 (기본 루트 '/', list_mock_apis로 확인)"),
+          .describe(
+            "이동하여 배치될 대상 부모 폴더 경로 (기본 루트 '/', 예: /api/v1)"
+          ),
         confirmMerge: z
           .boolean()
           .optional()
           .describe(
-            "대상에 같은 이름의 폴더가 있어 병합이 필요할 때만 지정합니다. true면 원본 폴더 삭제를 승인하고 진행합니다."
+            "대상 위치에 동일 이름의 폴더가 존재하여 병합(원본 폴더 문서 삭제)이 필요한 경우 true로 지정하여 승인합니다."
           ),
       },
     },

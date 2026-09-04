@@ -27,17 +27,22 @@ export function registerRenameMockApi(server: McpServer, client: ApiClient) {
     {
       title: "Mock API 이름 변경",
       description:
-        "경로로 지정한 항목의 이름을 변경합니다. 이름이 바뀌면 호출 URL 경로도 함께 재계산됩니다. 경로는 list_mock_apis로 확인하세요.",
+        "경로로 지정한 Mock API 또는 폴더의 이름을 변경합니다. " +
+        "이름 변경 시 해당 항목 및 하위 항목들의 Mock API 호출 URL 경로가 자동으로 재계산됩니다. 경로는 list_mock_apis로 확인하세요.",
       annotations: { readOnlyHint: false, destructiveHint: false },
       inputSchema: {
-        path: z.string().describe("이름을 바꿀 항목 경로 (예: /shop/users)"),
+        path: z
+          .string()
+          .describe("이름을 변경할 대상 Mock API 또는 폴더 경로 (예: /shop/users)"),
         newName: z
           .string()
           .regex(
             ITEM_NAME_REGEX,
             "이름은 한글/영문/숫자/하이픈/언더바만 사용할 수 있습니다."
           )
-          .describe("새 이름 (URL 경로가 됨)"),
+          .describe(
+            "새로운 단일 이름 (경로가 아닌 순수 이름만 입력, 예: 'members' 또는 'v2'. 영문/한글/숫자/-/_ 지원)"
+          ),
       },
     },
     async (args) => withApiErrors(() => handleRenameMockApi(client, args))

@@ -23,7 +23,7 @@ const primitiveInput = z.enum(SCHEMA_PRIMITIVES)
  * 여기에 공백을 더하면 최종 설명에 두 칸이 생긴다.
  */
 export const SCHEMA_VALUE_TYPES_HINT =
-  `스키마 값 타입: ${SCHEMA_PRIMITIVES.map((t) => `"${t}"`).join(" | ")}` +
+  `지원하는 스키마 타입: ${SCHEMA_PRIMITIVES.map((t) => `"${t}"`).join(" | ")}` +
   ' | { "type": "array", "items": <타입> } | 중첩 객체'
 
 // SchemaObject 재귀 입력: 값 = 기본타입 | { type: "array", items } | 중첩 객체

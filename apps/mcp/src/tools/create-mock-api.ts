@@ -149,9 +149,9 @@ export function registerCreateMockApi(
     {
       title: "Mock API 생성",
       description:
-        "스키마 정의로부터 mock 데이터를 생성해 워크스페이스에 mock API를 만들고 호출 가능한 URL을 반환합니다. " +
-        SCHEMA_VALUE_TYPES_HINT +
-        " 최상위 id 필드는 자동으로 number 자동 증가(1,2,3…)로 추가되므로 스키마에 정의할 필요가 없습니다.",
+        "스키마 정의로부터 mock 데이터를 생성하여 새 Mock API 엔드포인트를 등록하고 즉시 호출 가능한 URL을 반환합니다. " +
+        "최상위 'id' 필드는 1부터 시작하는 자동 증가 number로 시스템이 자동 주입하므로 schema에 정의하지 마세요. " +
+        SCHEMA_VALUE_TYPES_HINT,
       annotations: { readOnlyHint: false, destructiveHint: false },
       inputSchema: {
         name: z
@@ -160,13 +160,15 @@ export function registerCreateMockApi(
             ITEM_NAME_REGEX,
             "이름은 한글/영문/숫자/하이픈/언더바만 사용할 수 있습니다."
           )
-          .describe("리소스 이름 (URL 경로가 됨, 예: products)"),
+          .describe(
+            "리소스 단일 이름 (슬래시 제외, URL의 마지막 세그먼트가 됨. 영문/한글/숫자/-/_, 예: products)"
+          ),
         schema: schemaObjectInput,
         parentPath: z
           .string()
           .default("/")
           .describe(
-            "배치할 폴더 경로 (기본 루트 '/'). 없는 폴더면 createParents: true를 함께 지정하세요."
+            "배치할 부모 폴더 경로 (기본값 '/'). 존재하지 않는 폴더일 경우 createParents: true를 함께 설정하세요."
           ),
         count: z
           .number()
@@ -174,20 +176,20 @@ export function registerCreateMockApi(
           .min(1)
           .max(50)
           .default(10)
-          .describe("생성할 mock 데이터 건수"),
+          .describe("생성할 mock 데이터 건수 (1~50, 기본값 10)"),
         locale: z.enum(["ko", "en"]).default("ko"),
         fakerHints: z
           .record(z.string())
           .optional()
           .describe(
-            '필드 dot-path → faker 메서드. 예: { "price": "commerce.price", "author.name": "person.fullName" }'
+            '특정 필드에 적용할 Faker 메서드 매핑 (예: { "price": "commerce.price", "author.name": "person.fullName" }). 필드 타입과 호환되는 메서드여야 합니다.'
           ),
         ...mockApiOptionInputShape,
         createParents: z
           .boolean()
           .default(false)
           .describe(
-            "parentPath의 폴더가 없으면 자동으로 만듭니다. 중간 폴더도 함께 생성합니다."
+            "true로 설정 시 parentPath에 지정된 상위 폴더 경로가 없으면 중간 폴더까지 자동으로 생성합니다. (폴더 존재 여부가 불확실할 때 true 권장)"
           ),
       },
     },
