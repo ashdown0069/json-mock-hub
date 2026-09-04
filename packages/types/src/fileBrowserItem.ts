@@ -31,6 +31,6 @@ export interface FileBrowserItemContract {
  * 따라서 id가 아니라 _id이고, 방금 보낸 json 전량이 함께 에코된다.
  */
 export interface CreatedItemResponse {
-  _id: string
+  id: string
   path: string
 }

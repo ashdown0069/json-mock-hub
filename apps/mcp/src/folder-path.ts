@@ -66,7 +66,7 @@ export async function ensureFolderPath(
       itemType: "Folder",
       parentId,
     })
-    parentId = madeFolder._id
+    parentId = madeFolder.id
     created.push(currentPath)
   }
 

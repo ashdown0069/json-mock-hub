@@ -39,7 +39,7 @@ function makeClient() {
         parentId: payload.parentId,
       })
       seq += 1
-      return { _id: `new${seq}`, path: `/${payload.name}` }
+      return { id: `new${seq}`, path: `/${payload.name}` }
     },
   } as never
   return { client, calls }

@@ -187,7 +187,7 @@ describe("handleCreateMockApi — createParents", () => {
           parentId: payload.parentId,
         })
         seq += 1
-        return { _id: `new${seq}`, path: `/${payload.name}` }
+        return { id: `new${seq}`, path: `/${payload.name}` }
       },
     } as any
     return { client, calls }
