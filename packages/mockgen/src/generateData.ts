@@ -3,7 +3,11 @@
 // 드러나고, 나중에 번들러 동작이 바뀌어도 조용히 커지지 않는다.
 import { faker as fakerKO } from "@faker-js/faker/locale/ko"
 import { faker as fakerEN } from "@faker-js/faker/locale/en"
-import { FieldSchema, SchemaPrimitive, MAX_SCHEMA_DEPTH } from "@workspace/types"
+import {
+  FieldSchema,
+  SchemaPrimitive,
+  MAX_SCHEMA_DEPTH,
+} from "@workspace/types"
 import { isFakerMethodAllowed } from "./fakerMethods"
 
 /** 배열 필드가 만드는 원소 수. 깊이 d에서 리프가 n × 3^d로 폭발하므로 상한과 함께 관리한다. */
@@ -53,7 +57,7 @@ export const generateDummyData = (
   // 레코드 + satisfies로 두면 SchemaPrimitive에 값이 추가될 때 컴파일 에러가 난다 —
   // switch의 default: return ""는 모든 행을 빈 문자열로 만들면서도 조용히 통과했다.
   const PRIMITIVE_GENERATORS = {
-    string: () => faker.lorem.word(),
+    string: () => faker.lorem.words(),
     number: () => faker.number.int({ min: 1, max: 1000 }),
     boolean: () => faker.datatype.boolean(),
     date: () => faker.date.recent().toISOString(),
