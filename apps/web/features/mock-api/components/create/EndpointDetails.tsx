@@ -1,6 +1,6 @@
 import React from "react"
 import { useTranslations } from "next-intl"
-import { Field, FieldLabel } from "@workspace/ui/components/field"
+import { Field, FieldDescription, FieldLabel } from "@workspace/ui/components/field"
 import {
   InputGroup,
   InputGroupAddon,
@@ -24,6 +24,10 @@ export function EndpointDetails({ endpointPrefix }: EndpointDetailsProps) {
   const apiPath = useCreateMockApiStore((state) => state.apiPath)
   const setApiPath = useCreateMockApiStore((state) => state.setApiPath)
 
+  // 선행 슬래시를 제거하여 endpointPrefix와의 결합 시 이중 슬래시 방지
+  const cleanPath = apiPath.trim().replace(/^\/+/, "")
+  const fullUrl = `${endpointPrefix}${cleanPath}`
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -38,9 +42,9 @@ export function EndpointDetails({ endpointPrefix }: EndpointDetailsProps) {
         <Field>
           <FieldLabel>{t("apiPath")}</FieldLabel>
           <InputGroup>
-            {/* 하위 폴더에서 생성 시 최종 경로가 불명확해 이름에 "/"를 넣는 실수를 방지하기 위해 접두어를 표시한다 */}
-            <InputGroupAddon className="font-mono text-xs text-muted-foreground">
-              {endpointPrefix}
+            {/* 인풋 너비 확보를 위해 Addon에는 '/'만 노출 */}
+            <InputGroupAddon className="font-mono text-xs text-muted-foreground select-none">
+              /
             </InputGroupAddon>
             <InputGroupInput
               value={apiPath}
@@ -48,6 +52,9 @@ export function EndpointDetails({ endpointPrefix }: EndpointDetailsProps) {
               placeholder={t("apiPathPlaceholder")}
             />
           </InputGroup>
+          <FieldDescription className="font-mono text-xs text-muted-foreground break-all">
+            {fullUrl}
+          </FieldDescription>
         </Field>
       </CardContent>
     </Card>

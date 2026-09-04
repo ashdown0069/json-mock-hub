@@ -9,7 +9,6 @@ const nextConfig = {
     "@workspace/types",
     "@workspace/codegen",
     "@workspace/mockgen",
-    "@workspace/data-access",
   ],
   images: {
     remotePatterns: [],
