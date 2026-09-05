@@ -1,7 +1,4 @@
-import {
-  DEFAULT_MOCK_PARAMS,
-  resolveMockApiParams,
-} from "../mockContract"
+import { DEFAULT_MOCK_PARAMS, resolveMockApiParams } from "../mockContract"
 
 describe("DEFAULT_MOCK_PARAMS", () => {
   it("목서버 런타임이 읽는 키와 생성 코드가 박는 키를 고정한다", () => {
@@ -33,7 +30,7 @@ describe("resolveMockApiParams", () => {
 
   it("기능이 켜져 있고 파라미터명이 없으면 기본값을 채운다", () => {
     expect(
-      resolveMockApiParams({ pagination: true, sort: true, search: true }),
+      resolveMockApiParams({ pagination: true, sort: true, search: true })
     ).toEqual({
       pagination: { pageParam: "page", limitParam: "limit" },
       sort: { sortParam: "_sort", orderParam: "_order" },
@@ -50,7 +47,7 @@ describe("resolveMockApiParams", () => {
         sortParams: { sortParam: "orderBy", orderParam: "dir" },
         search: true,
         searchParams: { searchParam: "keyword" },
-      }),
+      })
     ).toEqual({
       pagination: { pageParam: "p", limitParam: "size" },
       sort: { sortParam: "orderBy", orderParam: "dir" },
@@ -65,7 +62,7 @@ describe("resolveMockApiParams", () => {
       resolveMockApiParams({
         pagination: true,
         paginationParams: { pageParam: "", limitParam: "" },
-      }).pagination,
+      }).pagination
     ).toEqual({ pageParam: "page", limitParam: "limit" })
   })
 
@@ -74,7 +71,7 @@ describe("resolveMockApiParams", () => {
       resolveMockApiParams({
         pagination: false,
         paginationParams: { pageParam: "p", limitParam: "size" },
-      }).pagination,
+      }).pagination
     ).toBeNull()
   })
 })

@@ -27,8 +27,7 @@ export interface FileBrowserItemContract {
 /**
  * POST /:workspaceId/filebrowser/createItem 의 응답.
  *
- * 이 라우트만 @Serialize가 없어 mongoose 문서 원본이 그대로 나간다.
- * 따라서 id가 아니라 _id이고, 방금 보낸 json 전량이 함께 에코된다.
+ * @Serialize(FilebrowserItems)가 적용되어 id와 path를 보장한다.
  */
 export interface CreatedItemResponse {
   id: string
