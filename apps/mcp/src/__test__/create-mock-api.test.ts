@@ -23,11 +23,11 @@ const baseArgs = {
 
 function makeClient(over: Partial<{
   getItems: () => Promise<FileBrowserItemRes[]>
-  createItem: (p: any) => Promise<{ _id: string; path: string }>
+  createItem: (p: any) => Promise<{ id: string; path: string }>
 }> = {}) {
   return {
     getItems: over.getItems ?? (async () => []),
-    createItem: over.createItem ?? (async () => ({ _id: "x", path: "/users" })),
+    createItem: over.createItem ?? (async () => ({ id: "x", path: "/users" })),
   } as any
 }
 
@@ -37,7 +37,7 @@ describe("handleCreateMockApi", () => {
     const client = makeClient({
       createItem: async (p) => {
         received = p
-        return { _id: "secret-id", path: "/users" }
+        return { id: "secret-id", path: "/users" }
       },
     })
     const res = await handleCreateMockApi(client, config, baseArgs)
@@ -57,7 +57,7 @@ describe("handleCreateMockApi", () => {
       ],
       createItem: async (p) => {
         received = p
-        return { _id: "x", path: "/shop/users" }
+        return { id: "x", path: "/shop/users" }
       },
     })
     const res = await handleCreateMockApi(client, config, { ...baseArgs, parentPath: "/shop" })
@@ -76,7 +76,7 @@ describe("handleCreateMockApi", () => {
 describe("예약 필드 id 주입", () => {
   it("createItem에 전달되는 schema 최상위에 id: number가 주입된다", async () => {
     const client = makeClient({
-      createItem: jest.fn().mockResolvedValue({ _id: "x", path: "/products" }),
+      createItem: jest.fn().mockResolvedValue({ id: "x", path: "/products" }),
     })
     await handleCreateMockApi(client, config, {
       name: "products",
@@ -92,7 +92,7 @@ describe("예약 필드 id 주입", () => {
 
   it("사용자가 schema에 id를 정의해도 number로 덮어쓴다", async () => {
     const client = makeClient({
-      createItem: jest.fn().mockResolvedValue({ _id: "x", path: "/products" }),
+      createItem: jest.fn().mockResolvedValue({ id: "x", path: "/products" }),
     })
     await handleCreateMockApi(client, config, {
       name: "products",
@@ -144,7 +144,7 @@ describe("handleCreateMockApi — 대소문자 충돌 선차단", () => {
   })
 
   it("다른 부모 아래의 동명 항목은 충돌로 보지 않는다", async () => {
-    const createItem = jest.fn().mockResolvedValue({ _id: "x", path: "/products" })
+    const createItem = jest.fn().mockResolvedValue({ id: "x", path: "/products" })
     const client = makeClient({
       getItems: async () => [existing("Products", "/shop/Products", "f1")],
       createItem,
@@ -160,7 +160,7 @@ describe("handleCreateMockApi — 대소문자 충돌 선차단", () => {
   })
 
   it("충돌이 없으면 그대로 생성한다", async () => {
-    const createItem = jest.fn().mockResolvedValue({ _id: "x", path: "/users" })
+    const createItem = jest.fn().mockResolvedValue({ id: "x", path: "/users" })
     const client = makeClient({
       getItems: async () => [existing("orders", "/orders")],
       createItem,
@@ -259,7 +259,7 @@ describe("handleCreateMockApi — createParents", () => {
 
 describe("handleCreateMockApi — sort·search 옵션", () => {
   it("sort를 지정하면 createItem 페이로드의 options.sort가 켜진다", async () => {
-    const createItem = jest.fn().mockResolvedValue({ _id: "x", path: "/users" })
+    const createItem = jest.fn().mockResolvedValue({ id: "x", path: "/users" })
     const client = makeClient({ createItem })
 
     await handleCreateMockApi(client, config, {
@@ -276,7 +276,7 @@ describe("handleCreateMockApi — sort·search 옵션", () => {
   })
 
   it("search를 지정하면 options.search가 켜지고 결과 안내에 쿼리 예시가 붙는다", async () => {
-    const createItem = jest.fn().mockResolvedValue({ _id: "x", path: "/users" })
+    const createItem = jest.fn().mockResolvedValue({ id: "x", path: "/users" })
     const client = makeClient({ createItem })
 
     const res = await handleCreateMockApi(client, config, {
@@ -289,7 +289,7 @@ describe("handleCreateMockApi — sort·search 옵션", () => {
   })
 
   it("옵션을 하나도 지정하지 않으면 전부 꺼진 채로 생성된다", async () => {
-    const createItem = jest.fn().mockResolvedValue({ _id: "x", path: "/users" })
+    const createItem = jest.fn().mockResolvedValue({ id: "x", path: "/users" })
     const client = makeClient({ createItem })
 
     await handleCreateMockApi(client, config, baseArgs)
