@@ -24,11 +24,11 @@ describe("Workspaces", () => {
     mockUseGetWorkspaceList.mockReset()
   })
 
-  it("로딩 중에는 loading 문구를 표시한다", () => {
+  it("로딩 중에는 큰 섹션 단위 스켈레톤을 표시한다", () => {
     mockUseGetWorkspaceList.mockReturnValue({ isLoading: true })
     render(<Workspaces />)
 
-    expect(screen.getByText("loading")).toBeInTheDocument()
+    expect(screen.getByTestId("workspaces-skeleton")).toBeInTheDocument()
     expect(screen.queryByTestId("workspace-card")).not.toBeInTheDocument()
   })
 

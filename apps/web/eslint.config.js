@@ -6,10 +6,6 @@ import { nextJsConfig } from "@workspace/eslint-config/next-js"
  *
  * - `customAxiosError`(타입)와 `refreshAccessToken`(SSE 재연결용)은 어디서든
  *   써야 하므로 importNames로 axiosInstance와 default만 제한한다.
- * - `axios` 패키지 직접 import는 막지 않는다 — 서버 모듈이 isAxiosError
- *   타입가드에 정당하게 쓴다(checkMembership.server.ts).
- * - serverAxiosInstance는 소비자가 `import "server-only"`로 이미 경계가
- *   강제되므로 대상에서 뺐다.
  *
  * @type {import("eslint").Linter.Config[]}
  */

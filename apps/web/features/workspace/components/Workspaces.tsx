@@ -3,6 +3,7 @@
 import React from "react"
 import { useGetWorkspaceList } from "../api/getWorkspaceList"
 import { useTranslations } from "next-intl"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { WorkspaceCard } from "./WorkspaceCard"
 import CreateWorkspace from "./CreateWorkspaceDialog/CreateWorkspace"
 
@@ -10,10 +11,19 @@ export const Workspaces = () => {
   const { data: workspaces, isLoading, isError } = useGetWorkspaceList()
   const t = useTranslations("Workspaces")
 
+  // 세부 요소가 아닌 큼직한 2개 섹션(헤더 바 + 카드 그리드 블록)으로 로딩 처리
   if (isLoading) {
     return (
-      <div className="flex w-full items-center justify-center py-20 text-sm font-medium text-muted-foreground">
-        {t("loading")}
+      <div data-testid="workspaces-skeleton" className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-36 rounded-lg" />
+          <Skeleton className="h-9 w-28 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-44 w-full rounded-xl" />
+          <Skeleton className="h-44 w-full rounded-xl" />
+          <Skeleton className="h-44 w-full rounded-xl" />
+        </div>
       </div>
     )
   }
@@ -47,4 +57,3 @@ export const Workspaces = () => {
     </div>
   )
 }
-

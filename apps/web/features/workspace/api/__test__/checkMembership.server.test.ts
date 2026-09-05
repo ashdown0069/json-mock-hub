@@ -1,66 +1,86 @@
-const mockGet = jest.fn()
-jest.mock("@/lib/serverAxios", () => ({
-  serverAxiosInstance: { get: (...args: unknown[]) => mockGet(...args) },
+const mockCookieStore = { toString: () => "ACCESS_TOKEN=test; REFRESH_TOKEN=ref" }
+jest.mock("next/headers", () => ({
+  cookies: jest.fn(async () => mockCookieStore),
 }))
 
 import { checkWorkspaceMembership } from "../checkMembership.server"
 
-/** axios가 던지는 형태의 에러 */
-const httpError = (status: number) =>
-  Object.assign(new Error("failed"), {
-    isAxiosError: true,
-    response: { status, data: {} },
-  })
+describe("checkWorkspaceMembership (Native Fetch 기반)", () => {
+  const originalFetch = globalThis.fetch
 
-describe("checkWorkspaceMembership", () => {
   beforeEach(() => {
-    mockGet.mockReset()
+    jest.restoreAllMocks()
     jest.spyOn(console, "error").mockImplementation(() => undefined)
   })
 
-  afterEach(() => jest.restoreAllMocks())
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+  })
 
   it("성공하면 status: ok와 멤버십 정보를 반환한다", async () => {
-    mockGet.mockResolvedValue({ data: { isMember: true, role: "owner" } })
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ isMember: true, role: "owner" }),
+    } as Response)
 
-    expect(await checkWorkspaceMembership("ws1")).toEqual({
+    const result = await checkWorkspaceMembership("ws1")
+    expect(result).toEqual({
       status: "ok",
       isMember: true,
       role: "owner",
     })
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/workspaces/ws1/membership"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Cookie: "ACCESS_TOKEN=test; REFRESH_TOKEN=ref",
+        }),
+      })
+    )
   })
 
-  it("401은 unauthenticated로 구분한다", async () => {
-    mockGet.mockRejectedValue(httpError(401))
+  it("401 응답 시 unauthenticated를 반환한다", async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({}),
+    } as Response)
 
-    expect(await checkWorkspaceMembership("ws1")).toEqual({
-      status: "unauthenticated",
-    })
+    const result = await checkWorkspaceMembership("ws1")
+    expect(result).toEqual({ status: "unauthenticated" })
   })
 
-  it("403은 멤버가 아닌 것으로 해석한다 (로그아웃 대상이 아님)", async () => {
-    mockGet.mockRejectedValue(httpError(403))
+  it("403 응답 시 isMember: false인 ok를 반환한다", async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({}),
+    } as Response)
 
-    expect(await checkWorkspaceMembership("ws1")).toEqual({
+    const result = await checkWorkspaceMembership("ws1")
+    expect(result).toEqual({
       status: "ok",
       isMember: false,
       role: null,
     })
   })
 
-  it("500은 unavailable로 구분한다 (API 재시작이 로그아웃이 되면 안 됨)", async () => {
-    mockGet.mockRejectedValue(httpError(500))
+  it("500 응답 시 unavailable을 반환한다", async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    } as Response)
 
-    expect(await checkWorkspaceMembership("ws1")).toEqual({
-      status: "unavailable",
-    })
+    const result = await checkWorkspaceMembership("ws1")
+    expect(result).toEqual({ status: "unavailable" })
   })
 
-  it("네트워크 오류도 unavailable로 처리한다", async () => {
-    mockGet.mockRejectedValue(new Error("ECONNREFUSED"))
+  it("네트워크 예외 시 unavailable을 반환한다", async () => {
+    globalThis.fetch = jest.fn().mockRejectedValue(new Error("ECONNREFUSED"))
 
-    expect(await checkWorkspaceMembership("ws1")).toEqual({
-      status: "unavailable",
-    })
+    const result = await checkWorkspaceMembership("ws1")
+    expect(result).toEqual({ status: "unavailable" })
   })
 })
