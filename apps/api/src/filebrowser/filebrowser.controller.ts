@@ -90,6 +90,7 @@ export class FilebrowserController {
     return this.filebrowserService.getItem(workspaceId, itemId);
   }
 
+  @Serialize(FilebrowserItems)
   @RequirePermission('canCreate')
   @Post('createItem')
   async createItems(

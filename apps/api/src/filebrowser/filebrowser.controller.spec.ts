@@ -129,5 +129,14 @@ describe('FilebrowserController', () => {
         action: 'DELETE',
       });
     });
+
+    it('createItems 핸들러에 Serialize 인터셉터가 적용되어 있다', () => {
+      const interceptors = Reflect.getMetadata(
+        '__interceptors__',
+        controller.createItems,
+      );
+      expect(interceptors).toBeDefined();
+      expect(interceptors.length).toBeGreaterThan(0);
+    });
   });
 });
