@@ -19,7 +19,7 @@ export interface CreateItemPayload {
   fieldDefs?: FieldSchema[]
 }
 
-// 이 라우트만 @Serialize가 없어 mongoose 문서 원본이 나온다 — id가 아니라 _id다.
+// @Serialize(FilebrowserItems)가 적용되어 id와 path를 포함한 CreatedItemResponse를 반환한다.
 export async function createBrowserItem(
   workspaceId: string,
   payload: CreateItemPayload

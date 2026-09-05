@@ -60,7 +60,7 @@ export function useMockApiDialog(workspaceId: string, basePath: string) {
       { ...payload, itemType: "File", parentId: dialogParent.id },
       {
         onSuccess: (created) => {
-          setActiveItem(created._id)
+          setActiveItem(created.id)
           toast.success(t("createSuccess"))
           // 실패 시에는 폼을 유지해 재시도할 수 있게 하고, 성공 시에만 닫는다
           setDialogParent(null)

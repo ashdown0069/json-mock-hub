@@ -188,7 +188,7 @@ describe("useMockApiDialog 및 parentPathOf 테스트", () => {
       })
 
       const [, options] = mockCreateItem.mock.calls[0]
-      const createdItem = { _id: "created-api-id", path: "/new-api" }
+      const createdItem = { id: "created-api-id", path: "/new-api" }
 
       act(() => {
         options.onSuccess(createdItem)
