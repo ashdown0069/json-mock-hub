@@ -11,9 +11,14 @@ jest.mock("@workspace/ui/components/tooltip", () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-const createItemMock = jest.fn()
-jest.mock("../../api/createBrowserItem", () => ({
-  useCreateBrowserItem: () => ({ mutate: createItemMock }),
+const mockTreeCreate = jest.fn()
+jest.mock("../FileTree", () => ({
+  FileTree: ({ treeRef }: { treeRef?: React.MutableRefObject<any> }) => {
+    if (treeRef) {
+      treeRef.current = { create: mockTreeCreate }
+    }
+    return <div data-testid="file-tree" />
+  },
 }))
 jest.mock("@/hooks/useWorkspaceBasePath", () => ({
   useWorkspaceBasePath: () => ({
@@ -23,9 +28,6 @@ jest.mock("@/hooks/useWorkspaceBasePath", () => ({
 }))
 jest.mock("@/hooks/useMyPermissions", () => ({
   useMyPermissions: () => ({ canCreate: true, canUpdate: true, canDelete: true }),
-}))
-jest.mock("../FileTree", () => ({
-  FileTree: () => <div data-testid="file-tree" />,
 }))
 // 마운트 여부를 DOM으로 판정해야 하므로 마커를 그린다. () => null이면
 // 마운트돼도 화면에 흔적이 없어 지연 마운트를 검증할 수 없다.
@@ -51,49 +53,21 @@ jest.mock("@/features/mock-api/hooks/useMockApiDialog", () => ({
 import { render, screen, fireEvent } from "@testing-library/react"
 import { ApisExplorer } from "../ApisExplorer"
 
-describe("ApisExplorer 폴더 생성 입력창", () => {
+describe("ApisExplorer 루트 폴더 생성", () => {
   beforeEach(() => {
-    createItemMock.mockClear()
+    mockTreeCreate.mockClear()
   })
 
-  it("초기에는 폴더명 입력창이 보이지 않는다", () => {
-    render(<ApisExplorer />)
-    expect(screen.queryByPlaceholderText("New folder...")).not.toBeInTheDocument()
-  })
-
-  it("폴더 생성 버튼을 누르면 입력창이 나타난다", () => {
+  it("폴더 생성 버튼을 누르면 FileTree의 create({ parentId: null, index: 0, type: 'internal' })가 호출된다", () => {
     render(<ApisExplorer />)
     // TreeActionButtons의 폴더 생성 버튼. 아이콘 전용이므로 첫 번째 버튼을 사용한다
     fireEvent.click(screen.getAllByRole("button")[0]!)
-    expect(screen.getByPlaceholderText("New folder...")).toBeInTheDocument()
-  })
 
-  it("Escape를 누르면 입력창이 사라지고 생성 요청이 나가지 않는다", () => {
-    render(<ApisExplorer />)
-    fireEvent.click(screen.getAllByRole("button")[0]!)
-
-    const input = screen.getByPlaceholderText("New folder...")
-    fireEvent.change(input, { target: { value: "users" } })
-    fireEvent.keyDown(input, { key: "Escape" })
-
-    expect(screen.queryByPlaceholderText("New folder...")).not.toBeInTheDocument()
-    expect(createItemMock).not.toHaveBeenCalled()
-  })
-
-  it("이름을 입력하고 Enter를 누르면 폴더 생성이 요청되고 입력창이 닫힌다", () => {
-    render(<ApisExplorer />)
-    fireEvent.click(screen.getAllByRole("button")[0]!)
-
-    const input = screen.getByPlaceholderText("New folder...")
-    fireEvent.change(input, { target: { value: "users" } })
-    fireEvent.keyDown(input, { key: "Enter" })
-
-    expect(createItemMock).toHaveBeenCalledWith({
-      name: "users",
-      itemType: "Folder",
+    expect(mockTreeCreate).toHaveBeenCalledWith({
       parentId: null,
+      index: 0,
+      type: "internal",
     })
-    expect(screen.queryByPlaceholderText("New folder...")).not.toBeInTheDocument()
   })
 })
 

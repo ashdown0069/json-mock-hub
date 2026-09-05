@@ -19,8 +19,8 @@ export function useFileTreeData(workspaceId: string) {
   const [tempNode, setTempNode] = useState<FileItem | null>(null)
 
   const treeData = useMemo(() => {
-    const merged = tempNode ? [...flatItems, tempNode] : flatItems
-    return buildTree(merged)
+    const merged = tempNode ? [tempNode, ...flatItems] : flatItems
+    return buildTree(merged, tempNode?.id)
   }, [flatItems, tempNode])
 
   return { flatItems, treeData, isLoading, isError, refetch, tempNode, setTempNode }

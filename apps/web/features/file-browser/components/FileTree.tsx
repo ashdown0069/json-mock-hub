@@ -1,10 +1,11 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { Tree } from "react-arborist"
+import { Tree, type TreeApi } from "react-arborist"
 import { FileTreeNode } from "./FileTreeNode"
 import { useTranslations } from "next-intl"
 import { Button } from "@workspace/ui/components/button"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { useMyPermissions } from "@/hooks/useMyPermissions"
 import { useElementSize } from "@/hooks/useElementSize"
 import { FileItem, FileTree as FileTreeNodeData } from "../types"
@@ -30,9 +31,14 @@ interface FileTreeProps {
   /** Mock API(File) 생성 요청을 다이얼로그로 위임합니다 (부모 폴더 id/경로 전달) */
   onCreateMockApi: (parentId: string | null, parentPath: string) => void
   onEditMockApi: (item: FileItem) => void
+  treeRef?: React.Ref<TreeApi<FileTreeNodeData> | undefined>
 }
 
-export function FileTree({ onCreateMockApi, onEditMockApi }: FileTreeProps) {
+export function FileTree({
+  onCreateMockApi,
+  onEditMockApi,
+  treeRef,
+}: FileTreeProps) {
   const params = useParams()
   const workspaceId = params.workspaceId as string
   const t = useTranslations("FileBrowser")
@@ -57,8 +63,11 @@ export function FileTree({ onCreateMockApi, onEditMockApi }: FileTreeProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-        {t("loading")}
+      <div data-testid="file-tree-skeleton" className="space-y-2 p-3">
+        <Skeleton className="h-6 w-3/4 rounded" />
+        <Skeleton className="h-6 w-full rounded" />
+        <Skeleton className="h-6 w-5/6 rounded" />
+        <Skeleton className="h-6 w-2/3 rounded" />
       </div>
     )
   }
@@ -88,6 +97,7 @@ export function FileTree({ onCreateMockApi, onEditMockApi }: FileTreeProps) {
       {/* 측정 전(0×0)에는 렌더하지 않아 300×500 기본값이 잠깐 보이는 것을 막는다 */}
       {width > 0 && height > 0 ? (
         <Tree
+          ref={treeRef}
           data={treeData}
           childrenAccessor={folderChildrenAccessor}
           width={width}

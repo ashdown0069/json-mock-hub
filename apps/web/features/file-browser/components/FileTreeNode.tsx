@@ -137,7 +137,7 @@ export function FileTreeNode({
                     node.open()
                     node.tree.create({
                       parentId: node.id,
-                      index: node.children?.length ?? 0,
+                      index: 0,
                       type: "internal",
                     })
                   }

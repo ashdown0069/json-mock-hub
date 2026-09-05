@@ -60,6 +60,58 @@ describe("tree.utils", () => {
       const tree = buildTree([])
       expect(tree).toEqual([])
     })
+
+    it("트리 노드를 폴더 우선(Folder first) 및 이름 오름차순(A-Z)으로 정렬한다", () => {
+      const flatItems: FileItem[] = [
+        { id: "1", name: "b-file", itemType: "File", parentId: null },
+        { id: "2", name: "z-folder", itemType: "Folder", parentId: null },
+        { id: "3", name: "a-folder", itemType: "Folder", parentId: null },
+        { id: "4", name: "a-file", itemType: "File", parentId: null },
+      ]
+
+      const tree = buildTree(flatItems)
+
+      expect(tree.map((n) => n.name)).toEqual([
+        "a-folder",
+        "z-folder",
+        "a-file",
+        "b-file",
+      ])
+    })
+
+    it("임시 노드(tempNodeId 또는 temp- 접두사)는 항상 최상단(index 0)에 위치한다", () => {
+      const flatItems: FileItem[] = [
+        { id: "1", name: "b-folder", itemType: "Folder", parentId: null },
+        { id: "temp-123", name: "", itemType: "Folder", parentId: null },
+        { id: "2", name: "a-folder", itemType: "Folder", parentId: null },
+      ]
+
+      const tree = buildTree(flatItems, "temp-123")
+
+      expect(tree[0]?.id).toBe("temp-123")
+      expect(tree[1]?.name).toBe("a-folder")
+      expect(tree[2]?.name).toBe("b-folder")
+    })
+
+    it("자식(children) 노드에도 폴더 우선 및 이름 오름차순 정렬이 재귀적으로 적용된다", () => {
+      const flatItems: FileItem[] = [
+        { id: "p1", name: "parent", itemType: "Folder", parentId: null },
+        { id: "c1", name: "file-b", itemType: "File", parentId: "p1" },
+        { id: "c2", name: "subfolder-b", itemType: "Folder", parentId: "p1" },
+        { id: "c3", name: "subfolder-a", itemType: "Folder", parentId: "p1" },
+        { id: "c4", name: "file-a", itemType: "File", parentId: "p1" },
+      ]
+
+      const tree = buildTree(flatItems)
+      const children = tree[0]?.children ?? []
+
+      expect(children.map((c) => c.name)).toEqual([
+        "subfolder-a",
+        "subfolder-b",
+        "file-a",
+        "file-b",
+      ])
+    })
   })
 
   describe("buildTree — 빈 폴더", () => {

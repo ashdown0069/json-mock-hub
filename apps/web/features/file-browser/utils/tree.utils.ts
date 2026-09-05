@@ -22,7 +22,53 @@ import type { FileItem, FileTree } from "../types"
  * //    ]}]
  * ```
  */
-export function buildTree(flatItems: FileItem[]): FileTree[] {
+/**
+ * 트리 노드 정렬 비교 함수
+ *
+ * @description
+ * 1순위: 임시 노드 (tempNodeId 일치 또는 id가 'temp-'로 시작) -> 항상 최상단(-1)
+ * 2순위: 폴더 우선 (Folder first) -> 폴더가 파일보다 항상 앞(-1)
+ * 3순위: 이름 오름차순 (대소문자 무시, 숫자 자연 정렬)
+ */
+export function compareTreeNodes(
+  a: FileTree,
+  b: FileTree,
+  tempNodeId?: string | null
+): number {
+  if (tempNodeId) {
+    if (a.id === tempNodeId && b.id !== tempNodeId) return -1
+    if (b.id === tempNodeId && a.id !== tempNodeId) return 1
+  }
+
+  const aIsTemp = a.id.startsWith("temp-")
+  const bIsTemp = b.id.startsWith("temp-")
+  if (aIsTemp && !bIsTemp) return -1
+  if (bIsTemp && !aIsTemp) return 1
+
+  if (a.itemType !== b.itemType) {
+    return a.itemType === "Folder" ? -1 : 1
+  }
+
+  return a.name.localeCompare(b.name, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  })
+}
+
+function sortTreeNodes(nodes: FileTree[], tempNodeId?: string | null): FileTree[] {
+  nodes.sort((a, b) => compareTreeNodes(a, b, tempNodeId))
+  for (const node of nodes) {
+    if (node.children && node.children.length > 0) {
+      sortTreeNodes(node.children, tempNodeId)
+    }
+  }
+  return nodes
+}
+
+export function buildTree(
+  flatItems: FileItem[],
+  tempNodeId?: string | null
+): FileTree[] {
   const map = new Map<string, FileTree>()
   const roots: FileTree[] = []
 
@@ -54,5 +100,5 @@ export function buildTree(flatItems: FileItem[]): FileTree[] {
     }
   }
 
-  return roots
+  return sortTreeNodes(roots, tempNodeId)
 }
