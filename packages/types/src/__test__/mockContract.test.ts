@@ -17,11 +17,13 @@ describe("DEFAULT_MOCK_PARAMS", () => {
 describe("resolveMockApiParams", () => {
   it("options가 없으면 모든 기능이 null이다", () => {
     expect(resolveMockApiParams(null)).toEqual({
+      resourceType: "collection",
       pagination: null,
       sort: null,
       search: null,
     })
     expect(resolveMockApiParams(undefined)).toEqual({
+      resourceType: "collection",
       pagination: null,
       sort: null,
       search: null,
@@ -32,6 +34,7 @@ describe("resolveMockApiParams", () => {
     expect(
       resolveMockApiParams({ pagination: true, sort: true, search: true })
     ).toEqual({
+      resourceType: "collection",
       pagination: { pageParam: "page", limitParam: "limit" },
       sort: { sortParam: "_sort", orderParam: "_order" },
       search: { searchParam: "q" },
@@ -49,6 +52,7 @@ describe("resolveMockApiParams", () => {
         searchParams: { searchParam: "keyword" },
       })
     ).toEqual({
+      resourceType: "collection",
       pagination: { pageParam: "p", limitParam: "size" },
       sort: { sortParam: "orderBy", orderParam: "dir" },
       search: { searchParam: "keyword" },
@@ -73,5 +77,31 @@ describe("resolveMockApiParams", () => {
         paginationParams: { pageParam: "p", limitParam: "size" },
       }).pagination
     ).toBeNull()
+  })
+
+  describe("resourceType 분기", () => {
+    it("resourceType이 지정되지 않으면 기본값 'collection'으로 해석된다", () => {
+      const params = resolveMockApiParams({ pagination: true })
+      expect(params.resourceType).toBe("collection")
+      expect(params.pagination).not.toBeNull()
+    })
+
+    it("resourceType이 'object'이면 pagination, sort, search 옵션이 켜져 있어도 null로 강제된다", () => {
+      const params = resolveMockApiParams({
+        resourceType: "object",
+        pagination: true,
+        sort: true,
+        search: true,
+      } as any)
+      expect(params.resourceType).toBe("object")
+      expect(params.pagination).toBeNull()
+      expect(params.sort).toBeNull()
+      expect(params.search).toBeNull()
+    })
+
+    it("options가 null이나 undefined인 경우에도 기본 리소스 타입은 'collection'이다", () => {
+      expect(resolveMockApiParams(null).resourceType).toBe("collection")
+      expect(resolveMockApiParams(undefined).resourceType).toBe("collection")
+    })
   })
 })

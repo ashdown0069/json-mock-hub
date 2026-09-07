@@ -21,9 +21,22 @@ assert.equal(DEFAULT_MOCK_PARAMS.searchParam, "q")
 // 함수 export가 호출 가능한지
 assert.equal(typeof resolveMockApiParams, "function")
 assert.equal(resolveMockApiParams(null).pagination, null)
+assert.equal(resolveMockApiParams(null).resourceType, "collection")
 assert.equal(
   resolveMockApiParams({ pagination: true }).pagination.pageParam,
   "page",
+)
+assert.equal(
+  resolveMockApiParams({ pagination: true }).resourceType,
+  "collection",
+)
+assert.equal(
+  resolveMockApiParams({ resourceType: "object", pagination: true }).resourceType,
+  "object",
+)
+assert.equal(
+  resolveMockApiParams({ resourceType: "object", pagination: true }).pagination,
+  null,
 )
 
 // 배럴(index)이 두 소스 파일을 모두 재export하는지

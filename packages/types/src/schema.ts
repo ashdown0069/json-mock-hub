@@ -47,8 +47,16 @@ export interface SchemaObject {
   [key: string]: SchemaType
 }
 
+// 단일 객체 및 컬렉션 리소스 구분 타입
+export type MockResourceType = "collection" | "object"
+
+/** 실효 목데이터 타입 (배열 또는 단일 객체) */
+export type EffectiveMockJson = unknown[] | Record<string, unknown>
+
 // Mock API 생성 시 설정할 수 있는 옵션 구조 (페이지네이션·정렬·검색 정보 포함)
 export interface MockApiOptions {
+  /** 리소스 타입 (기본값: 'collection') */
+  resourceType?: MockResourceType
   pagination: boolean
   paginationParams?: {
     pageParam: string

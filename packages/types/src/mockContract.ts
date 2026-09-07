@@ -1,4 +1,4 @@
-import type { MockApiOptions } from "./schema"
+import type { MockApiOptions, MockResourceType } from "./schema"
 
 /**
  * 목서버 실행 파라미터의 기본 이름 (단일 진실 원천).
@@ -20,6 +20,7 @@ export const DEFAULT_MOCK_PARAMS = {
 
 /** 기능별 파라미터명이 해석된 결과. 기능이 꺼져 있으면 null. */
 export interface ResolvedMockParams {
+  resourceType: MockResourceType
   pagination: { pageParam: string; limitParam: string } | null
   sort: { sortParam: string; orderParam: string } | null
   search: { searchParam: string } | null
@@ -34,11 +35,25 @@ const orDefault = (value: string | undefined, fallback: string): string =>
  *
  * 기능 플래그가 false면 파라미터명이 저장돼 있어도 null이다 — 켜져 있지 않은
  * 기능의 파라미터를 생성 코드에 넣으면 동작하지 않는 인자가 노출된다.
+ * 리소스 타입이 'object'(단일 객체)인 경우 pagination, sort, search는 모두 null로 처리된다.
  */
 export function resolveMockApiParams(
   options: MockApiOptions | null | undefined,
 ): ResolvedMockParams {
+  const resourceType: MockResourceType =
+    options?.resourceType === "object" ? "object" : "collection"
+
+  if (resourceType === "object") {
+    return {
+      resourceType: "object",
+      pagination: null,
+      sort: null,
+      search: null,
+    }
+  }
+
   return {
+    resourceType: "collection",
     pagination: options?.pagination
       ? {
           pageParam: orDefault(
