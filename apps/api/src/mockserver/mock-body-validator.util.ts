@@ -4,6 +4,7 @@ import {
   SchemaPrimitive,
   MAX_SCHEMA_DEPTH,
   isSchemaPrimitive,
+  MockResourceType,
 } from '@workspace/types';
 
 export type MockWriteMethod = 'post' | 'put' | 'patch';
@@ -219,11 +220,12 @@ function schemaToFieldSchemas(
 
 /**
  * fieldDefs를 우선하고 schema를 폴백으로 정규화된 검증 대상 필드 목록을 도출한다.
- * 서버 관리 필드인 'id'는 검증 대상에서 제외된다.
+ * 단일 객체('object') 모드가 아닐 때, 서버 관리 필드인 'id'는 검증 대상에서 제외된다.
  */
 export function resolveValidationFields(
   fieldDefs: unknown,
   schema: unknown,
+  resourceType: MockResourceType = 'collection',
 ): FieldSchema[] {
   let fields: FieldSchema[] = [];
 
@@ -239,7 +241,12 @@ export function resolveValidationFields(
     fields = schemaToFieldSchemas(schema as Record<string, unknown>);
   }
 
-  // 최상위 'id' 필드는 서버 관리 필드이므로 클라이언트 입력 스키마에서 제외한다.
+  // 단일 객체 리소스는 사용자가 정의한 id 필드를 보존한다
+  if (resourceType === 'object') {
+    return fields;
+  }
+
+  // 컬렉션 리소스의 최상위 'id' 필드는 서버 관리 필드이므로 클라이언트 입력 스키마에서 제외한다.
   return fields.filter((f) => f.name.trim() !== 'id');
 }
 
@@ -250,6 +257,7 @@ export function validateMockBody(
   body: unknown,
   expectedFields: FieldSchema[],
   method: MockWriteMethod,
+  resourceType: MockResourceType = 'collection',
 ): BodyValidationResult {
   // 1. 객체 여부 검증 (null, 배열, 원시값 거절)
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
@@ -272,8 +280,8 @@ export function validateMockBody(
     };
   }
 
-  // 3. 클라이언트 최상위 id 필드 거절
-  if (bodyObj.id !== undefined) {
+  // 3. 클라이언트 최상위 id 필드 거절 (컬렉션 모드에서만 서버 자동 관리)
+  if (resourceType !== 'object' && bodyObj.id !== undefined) {
     return {
       ok: false,
       code: 'mock.invalid_request_body',

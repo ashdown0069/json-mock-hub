@@ -6,6 +6,13 @@ export interface CollectionOverlay {
   created: Row[];
   updated: Record<string, Row>;
   deleted: string[];
+  /**
+   * 단일 객체 리소스의 상태:
+   * - undefined: 변경 없음 (DB baseJson 사용)
+   * - Row: POST/PUT/PATCH로 갱신된 실효본
+   * - null: DELETE로 비워진 상태 (빈 객체 {} 사용)
+   */
+  singleton?: Row | null;
 }
 
 /** 매 호출마다 새로운 빈 오버레이를 만든다(공유 참조 오염 방지). */
@@ -37,7 +44,66 @@ export function normalizeOverlay(value: unknown): CollectionOverlay {
       ? (raw.updated as Record<string, Row>)
       : {};
 
-  return { created, updated, deleted };
+  const singleton =
+    typeof raw.singleton === 'object' &&
+    raw.singleton !== null &&
+    !Array.isArray(raw.singleton)
+      ? (raw.singleton as Row)
+      : raw.singleton === null
+        ? null
+        : undefined;
+
+  return { created, updated, deleted, singleton };
+}
+
+/**
+ * 단일 객체(Singleton/Object) 리소스의 실효본을 반환한다.
+ * - singleton이 null이면 DELETE로 비워진 상태이므로 {} 반환
+ * - singleton이 Row 객체이면 갱신된 실효본 반환
+ * - singleton이 undefined이면 DB의 원본 base 객체 반환
+ */
+export function applyObjectOverlay(base: Row, overlay: CollectionOverlay): Row {
+  if (overlay.singleton === null) return {};
+  return overlay.singleton !== undefined ? overlay.singleton : base;
+}
+
+/**
+ * 단일 객체 리소스에 대한 쓰기(POST/PUT/PATCH)를 오버레이에 반영한다.
+ * - post/put: 본문 전체로 실효본 교체
+ * - patch: 기존 실효본에 본문 필드 병합
+ */
+export function applyObjectUpdate(
+  current: CollectionOverlay,
+  base: Row,
+  body: Row,
+  mode: 'post' | 'put' | 'patch',
+): { overlay: CollectionOverlay; updated: Row } {
+  const active = applyObjectOverlay(base, current);
+  const updated = mode === 'patch' ? { ...active, ...body } : { ...body };
+
+  return {
+    overlay: {
+      ...current,
+      singleton: updated,
+    },
+    updated,
+  };
+}
+
+/**
+ * 단일 객체 리소스를 비우는(DELETE) 상태를 오버레이에 반영한다 (singleton: null).
+ */
+export function applyObjectReset(current: CollectionOverlay): {
+  overlay: CollectionOverlay;
+  cleared: Row;
+} {
+  return {
+    overlay: {
+      ...current,
+      singleton: null,
+    },
+    cleared: {},
+  };
 }
 
 /**

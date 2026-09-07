@@ -14,6 +14,8 @@ import {
 } from 'class-validator';
 import { IsUniqueFieldNames } from '../../validators/unique-field-names.validator';
 
+import { MockResourceType } from '@workspace/types';
+
 // 프론트(apps/web/lib/validateItemName.ts)와 동일 규칙: 한글/영문/숫자/하이픈/언더바
 export const ITEM_NAME_REGEX = /^[a-zA-Z0-9가-힣_-]+$/;
 
@@ -44,6 +46,12 @@ export class SearchParamsDto {
 }
 
 export class ItemOptionsDto {
+  @IsIn(['collection', 'object'], {
+    message: 'resourceType은 collection 또는 object여야 합니다.',
+  })
+  @IsOptional()
+  resourceType?: MockResourceType;
+
   @IsBoolean()
   @IsOptional()
   pagination?: boolean;

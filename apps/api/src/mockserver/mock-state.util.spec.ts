@@ -6,6 +6,9 @@ import {
   applyCreate,
   applyUpdate,
   applyDelete,
+  applyObjectOverlay,
+  applyObjectUpdate,
+  applyObjectReset,
   MAX_OVERLAY_CREATED_ROWS,
 } from './mock-state.util';
 
@@ -240,15 +243,18 @@ describe('normalizeOverlay', () => {
       deleted: ['2'],
     };
 
-    expect(normalizeOverlay(overlay)).toEqual(overlay);
+    expect(normalizeOverlay(overlay)).toEqual({
+      ...overlay,
+      singleton: undefined,
+    });
   });
-
 
   it('null이면 빈 오버레이를 돌려준다', () => {
     expect(normalizeOverlay(null)).toEqual({
       created: [],
       updated: {},
       deleted: [],
+      singleton: undefined,
     });
   });
 
@@ -259,6 +265,7 @@ describe('normalizeOverlay', () => {
       created: [],
       updated: {},
       deleted: [],
+      singleton: undefined,
     });
   });
 
@@ -269,6 +276,100 @@ describe('normalizeOverlay', () => {
       created: [],
       updated: {},
       deleted: ['1', '2'],
+      singleton: undefined,
     });
   });
+
+  it('singleton의 3상태(undefined/Row/null)를 정확히 정규화한다', () => {
+    // 1. undefined
+    expect(normalizeOverlay({})).toHaveProperty('singleton', undefined);
+
+    // 2. Row 객체
+    expect(
+      normalizeOverlay({ singleton: { theme: 'dark', notifications: true } }),
+    ).toHaveProperty('singleton', { theme: 'dark', notifications: true });
+
+    // 3. null
+    expect(normalizeOverlay({ singleton: null })).toHaveProperty(
+      'singleton',
+      null,
+    );
+
+    // 손상된 값(배열, 원시타입)은 undefined로 폴백
+    expect(normalizeOverlay({ singleton: 'invalid' })).toHaveProperty(
+      'singleton',
+      undefined,
+    );
+    expect(normalizeOverlay({ singleton: [1, 2] })).toHaveProperty(
+      'singleton',
+      undefined,
+    );
+  });
 });
+
+describe('단일 객체 오버레이 순수 함수 (applyObjectOverlay, applyObjectUpdate, applyObjectReset)', () => {
+  const baseObject = { theme: 'light', fontSize: 14 };
+
+  it('applyObjectOverlay: singleton이 undefined이면 base를 반환한다', () => {
+    expect(applyObjectOverlay(baseObject, createEmptyOverlay())).toEqual(
+      baseObject,
+    );
+  });
+
+  it('applyObjectOverlay: singleton이 Row이면 갱신된 실효본을 반환한다', () => {
+    const overlay = {
+      ...createEmptyOverlay(),
+      singleton: { theme: 'dark', fontSize: 16 },
+    };
+    expect(applyObjectOverlay(baseObject, overlay)).toEqual({
+      theme: 'dark',
+      fontSize: 16,
+    });
+  });
+
+  it('applyObjectOverlay: singleton이 null이면 빈 객체({})를 반환한다 (DELETE 상태)', () => {
+    const overlay = {
+      ...createEmptyOverlay(),
+      singleton: null,
+    };
+    expect(applyObjectOverlay(baseObject, overlay)).toEqual({});
+  });
+
+  it('applyObjectUpdate: post/put 모드는 전체 본문으로 교체한다', () => {
+    const current = createEmptyOverlay();
+    const res = applyObjectUpdate(
+      current,
+      baseObject,
+      { theme: 'system' },
+      'put',
+    );
+    expect(res.updated).toEqual({ theme: 'system' });
+    expect(res.overlay.singleton).toEqual({ theme: 'system' });
+  });
+
+  it('applyObjectUpdate: patch 모드는 기존 실효본에 필드를 병합한다', () => {
+    const current = {
+      ...createEmptyOverlay(),
+      singleton: { theme: 'dark', fontSize: 14 },
+    };
+    const res = applyObjectUpdate(
+      current,
+      baseObject,
+      { fontSize: 18 },
+      'patch',
+    );
+    expect(res.updated).toEqual({ theme: 'dark', fontSize: 18 });
+    expect(res.overlay.singleton).toEqual({ theme: 'dark', fontSize: 18 });
+  });
+
+  it('applyObjectReset: singleton을 null로 설정하고 빈 객체를 반환한다', () => {
+    const current = {
+      ...createEmptyOverlay(),
+      singleton: { theme: 'dark' },
+    };
+    const res = applyObjectReset(current);
+    expect(res.cleared).toEqual({});
+    expect(res.overlay.singleton).toBeNull();
+  });
+});
+

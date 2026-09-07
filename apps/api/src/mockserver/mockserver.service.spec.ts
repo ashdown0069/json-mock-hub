@@ -688,4 +688,118 @@ describe('MockserverService', () => {
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
+
+  describe('단일 객체(Singleton/Object) Mock API 지원', () => {
+    const objectItem = {
+      path: '/settings',
+      itemType: 'File',
+      json: { theme: 'light', fontSize: 14 },
+      options: { resourceType: 'object' },
+      fieldDefs: [
+        { id: '1', name: 'theme', type: 'string' },
+        { id: '2', name: 'fontSize', type: 'number' },
+      ],
+    };
+
+    it('GET: 단일 객체 본문을 200 상태 코드로 반환한다', async () => {
+      mockFindOneResult(objectItem);
+      const res = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/settings',
+        'GET',
+        {},
+        null,
+      );
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ theme: 'light', fontSize: 14 });
+    });
+
+    it(':id 하위 리소스 요청 시 예외를 던지지 않고 404 객체 응답을 반환한다', async () => {
+      // 1차 조회 실패 -> 2차 부모 매칭(/settings)
+      findOneMock.mockReturnValueOnce({
+        lean: () => ({ exec: () => Promise.resolve(null) }),
+      });
+      findOneMock.mockReturnValueOnce({
+        lean: () => ({ exec: () => Promise.resolve(objectItem) }),
+      });
+
+      const res = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/settings/1',
+        'GET',
+        {},
+        null,
+      );
+      expect(res.status).toBe(404);
+      expect((res.body as any).message).toContain(
+        '하위 리소스 식별자를 지원하지 않습니다',
+      );
+    });
+
+    it('POST: 새 객체 본문으로 교체(201)하며, 스키마에 정의된 최상위 id 필드도 허용한다', async () => {
+      const objectWithId = {
+        path: '/popup',
+        itemType: 'File',
+        json: { id: 'pop-1', title: '공지' },
+        options: { resourceType: 'object' },
+        fieldDefs: [
+          { id: '1', name: 'id', type: 'string' },
+          { id: '2', name: 'title', type: 'string' },
+        ],
+      };
+      mockFindOneResult(objectWithId);
+
+      const res = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/popup',
+        'POST',
+        {},
+        { id: 'pop-2', title: '새 공지' },
+      );
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ id: 'pop-2', title: '새 공지' });
+      expect(mockStateService.mutate).toHaveBeenCalled();
+    });
+
+    it('PUT: 전체 본문으로 갱신(200)한다', async () => {
+      mockFindOneResult(objectItem);
+      const res = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/settings',
+        'PUT',
+        {},
+        { theme: 'dark', fontSize: 16 },
+      );
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ theme: 'dark', fontSize: 16 });
+    });
+
+    it('PATCH: 일부 필드만 병합(200)한다', async () => {
+      mockFindOneResult(objectItem);
+      const res = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/settings',
+        'PATCH',
+        {},
+        { fontSize: 18 },
+      );
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ theme: 'light', fontSize: 18 });
+    });
+
+    it('DELETE: 단일 객체를 비우고(200) {}를 반환한다', async () => {
+      mockFindOneResult(objectItem);
+      const res = await service.resolveRequest(
+        WORKSPACE_ID,
+        '/settings',
+        'DELETE',
+        {},
+        null,
+      );
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({});
+      expect(mockStateService.mutate).toHaveBeenCalled();
+    });
+  });
 });
+

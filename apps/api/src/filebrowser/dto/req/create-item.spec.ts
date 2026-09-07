@@ -37,3 +37,37 @@ describe('RenameItemDto newName 검증', () => {
     expect(errors.some((e) => e.property === 'newName')).toBe(true);
   });
 });
+
+describe('ItemOptionsDto resourceType 검증', () => {
+  it('collection 또는 object는 검증을 통과한다', async () => {
+    const dtoCollection = plainToInstance(CreateItemDto, {
+      name: 'item',
+      itemType: 'File',
+      parentId: null,
+      options: { resourceType: 'collection' },
+    });
+    const errors1 = await validate(dtoCollection);
+    expect(errors1.filter((e) => e.property === 'options')).toHaveLength(0);
+
+    const dtoObject = plainToInstance(CreateItemDto, {
+      name: 'item',
+      itemType: 'File',
+      parentId: null,
+      options: { resourceType: 'object' },
+    });
+    const errors2 = await validate(dtoObject);
+    expect(errors2.filter((e) => e.property === 'options')).toHaveLength(0);
+  });
+
+  it('collection/object 외의 값은 검증에 실패한다', async () => {
+    const dtoInvalid = plainToInstance(CreateItemDto, {
+      name: 'item',
+      itemType: 'File',
+      parentId: null,
+      options: { resourceType: 'invalid-type' },
+    });
+    const errors = await validate(dtoInvalid);
+    expect(errors.some((e) => e.property === 'options')).toBe(true);
+  });
+});
+

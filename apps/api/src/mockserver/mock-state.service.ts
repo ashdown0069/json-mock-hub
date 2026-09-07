@@ -15,9 +15,12 @@ import {
   FileBrowserItem,
   FileBrowserItemDocument,
 } from '../database/schema/file-browser-item.schema';
+import { EffectiveMockJson } from '@workspace/types';
 import {
   CollectionOverlay,
+  Row,
   applyOverlay,
+  applyObjectOverlay,
   createEmptyOverlay,
   normalizeOverlay,
 } from './mock-state.util';
@@ -65,12 +68,13 @@ export class MockStateService {
   ) {}
 
   /**
-   * 대시보드 미리보기 및 MockStateController용 실효 컬렉션 조회
+   * 대시보드 미리보기 및 MockStateController용 실효 데이터 조회
+   * (컬렉션: unknown[], 단일 객체: Record<string, unknown>)
    */
   async getEffectiveJson(
     workspaceId: string,
     path: string,
-  ): Promise<unknown[]> {
+  ): Promise<EffectiveMockJson> {
     const wsObjectId = new Types.ObjectId(workspaceId);
     const normalizedPath = normalizeMockPath(path);
 
@@ -89,8 +93,19 @@ export class MockStateService {
       });
     }
 
-    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
     const overlay = await this.getOverlay(workspaceId, normalizedPath);
+
+    if (item.options?.resourceType === 'object') {
+      const baseObj: Row =
+        typeof item.json === 'object' &&
+        item.json !== null &&
+        !Array.isArray(item.json)
+          ? (item.json as Row)
+          : {};
+      return applyObjectOverlay(baseObj, overlay);
+    }
+
+    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
     return applyOverlay(baseJson, overlay);
   }
 

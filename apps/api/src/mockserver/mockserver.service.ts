@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { resolveMockApiParams } from '@workspace/types';
+import { EffectiveMockJson, resolveMockApiParams } from '@workspace/types';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -19,8 +19,12 @@ import {
   applyCreate,
   applyUpdate,
   applyDelete,
+  applyObjectOverlay,
+  applyObjectUpdate,
+  applyObjectReset,
   MAX_OVERLAY_CREATED_ROWS,
   type ApplyCreateResult,
+  type Row,
 } from './mock-state.util';
 import {
   resolveValidationFields,
@@ -43,12 +47,12 @@ export class MockserverService {
 
   /**
    * 대시보드 미리보기용 — 저장된 base JSON에 현재 Redis 오버레이를 병합한
-   * "실효 컬렉션"을 반환합니다. MockStateService로 위임합니다.
+   * "실효 데이터(배열 또는 단일 객체)"를 반환합니다. MockStateService로 위임합니다.
    */
   async getEffectiveJson(
     workspaceId: string,
     path: string,
-  ): Promise<unknown[]> {
+  ): Promise<EffectiveMockJson> {
     return this.mockStateService.getEffectiveJson(workspaceId, path);
   }
 
@@ -116,8 +120,124 @@ export class MockserverService {
     query: Record<string, unknown>,
     reqBody: unknown,
   ): Promise<MockResponse> {
-    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
+    const params = resolveMockApiParams(item.options);
     const upperMethod = method.toUpperCase();
+
+    // 단일 객체(Singleton/Object) 리소스 분기
+    if (params.resourceType === 'object') {
+      if (resourceId) {
+        return {
+          status: 404,
+          body: {
+            message:
+              '단일 객체 Mock API는 하위 리소스 식별자를 지원하지 않습니다.',
+          },
+        };
+      }
+
+      const baseObj: Row =
+        typeof item.json === 'object' &&
+        item.json !== null &&
+        !Array.isArray(item.json)
+          ? (item.json as Row)
+          : {};
+
+      const overlay = await this.mockStateService.getOverlay(
+        workspaceId,
+        item.path,
+      );
+      const effective = applyObjectOverlay(baseObj, overlay);
+
+      if (upperMethod === 'GET') {
+        return { status: 200, body: effective };
+      }
+
+      if (upperMethod === 'POST') {
+        const validationFields = resolveValidationFields(
+          item.fieldDefs,
+          item.schema,
+          'object',
+        );
+        const validation = validateMockBody(
+          reqBody,
+          validationFields,
+          'post',
+          'object',
+        );
+
+        if (!validation.ok) {
+          return {
+            status: 400,
+            body: {
+              code: validation.code ?? 'mock.invalid_request_body',
+              message: validation.message ?? '유효하지 않은 요청 본문입니다.',
+            },
+          };
+        }
+
+        const bodyObj = reqBody as Row;
+        const updated = await this.mockStateService.mutate(
+          workspaceId,
+          item.path,
+          (current) => {
+            const res = applyObjectUpdate(current, baseObj, bodyObj, 'post');
+            return { overlay: res.overlay, result: res.updated };
+          },
+        );
+        return { status: 201, body: updated };
+      }
+
+      if (upperMethod === 'PUT' || upperMethod === 'PATCH') {
+        const mode: MockWriteMethod = upperMethod === 'PUT' ? 'put' : 'patch';
+        const validationFields = resolveValidationFields(
+          item.fieldDefs,
+          item.schema,
+          'object',
+        );
+        const validation = validateMockBody(
+          reqBody,
+          validationFields,
+          mode,
+          'object',
+        );
+
+        if (!validation.ok) {
+          return {
+            status: 400,
+            body: {
+              code: validation.code ?? 'mock.invalid_request_body',
+              message: validation.message ?? '유효하지 않은 요청 본문입니다.',
+            },
+          };
+        }
+
+        const bodyObj = reqBody as Row;
+        const updated = await this.mockStateService.mutate(
+          workspaceId,
+          item.path,
+          (current) => {
+            const res = applyObjectUpdate(current, baseObj, bodyObj, mode);
+            return { overlay: res.overlay, result: res.updated };
+          },
+        );
+        return { status: 200, body: updated };
+      }
+
+      if (upperMethod === 'DELETE') {
+        await this.mockStateService.mutate(workspaceId, item.path, (current) => {
+          const res = applyObjectReset(current);
+          return { overlay: res.overlay, result: res.cleared };
+        });
+        return { status: 200, body: {} };
+      }
+
+      return {
+        status: 405,
+        body: { message: `지원하지 않는 메소드입니다: ${method}` },
+      };
+    }
+
+    const baseJson: unknown[] = Array.isArray(item.json) ? item.json : [];
 
     // MockStateService는 MockStateModule로 항상 주입된다(@Optional 아님)
     const overlay = await this.mockStateService.getOverlay(
@@ -130,8 +250,6 @@ export class MockserverService {
     // ID가 주어지지 않은 컬렉션 단위의 요청 (예: GET /users, POST /users)
     if (!resourceId) {
       if (upperMethod === 'GET') {
-        // 아이템 옵션을 공유 계약으로 해석한다 (@workspace/types)
-        const params = resolveMockApiParams(item.options);
         const filtered = applyCollectionQuery(effective, query, params);
 
         if (params.pagination) {
