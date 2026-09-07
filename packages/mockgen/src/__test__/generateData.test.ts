@@ -1,4 +1,4 @@
-import { generateDummyData } from "../generateData"
+import { generateDummyData, generateSingleObjectData } from "../generateData"
 import { FieldSchema, SCHEMA_PRIMITIVES } from "@workspace/types"
 
 describe("generateDummyData - 스칼라 배열 원소 타입", () => {
@@ -246,6 +246,45 @@ describe("원시 타입 생성기의 누락 방지", () => {
 
     // ""는 "유효한 빈 문자열"과 구분되지 않아 소비자가 결함을 알 수 없다
     expect(row!.weird).toBeNull()
+  })
+})
+
+describe("generateSingleObjectData — 단일 객체 리소스 생성", () => {
+  it("단일 객체 형태로 반환하며 최상위 배열이 아니다", () => {
+    const fields: FieldSchema[] = [
+      { id: "1", name: "theme", type: "string", fakerMethod: "none" },
+      { id: "2", name: "notifications", type: "boolean", fakerMethod: "none" },
+    ]
+    const data = generateSingleObjectData(fields, "ko")
+    expect(Array.isArray(data)).toBe(false)
+    expect(typeof data).toBe("object")
+    expect(data).toHaveProperty("theme")
+    expect(data).toHaveProperty("notifications")
+    expect(typeof data.theme).toBe("string")
+    expect(typeof data.notifications).toBe("boolean")
+  })
+
+  it("사용자가 id를 정의하지 않은 경우 불필요한 자동 증가 id를 주입하지 않는다", () => {
+    const fields: FieldSchema[] = [
+      { id: "f1", name: "appName", type: "string", fakerMethod: "none" },
+    ]
+    const data = generateSingleObjectData(fields, "en")
+    expect(data).toHaveProperty("appName")
+    expect(data).not.toHaveProperty("id")
+  })
+
+  it("사용자가 최상위에 id 필드를 정의한 경우 자동 증가 숫자로 덮어쓰지 않고 정의된 타입의 값을 보존한다", () => {
+    const fields: FieldSchema[] = [
+      { id: "f1", name: "id", type: "uuid", fakerMethod: "none" },
+      { id: "f2", name: "version", type: "string", fakerMethod: "none" },
+    ]
+    const data = generateSingleObjectData(fields, "en")
+    expect(data).toHaveProperty("id")
+    expect(typeof data.id).toBe("string")
+    // uuid 포맷 정규식 검증
+    expect(data.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    )
   })
 })
 

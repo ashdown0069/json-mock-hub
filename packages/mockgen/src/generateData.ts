@@ -46,16 +46,14 @@ function callFakerMethod(
   return raw instanceof Date ? raw.toISOString() : raw
 }
 
-export const generateDummyData = (
-  fields: FieldSchema[],
-  count: number,
-  locale: string
-) => {
+/**
+ * 주어진 로케일에 맞춘 객체 생성기 팩토리.
+ * generateDummyData(컬렉션)와 generateSingleObjectData(단일 객체)가 동일한 생성 규칙을 공유한다.
+ */
+function createObjectGenerator(locale: string) {
   const faker = locale === "ko" ? fakerKO : fakerEN
 
   // 타입별 원시값 생성을 한 곳으로 모아 스칼라 필드와 스칼라 배열 원소가 동일 규칙을 쓰게 한다 (DRY).
-  // 레코드 + satisfies로 두면 SchemaPrimitive에 값이 추가될 때 컴파일 에러가 난다 —
-  // switch의 default: return ""는 모든 행을 빈 문자열로 만들면서도 조용히 통과했다.
   const PRIMITIVE_GENERATORS = {
     string: () => faker.lorem.words(),
     number: () => faker.number.int({ min: 1, max: 1000 }),
@@ -68,8 +66,6 @@ export const generateDummyData = (
     const generator = (
       PRIMITIVE_GENERATORS as Record<string, (() => unknown) | undefined>
     )[type]
-    // 목록 밖 타입에 ""를 주면 "유효한 빈 문자열"과 구분되지 않는다.
-    // null은 JSON에 그대로 담기고 zod/yup 검증에서 즉시 드러난다.
     return generator ? generator() : null
   }
 
@@ -84,8 +80,6 @@ export const generateDummyData = (
       if (!field.name) continue
 
       if (field.fakerMethod && field.fakerMethod !== "none") {
-        // 타입에 맞지 않는 조합(예: number + commerce.price)은 무시하고
-        // 선언된 타입에 맞는 값을 만든다 — 그래야 생성된 검증 스키마가 통과한다
         const value = callFakerMethod(faker, field.fakerMethod, field.type)
         obj[field.name] =
           value === undefined ? generatePrimitive(field.type) : value
@@ -98,7 +92,6 @@ export const generateDummyData = (
             ? generateObject(field.fields, depth + 1)
             : {}
       } else if (field.type === "array") {
-        // 상한을 넘으면 전개를 멈춰 리프 수가 3^d로 폭발하는 것을 막는다
         obj[field.name] =
           depth + 1 >= MAX_SCHEMA_DEPTH
             ? []
@@ -116,6 +109,20 @@ export const generateDummyData = (
     return { ...obj }
   }
 
+  return { generateObject }
+}
+
+/**
+ * 컬렉션(배열) 형태의 더미 데이터를 생성한다.
+ * 최상위 id는 1부터 순차 증가하는 번호로 주입된다.
+ */
+export const generateDummyData = (
+  fields: FieldSchema[],
+  count: number,
+  locale: string
+) => {
+  const { generateObject } = createObjectGenerator(locale)
+
   // 최상위 id는 예약 필드: 사용자 정의를 무시하고 항상 1부터 순차 증가시킨다
   const topLevelFields = fields.filter((f) => f.name.trim() !== "id")
   return Array.from({ length: count }).map((_, index) => ({
@@ -123,3 +130,16 @@ export const generateDummyData = (
     ...generateObject(topLevelFields),
   }))
 }
+
+/**
+ * 단일 객체(Singleton/Object) 형태의 목데이터를 생성한다.
+ * 최상위 id를 강제로 주입하지 않으며, 사용자가 정의한 id 필드가 있다면 정의된 규칙대로 생성·보존된다.
+ */
+export const generateSingleObjectData = (
+  fields: FieldSchema[],
+  locale: string
+): Record<string, unknown> => {
+  const { generateObject } = createObjectGenerator(locale)
+  return generateObject(fields)
+}
+
