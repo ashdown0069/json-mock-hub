@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
 import { axiosInstance, type customAxiosError } from "@/lib/axios"
 import { mockStateKeys } from "@/lib/queryKeys"
+import type { EffectiveMockJson } from "@workspace/types"
 
 export async function getEffectiveJson(
   workspaceId: string,
   path: string
-): Promise<unknown[]> {
+): Promise<EffectiveMockJson> {
   const { data } = await axiosInstance.get(`/${workspaceId}/mockstate/effective`, {
     params: { path },
   })
@@ -15,9 +16,9 @@ export async function getEffectiveJson(
 export function useGetEffectiveJson(
   workspaceId: string,
   path: string,
-  placeholderData: unknown[]
+  placeholderData: EffectiveMockJson
 ) {
-  return useQuery<unknown[], customAxiosError>({
+  return useQuery<EffectiveMockJson, customAxiosError>({
     queryKey: mockStateKeys.effective(workspaceId, path),
     queryFn: () => getEffectiveJson(workspaceId, path),
     enabled: Boolean(workspaceId && path),

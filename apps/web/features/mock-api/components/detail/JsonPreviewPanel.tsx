@@ -1,6 +1,6 @@
 "use client"
 
-import { resolveMockApiParams } from "@workspace/types"
+import { resolveMockApiParams, type EffectiveMockJson } from "@workspace/types"
 import { useGetEffectiveJson } from "@/features/mock-api/api/getEffectiveJson"
 import { useMockStateSSE } from "@/features/mock-api/hooks/useMockStateSSE"
 import { useSelectedFile } from "../../hooks/useSelectedFile"
@@ -20,8 +20,10 @@ export function JsonPreviewPanel() {
 
   // Rules of Hooks: item이 없어도 훅 호출 순서를 지키기 위해 안전한 폴백 값을 쓴다.
   // useGetEffectiveJson은 path가 비어 있으면 enabled: false로 요청을 보내지 않는다.
-  const basePlaceholder =
-    item && Array.isArray(item.json) ? (item.json as unknown[]) : []
+  const basePlaceholder: EffectiveMockJson =
+    item && item.json !== undefined && item.json !== null
+      ? (item.json as EffectiveMockJson)
+      : []
   const path = item ? (item.path ?? `/${item.name}`) : ""
   const { data: effectiveJson = basePlaceholder } = useGetEffectiveJson(
     workspaceId,

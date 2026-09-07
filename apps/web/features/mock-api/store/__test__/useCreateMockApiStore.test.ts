@@ -281,4 +281,32 @@ describe("useCreateMockApiStore", () => {
       expect(next.searchParam).toBe("q")
     })
   })
+
+  describe("resourceType (컬렉션 vs 단일 객체)", () => {
+    it("기본값은 'collection'이다", () => {
+      expect(useCreateMockApiStore.getState().resourceType).toBe("collection")
+    })
+
+    it("'object'로 변경 시 페이징, 정렬, 검색 옵션이 자동으로 비활성화된다", () => {
+      const s = useCreateMockApiStore.getState()
+      s.setEnablePagination(true)
+      s.setEnableSort(true)
+      s.setEnableSearch(true)
+
+      s.setResourceType("object")
+
+      const next = useCreateMockApiStore.getState()
+      expect(next.resourceType).toBe("object")
+      expect(next.enablePagination).toBe(false)
+      expect(next.enableSort).toBe(false)
+      expect(next.enableSearch).toBe(false)
+    })
+
+    it("reset 시 resourceType도 'collection'으로 초기화된다", () => {
+      const s = useCreateMockApiStore.getState()
+      s.setResourceType("object")
+      s.reset()
+      expect(useCreateMockApiStore.getState().resourceType).toBe("collection")
+    })
+  })
 })

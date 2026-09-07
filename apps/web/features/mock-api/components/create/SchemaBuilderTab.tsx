@@ -6,9 +6,10 @@ import { useCreateMockApiStore } from "../../store/useCreateMockApiStore"
 import { CreateMockApiPayload } from "../../types"
 import { isValidItemName } from "@/lib/validateItemName"
 import { EndpointDetails } from "./EndpointDetails"
+import { ResourceTypeSelector } from "./ResourceTypeSelector"
 import { SchemaEditor } from "./SchemaEditor"
 import { GenerationOptions } from "./GenerationOptions"
-import { generateDummyData } from "@workspace/mockgen/generateData"
+import { generateDummyData, generateSingleObjectData } from "@workspace/mockgen/generateData"
 import { fieldsToSchema, withIdField } from "@workspace/mockgen/convertSchema"
 import { findDuplicateFieldIds, normalizeFieldNames } from "@workspace/types"
 
@@ -30,6 +31,7 @@ export function SchemaBuilderTab({
   const tErr = useTranslations("errors")
   const t = useTranslations("MockApiDialog")
   const apiPath = useCreateMockApiStore((state) => state.apiPath)
+  const resourceType = useCreateMockApiStore((state) => state.resourceType)
   const fields = useCreateMockApiStore((state) => state.fields)
   const itemCount = useCreateMockApiStore((state) => state.itemCount)
   const enablePagination = useCreateMockApiStore(
@@ -62,46 +64,64 @@ export function SchemaBuilderTab({
       return
     }
 
-    const hasReservedId = fields.some(
-      (f) => f.name.trim().toLowerCase() === "id"
-    )
+    const isObject = resourceType === "object"
+
+    // 컬렉션 모드에서만 최상위 id가 시스템 예약어이므로 차단한다.
+    // 단일 객체 모드에서는 사용자가 정의한 id 필드를 온전히 허용한다.
+    const hasReservedId =
+      !isObject && fields.some((f) => f.name.trim().toLowerCase() === "id")
     if (hasReservedId) {
       toast.error(tErr("idFieldReserved"), { position: "top-center" })
       return
     }
 
     // 스키마 키·목데이터 키·fieldDefs 이름이 갈리지 않도록 한 번만 정규화한다.
-    // generateDummyData도 field.name을 그대로 객체 키로 쓰므로 같은 배열을 넘긴다.
     const normalizedFields = normalizeFieldNames(fields)
-    const json = generateDummyData(normalizedFields, itemCount[0] ?? 10, locale)
 
-    // 프론트가 생성 시각이나 ID를 조작하지 않고, 핵심 스키마·데이터만 담아 백엔드로 보낸다
+    const json = isObject
+      ? generateSingleObjectData(normalizedFields, locale)
+      : generateDummyData(normalizedFields, itemCount[0] ?? 10, locale)
+
+    const schema = isObject
+      ? fieldsToSchema(normalizedFields)
+      : withIdField(fieldsToSchema(normalizedFields))
+
+    const options = isObject
+      ? {
+          resourceType: "object" as const,
+          pagination: false,
+          sort: false,
+          search: false,
+        }
+      : {
+          resourceType: "collection" as const,
+          pagination: enablePagination,
+          ...(enablePagination && {
+            paginationParams: {
+              pageParam: pageParam,
+              limitParam: limitParam,
+            },
+          }),
+          sort: enableSort,
+          ...(enableSort && {
+            sortParams: { sortParam, orderParam },
+          }),
+          search: enableSearch,
+          ...(enableSearch && {
+            searchParams: { searchParam },
+          }),
+        }
+
     onCreate({
       name,
-      schema: withIdField(fieldsToSchema(normalizedFields)),
+      schema,
       json,
-      options: {
-        pagination: enablePagination,
-        ...(enablePagination && {
-          paginationParams: {
-            pageParam: pageParam,
-            limitParam: limitParam,
-          },
-        }),
-        sort: enableSort,
-        ...(enableSort && {
-          sortParams: { sortParam, orderParam },
-        }),
-        search: enableSearch,
-        ...(enableSearch && {
-          searchParams: { searchParam },
-        }),
-      },
+      options,
       fieldDefs: normalizedFields,
     })
   }
 
-  // 이름 있는 최상위 필드가 없으면 [{}] 같은 빈 응답이 생성되므로 제출을 막는다
+  // 이름 있는 최상위 필드가 없으면 [{}] 또는 {} 같은 빈 응답이 생성되므로 제출을 막는다
   const hasNamedField = fields.some((field) => field.name.trim() !== "")
 
   return (
@@ -110,6 +130,7 @@ export function SchemaBuilderTab({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="flex flex-col gap-6 lg:col-span-7">
             <EndpointDetails endpointPrefix={endpointPrefix} />
+            <ResourceTypeSelector />
             <SchemaEditor duplicateFieldIds={duplicateFieldIds} />
           </div>
           <div className="flex flex-col gap-6 lg:col-span-5">

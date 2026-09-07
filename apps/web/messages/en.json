@@ -371,6 +371,13 @@
     "orderParamPlaceholder": "e.g. _order",
     "searchFeature": "Full-text search",
     "searchParam": "Search parameter",
-    "searchParamPlaceholder": "e.g. q"
+    "searchParamPlaceholder": "e.g. q",
+    "resourceType": "Data Structure",
+    "resourceTypeCollection": "Array (List)",
+    "resourceTypeCollectionDesc": "List API handling multiple items. Supports ID lookup, pagination, sorting, and search.",
+    "resourceTypeObject": "Single Object",
+    "resourceTypeObjectDesc": "API returning a single JSON object directly (e.g. /me, /settings).",
+    "resourceTypeObjectBannerTitle": "Single Object API Notice",
+    "resourceTypeObjectBannerDesc": "In single object mode, a single JSON object is returned directly. Pagination, sorting, and search are disabled."
   }
 }

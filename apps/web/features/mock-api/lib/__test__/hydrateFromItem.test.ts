@@ -39,4 +39,28 @@ describe("buildHydrationState — 파라미터명 기본값", () => {
     expect(state.searchParam).toBe("keyword")
     expect(state.enableSearch).toBe(true)
   })
+
+  it("단일 객체(resourceType: 'object') 아이템 복원 시 resourceType과 사용자 id 필드를 보존한다", () => {
+    const objectItem = {
+      ...baseItem,
+      name: "settings",
+      options: {
+        resourceType: "object",
+        pagination: false,
+        sort: false,
+        search: false,
+      },
+      fieldDefs: [
+        { id: "1", name: "id", type: "string" },
+        { id: "2", name: "theme", type: "string" },
+      ],
+    } as unknown as FileItem
+
+    const state = buildHydrationState(objectItem)
+    expect(state.resourceType).toBe("object")
+    expect(state.fields).toEqual([
+      { id: "1", name: "id", type: "string" },
+      { id: "2", name: "theme", type: "string" },
+    ])
+  })
 })

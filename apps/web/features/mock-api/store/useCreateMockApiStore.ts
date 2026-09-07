@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { FieldSchema, FieldType } from '@workspace/types'
+import { FieldSchema, FieldType, MockResourceType } from '@workspace/types'
 import { mapFieldTree } from '../utils/mapFieldTree'
 import { isFakerMethodAllowed } from '@workspace/mockgen/fakerMethods'
 
@@ -12,6 +12,7 @@ const generateId = (): string => {
 
 
 interface CreateMockApiSeedState {
+  resourceType: MockResourceType
   apiPath: string
   fields: FieldSchema[]
   itemCount: number[]
@@ -26,6 +27,7 @@ interface CreateMockApiSeedState {
 }
 
 interface CreateMockApiState extends CreateMockApiSeedState {
+  setResourceType: (type: MockResourceType) => void
   setApiPath: (path: string) => void
 
   addField: () => void
@@ -49,6 +51,7 @@ interface CreateMockApiState extends CreateMockApiSeedState {
 }
 
 const initialState: CreateMockApiSeedState = {
+  resourceType: 'collection',
   apiPath: '',
   fields: [],
   itemCount: [10],
@@ -64,6 +67,13 @@ const initialState: CreateMockApiSeedState = {
 
 export const useCreateMockApiStore = create<CreateMockApiState>((set) => ({
   ...initialState,
+
+  setResourceType: (resourceType) =>
+    set((state) =>
+      resourceType === 'object'
+        ? { resourceType, enablePagination: false, enableSort: false, enableSearch: false }
+        : { resourceType },
+    ),
 
   setApiPath: (apiPath) => set({ apiPath }),
 

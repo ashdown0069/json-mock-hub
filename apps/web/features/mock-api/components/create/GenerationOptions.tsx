@@ -36,6 +36,7 @@ export function GenerationOptions() {
     setEnableSearch,
     searchParam,
     setSearchParam,
+    resourceType,
   } = useCreateMockApiStore(
     useShallow((state) => ({
       itemCount: state.itemCount,
@@ -56,15 +57,41 @@ export function GenerationOptions() {
       setEnableSearch: state.setEnableSearch,
       searchParam: state.searchParam,
       setSearchParam: state.setSearchParam,
+      resourceType: state.resourceType,
     }))
   )
+
+  if (resourceType === "object") {
+    return (
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+              4
+            </span>
+            {t("generationOptions")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+            <h4 className="font-semibold text-primary">
+              {t("resourceTypeObjectBannerTitle")}
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t("resourceTypeObjectBannerDesc")}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-            3
+            4
           </span>
           {t("generationOptions")}
         </CardTitle>

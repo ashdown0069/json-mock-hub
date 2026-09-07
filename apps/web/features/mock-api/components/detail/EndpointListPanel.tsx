@@ -68,25 +68,77 @@ export function EndpointListPanel() {
       })
     : null
 
-  // hydrateFromItem.ts와 동일한 패턴: id는 서버가 관리하므로 바디 예시에서 제외한다
-  const bodyFields = (item.fieldDefs ?? schemaToFields(item.schema)).filter(
-    (f) => f.name !== "id",
-  )
+  const isObject = params.resourceType === "object"
+
+  // 컬렉션 모드에서는 id는 서버가 자동 관리하므로 바디 예시에서 제외하지만,
+  // 단일 객체 모드에서는 사용자가 정의한 id 필드도 유효한 바디 속성이므로 포함한다
+  const rawFields = item.fieldDefs ?? schemaToFields(item.schema)
+  const bodyFields = isObject
+    ? rawFields
+    : rawFields.filter((f) => f.name !== "id")
   const bodyTemplate = Object.fromEntries(bodyFields.map((f) => [f.name, ""]))
   const bodyText = JSON.stringify(bodyTemplate, null, 2)
 
-  const endpoints: EndpointDef[] = [
-    {
-      method: "GET",
-      url: `${base}${itemPath}${paginationQuery}`,
-      description: t("descList"),
-    },
-    { method: "GET", url: `${base}${itemPath}/:id`, description: t("descGetOne") },
-    { method: "POST", url: `${base}${itemPath}`, description: t("descCreate") },
-    { method: "PUT", url: `${base}${itemPath}/:id`, description: t("descUpdate") },
-    { method: "PATCH", url: `${base}${itemPath}/:id`, description: t("descPatch") },
-    { method: "DELETE", url: `${base}${itemPath}/:id`, description: t("descDelete") },
-  ]
+  const endpoints: EndpointDef[] = isObject
+    ? [
+        {
+          method: "GET",
+          url: `${base}${itemPath}`,
+          description: t("descGetOne"),
+        },
+        {
+          method: "POST",
+          url: `${base}${itemPath}`,
+          description: t("descCreate"),
+        },
+        {
+          method: "PUT",
+          url: `${base}${itemPath}`,
+          description: t("descUpdate"),
+        },
+        {
+          method: "PATCH",
+          url: `${base}${itemPath}`,
+          description: t("descPatch"),
+        },
+        {
+          method: "DELETE",
+          url: `${base}${itemPath}`,
+          description: t("descDelete"),
+        },
+      ]
+    : [
+        {
+          method: "GET",
+          url: `${base}${itemPath}${paginationQuery}`,
+          description: t("descList"),
+        },
+        {
+          method: "GET",
+          url: `${base}${itemPath}/:id`,
+          description: t("descGetOne"),
+        },
+        {
+          method: "POST",
+          url: `${base}${itemPath}`,
+          description: t("descCreate"),
+        },
+        {
+          method: "PUT",
+          url: `${base}${itemPath}/:id`,
+          description: t("descUpdate"),
+        },
+        {
+          method: "PATCH",
+          url: `${base}${itemPath}/:id`,
+          description: t("descPatch"),
+        },
+        {
+          method: "DELETE",
+          url: `${base}${itemPath}/:id`,
+          description: t("descDelete"),
+        },
+      ]
 
   const handleConfirmReset = () => {
     resetState.mutate(

@@ -37,6 +37,13 @@ jest.mock("@workspace/mockgen/generateData", () => ({
       id: index + 1,
     }))
   ),
+  generateSingleObjectData: jest.fn((fields: any[]) => {
+    const obj: Record<string, any> = {}
+    fields.forEach((f) => {
+      obj[f.name] = f.type === "number" ? 1 : "sample"
+    })
+    return obj
+  }),
 }))
 
 const setupStore = (
@@ -171,11 +178,40 @@ describe("id 예약 필드와 정렬·검색 옵션 페이로드", () => {
     fireEvent.click(screen.getByRole("button", { name: /엔드포인트 생성/ }))
     const payload = onCreate.mock.calls[0][0]
     expect(payload.options).toEqual({
+      resourceType: "collection",
       pagination: false,
       sort: true,
       sortParams: { sortParam: "orderBy", orderParam: "direction" },
       search: true,
       searchParams: { searchParam: "keyword" },
+    })
+  })
+
+  it("단일 객체 모드(resourceType: 'object')에서는 사용자가 정의한 id 필드가 차단되지 않고 1개 객체로 생성된다", () => {
+    setupStore({
+      apiPath: "settings",
+      resourceType: "object",
+      fields: [
+        { id: "f1", name: "id", type: "string", fakerMethod: "none" },
+        { id: "f2", name: "theme", type: "string", fakerMethod: "none" },
+      ],
+    })
+    const onCreate = jest.fn()
+    renderTab({ onCreate })
+    fireEvent.click(screen.getByRole("button", { name: /엔드포인트 생성/ }))
+    expect(onCreate).toHaveBeenCalledTimes(1)
+    const payload = onCreate.mock.calls[0][0]
+    expect(payload.options).toEqual({
+      resourceType: "object",
+      pagination: false,
+      sort: false,
+      search: false,
+    })
+    expect(Array.isArray(payload.json)).toBe(false)
+    expect(typeof payload.json).toBe("object")
+    expect(payload.schema).toEqual({
+      id: "string",
+      theme: "string",
     })
   })
 

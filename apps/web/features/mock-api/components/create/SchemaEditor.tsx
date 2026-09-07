@@ -184,13 +184,14 @@ export function SchemaEditor({
   const t = useTranslations("MockApiDialog")
   const fields = useCreateMockApiStore((state) => state.fields)
   const addField = useCreateMockApiStore((state) => state.addField)
+  const resourceType = useCreateMockApiStore((state) => state.resourceType)
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-            2
+            3
           </span>
           {t("dataSchema")}
         </CardTitle>
@@ -199,19 +200,21 @@ export function SchemaEditor({
         </Button>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-2 pb-6">
-        {/* 예약 필드 id: 시스템이 자동 증가(1,2,3…)로 주입하는 잠금 행 (편집 불가) */}
-        <div
-          data-testid="locked-id-row"
-          className="flex items-center gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2"
-        >
-          <Lock className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="flex-1 font-mono text-sm text-muted-foreground">
-            id
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Number · {t("idFieldAuto")}
-          </span>
-        </div>
+        {/* 컬렉션 모드일 때만 예약 필드 id(자동 증가) 잠금 행 표시. 단일 객체 모드에서는 사용자 정의 id 허용 */}
+        {resourceType !== "object" && (
+          <div
+            data-testid="locked-id-row"
+            className="flex items-center gap-2 rounded-md border border-dashed bg-muted/30 px-3 py-2"
+          >
+            <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="flex-1 font-mono text-sm text-muted-foreground">
+              id
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Number · {t("idFieldAuto")}
+            </span>
+          </div>
+        )}
 
         {fields.length === 0 ? (
           <div className="rounded-lg border-2 border-dashed border-border py-8 text-center text-sm text-muted-foreground">
