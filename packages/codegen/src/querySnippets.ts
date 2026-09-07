@@ -12,6 +12,70 @@ export function buildQuerySnippet(
   const { resourceName, typeName } = ctx
   const ts = lang === "ts"
   const keysVar = `${resourceName}Keys`
+
+  if (ctx.resourceType === "object") {
+    const lines: string[] = [
+      `import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";`,
+      `import {`,
+      `  get${typeName},`,
+      `  create${typeName},`,
+      `  update${typeName},`,
+      `  delete${typeName},`,
+      `} from "./${resourceName}Api";`,
+    ]
+    if (ts) {
+      lines.push(`import type { ${typeName} } from "./${resourceName}Schema";`)
+    }
+    lines.push(
+      ``,
+      `export const ${keysVar} = {`,
+      ts
+        ? `  all: [${JSON.stringify(resourceName)}] as const,`
+        : `  all: [${JSON.stringify(resourceName)}],`,
+      `};`,
+      ``,
+      `export function use${typeName}Query() {`,
+      `  return useQuery({`,
+      `    queryKey: ${keysVar}.all,`,
+      `    queryFn: () => get${typeName}(),`,
+      `  });`,
+      `}`,
+      ``,
+      `export function useCreate${typeName}Mutation() {`,
+      `  const queryClient = useQueryClient();`,
+      `  return useMutation({`,
+      `    mutationFn: create${typeName},`,
+      `    onSuccess: () => {`,
+      `      queryClient.invalidateQueries({ queryKey: ${keysVar}.all });`,
+      `    },`,
+      `  });`,
+      `}`,
+      ``,
+      `export function useUpdate${typeName}Mutation() {`,
+      `  const queryClient = useQueryClient();`,
+      `  return useMutation({`,
+      ts
+        ? `    mutationFn: (payload: Partial<${typeName}>) => update${typeName}(payload),`
+        : `    mutationFn: (payload) => update${typeName}(payload),`,
+      `    onSuccess: () => {`,
+      `      queryClient.invalidateQueries({ queryKey: ${keysVar}.all });`,
+      `    },`,
+      `  });`,
+      `}`,
+      ``,
+      `export function useDelete${typeName}Mutation() {`,
+      `  const queryClient = useQueryClient();`,
+      `  return useMutation({`,
+      `    mutationFn: () => delete${typeName}(),`,
+      `    onSuccess: () => {`,
+      `      queryClient.invalidateQueries({ queryKey: ${keysVar}.all });`,
+      `    },`,
+      `  });`,
+      `}`
+    )
+    return lines.join("\n")
+  }
+
   const sig = listSignature(ctx, lang)
 
   const lines: string[] = [

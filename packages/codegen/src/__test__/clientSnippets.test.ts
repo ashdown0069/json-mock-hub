@@ -8,6 +8,7 @@ const ctx: CodeGenContext = {
   baseUrl: "http://ws1.localhost:3000/api",
   resourcePath: "/users",
   schema: { name: "string" },
+  resourceType: "collection",
   pagination: null,
   sort: null,
   search: null,
@@ -137,6 +138,7 @@ describe("정렬·검색 설정 기반 ListQuery 타입", () => {
     baseUrl: "http://ws1.localhost:3000/api",
     resourcePath: "/users",
     schema: { id: "number", name: "string" } as SchemaObject,
+    resourceType: "collection" as const,
     pagination: null,
     sort: null,
     search: null,
@@ -237,6 +239,57 @@ describe("buildClientSnippet — 생성 코드 이스케이프", () => {
     const code = buildClientSnippet(ctxWith({}), "axios", "js")
     expect(code).toContain('baseURL: "http://localhost:4001/api"')
     expect(code).toContain('"/users"')
+  })
+})
+
+describe("buildClientSnippet - 단일 객체(resourceType: 'object')", () => {
+  const objectCtx: CodeGenContext = {
+    resourceName: "settings",
+    typeName: "Settings",
+    baseUrl: "http://ws1.localhost:3000/api",
+    resourcePath: "/settings",
+    schema: { theme: "string" },
+    resourceType: "object",
+    pagination: null,
+    sort: null,
+    search: null,
+  }
+
+  it("axios TS: 단일 객체용 get, create, update, delete 4종 함수를 생성하고 ById 및 List는 제외한다", () => {
+    const code = buildClientSnippet(objectCtx, "axios", "ts")
+    expect(code).toContain("export async function getSettings(): Promise<Settings> {")
+    expect(code).toContain('api.get<Settings>("/settings")')
+    expect(code).toContain("export async function createSettings(payload: Settings): Promise<Settings> {")
+    expect(code).toContain('api.post<Settings>("/settings", payload)')
+    expect(code).toContain("export async function updateSettings(payload: Partial<Settings>): Promise<Settings> {")
+    expect(code).toContain('api.put<Settings>("/settings", payload)')
+    expect(code).toContain("export async function deleteSettings(): Promise<void> {")
+    expect(code).toContain('api.delete("/settings")')
+
+    expect(code).not.toContain("getSettingsById")
+    expect(code).not.toContain("getSettingsList")
+    expect(code).not.toContain("SettingsListResponse")
+  })
+
+  it("axios JS: 타입 표기 없이 단일 객체 함수를 생성한다", () => {
+    const code = buildClientSnippet(objectCtx, "axios", "js")
+    expect(code).toContain("export async function getSettings() {")
+    expect(code).toContain("export async function updateSettings(payload) {")
+    expect(code).not.toContain(": Promise<")
+  })
+
+  it("fetch TS: 단일 객체용 fetch 함수 4종을 생성한다", () => {
+    const code = buildClientSnippet(objectCtx, "fetch", "ts")
+    expect(code).toContain("export async function getSettings(): Promise<Settings> {")
+    expect(code).toContain("await fetch(`${BASE_URL}/settings`)")
+    expect(code).toContain("export async function createSettings(payload: Settings): Promise<Settings> {")
+    expect(code).toContain("export async function updateSettings(payload: Partial<Settings>): Promise<Settings> {")
+    expect(code).toContain("method: \"PUT\"")
+    expect(code).toContain("export async function deleteSettings(): Promise<void> {")
+    expect(code).toContain("method: \"DELETE\"")
+
+    expect(code).not.toContain("getSettingsById")
+    expect(code).not.toContain("getSettingsList")
   })
 })
 

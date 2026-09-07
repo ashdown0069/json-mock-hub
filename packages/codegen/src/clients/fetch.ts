@@ -36,6 +36,47 @@ export function buildFetchClient(ctx: CodeGenContext, lang: CodeLang): string {
     ``
   )
 
+  if (ctx.resourceType === "object") {
+    lines.push(
+      ts
+        ? `export async function get${typeName}(): Promise<${typeName}> {`
+        : `export async function get${typeName}() {`,
+      `  const res = await fetch(\`\${BASE_URL}${templatePath}\`);`,
+      ts ? `  return handleResponse<${typeName}>(res);` : `  return handleResponse(res);`,
+      `}`,
+      ``,
+      ts
+        ? `export async function create${typeName}(payload: ${typeName}): Promise<${typeName}> {`
+        : `export async function create${typeName}(payload) {`,
+      `  const res = await fetch(\`\${BASE_URL}${templatePath}\`, {`,
+      `    method: "POST",`,
+      `    headers: { "Content-Type": "application/json" },`,
+      `    body: JSON.stringify(payload),`,
+      `  });`,
+      ts ? `  return handleResponse<${typeName}>(res);` : `  return handleResponse(res);`,
+      `}`,
+      ``,
+      ts
+        ? `export async function update${typeName}(payload: Partial<${typeName}>): Promise<${typeName}> {`
+        : `export async function update${typeName}(payload) {`,
+      `  const res = await fetch(\`\${BASE_URL}${templatePath}\`, {`,
+      `    method: "PUT",`,
+      `    headers: { "Content-Type": "application/json" },`,
+      `    body: JSON.stringify(payload),`,
+      `  });`,
+      ts ? `  return handleResponse<${typeName}>(res);` : `  return handleResponse(res);`,
+      `}`,
+      ``,
+      ts
+        ? `export async function delete${typeName}(): Promise<void> {`
+        : `export async function delete${typeName}() {`,
+      `  const res = await fetch(\`\${BASE_URL}${templatePath}\`, { method: "DELETE" });`,
+      `  if (!res.ok) throw new Error(\`요청 실패: \${res.status}\`);`,
+      `}`
+    )
+    return lines.join("\n")
+  }
+
   const sig = listSignature(ctx, lang)
 
   const fetchGetCall = (): string[] => {

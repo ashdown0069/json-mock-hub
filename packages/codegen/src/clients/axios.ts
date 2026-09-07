@@ -21,6 +21,37 @@ export function buildAxiosClient(ctx: CodeGenContext, lang: CodeLang): string {
     lines.push(`import type { ${typeName} } from "./${resourceName}Schema";`)
   }
   lines.push(``, `const api = axios.create({ baseURL: ${quotedBaseUrl} });`, ``)
+  if (ctx.resourceType === "object") {
+    lines.push(
+      ts
+        ? `export async function get${typeName}(): Promise<${typeName}> {`
+        : `export async function get${typeName}() {`,
+      `  const { data } = await api.get${ts ? `<${typeName}>` : ""}(${quotedPath});`,
+      `  return data;`,
+      `}`,
+      ``,
+      ts
+        ? `export async function create${typeName}(payload: ${typeName}): Promise<${typeName}> {`
+        : `export async function create${typeName}(payload) {`,
+      `  const { data } = await api.post${ts ? `<${typeName}>` : ""}(${quotedPath}, payload);`,
+      `  return data;`,
+      `}`,
+      ``,
+      ts
+        ? `export async function update${typeName}(payload: Partial<${typeName}>): Promise<${typeName}> {`
+        : `export async function update${typeName}(payload) {`,
+      `  const { data } = await api.put${ts ? `<${typeName}>` : ""}(${quotedPath}, payload);`,
+      `  return data;`,
+      `}`,
+      ``,
+      ts
+        ? `export async function delete${typeName}(): Promise<void> {`
+        : `export async function delete${typeName}() {`,
+      `  await api.delete(${quotedPath});`,
+      `}`
+    )
+    return lines.join("\n")
+  }
   if (ts && pagination) {
     lines.push(paginatedResponseInterface(typeName), ``)
   }

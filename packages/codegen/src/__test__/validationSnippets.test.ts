@@ -16,6 +16,7 @@ const ctx: CodeGenContext = {
     profile: { bio: "string" },
     tags: { type: "array", items: "string" },
   },
+  resourceType: "collection",
   pagination: null,
   sort: null,
   search: null,

@@ -7,6 +7,7 @@ const ctx: CodeGenContext = {
   baseUrl: "http://ws1.localhost:3000/api",
   resourcePath: "/users",
   schema: { name: "string" },
+  resourceType: "collection",
   pagination: null,
   sort: null,
   search: null,
@@ -115,6 +116,51 @@ describe("정렬·검색 설정 기반 훅 생성", () => {
   it("모두 비활성화면 인자 없는 목록 훅을 생성한다", () => {
     const code = buildQuerySnippet(baseCtx, "ts")
     expect(code).toContain("useUsersListQuery()")
+  })
+})
+
+describe("buildQuerySnippet - 단일 객체(resourceType: 'object')", () => {
+  const objectCtx: CodeGenContext = {
+    resourceName: "settings",
+    typeName: "Settings",
+    baseUrl: "http://ws1.localhost:3000/api",
+    resourcePath: "/settings",
+    schema: { theme: "string" },
+    resourceType: "object",
+    pagination: null,
+    sort: null,
+    search: null,
+  }
+
+  it("TS: 단일 객체용 쿼리 키 및 useSettingsQuery와 3종 mutation 훅을 생성하고 ById는 제외한다", () => {
+    const code = buildQuerySnippet(objectCtx, "ts")
+    expect(code).toContain("export const settingsKeys = {")
+    expect(code).toContain('all: ["settings"] as const,')
+    expect(code).not.toContain("detail:")
+
+    expect(code).toContain("export function useSettingsQuery() {")
+    expect(code).toContain("queryKey: settingsKeys.all,")
+    expect(code).toContain("queryFn: () => getSettings(),")
+
+    expect(code).toContain("export function useCreateSettingsMutation() {")
+    expect(code).toContain("mutationFn: createSettings,")
+
+    expect(code).toContain("export function useUpdateSettingsMutation() {")
+    expect(code).toContain("mutationFn: (payload: Partial<Settings>) => updateSettings(payload),")
+
+    expect(code).toContain("export function useDeleteSettingsMutation() {")
+    expect(code).toContain("mutationFn: () => deleteSettings(),")
+
+    expect(code).not.toContain("useSettingsListQuery")
+    expect(code).not.toContain("useSettingsById")
+  })
+
+  it("JS: 타입 표기 없이 단일 객체 훅을 생성한다", () => {
+    const code = buildQuerySnippet(objectCtx, "js")
+    expect(code).toContain("export function useSettingsQuery() {")
+    expect(code).toContain("mutationFn: (payload) => updateSettings(payload),")
+    expect(code).not.toContain("as const")
+    expect(code).not.toContain("import type")
   })
 })
 

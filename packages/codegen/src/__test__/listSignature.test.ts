@@ -7,6 +7,7 @@ const base: CodeGenContext = {
   baseUrl: "http://ws1.localhost:3000/api",
   resourcePath: "/users",
   schema: { id: "number" },
+  resourceType: "collection",
   pagination: null,
   sort: null,
   search: null,
