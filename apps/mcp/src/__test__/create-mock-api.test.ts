@@ -285,7 +285,7 @@ describe("handleCreateMockApi — sort·search 옵션", () => {
     } as any)
 
     expect(createItem.mock.calls[0][0].options.search).toBe(true)
-    expect((res.content[0] as any).text).toContain("?q=검색어")
+    expect((res.content[0] as any).text).toContain("?q=<query>")
   })
 
   it("옵션을 하나도 지정하지 않으면 전부 꺼진 채로 생성된다", async () => {

@@ -1,7 +1,12 @@
 import { z } from "zod"
-import { DEFAULT_MOCK_PARAMS, type MockApiOptions } from "@workspace/types"
+import {
+  DEFAULT_MOCK_PARAMS,
+  type MockApiOptions,
+  type MockResourceType,
+} from "@workspace/types"
 
 export interface OptionArgs {
+  resourceType?: MockResourceType
   pagination?: { pageParam: string; limitParam: string }
   disablePagination?: boolean
   sort?: { sortParam: string; orderParam: string }
@@ -25,6 +30,19 @@ export function buildMockApiOptions(
   args: OptionArgs
 ): MockApiOptions {
   const next: MockApiOptions = { ...(previous ?? { pagination: false }) }
+
+  if (args.resourceType) {
+    next.resourceType = args.resourceType
+    if (args.resourceType === "object") {
+      next.pagination = false
+      next.sort = false
+      next.search = false
+      delete next.paginationParams
+      delete next.sortParams
+      delete next.searchParams
+      return next
+    }
+  }
 
   if (args.pagination) {
     next.pagination = true
@@ -72,7 +90,7 @@ export const mockApiOptionInputShape = {
     })
     .optional()
     .describe(
-      `지정 시 정렬 기능을 활성화합니다 (예: ?${DEFAULT_MOCK_PARAMS.sortParam}=필드명&${DEFAULT_MOCK_PARAMS.orderParam}=asc|desc). 생략 시 기존 설정을 유지합니다.`
+      `지정 시 정렬 기능을 활성화합니다 (예: ?${DEFAULT_MOCK_PARAMS.sortParam}=<field>&${DEFAULT_MOCK_PARAMS.orderParam}=asc|desc). 생략 시 기존 설정을 유지합니다.`
     ),
   search: z
     .object({
@@ -80,7 +98,7 @@ export const mockApiOptionInputShape = {
     })
     .optional()
     .describe(
-      `지정 시 전체 텍스트 검색을 활성화합니다 (예: ?${DEFAULT_MOCK_PARAMS.searchParam}=검색어). 생략 시 기존 설정을 유지합니다.`
+      `지정 시 전체 텍스트 검색을 활성화합니다 (예: ?${DEFAULT_MOCK_PARAMS.searchParam}=<query>). 생략 시 기존 설정을 유지합니다.`
     ),
 } as const
 

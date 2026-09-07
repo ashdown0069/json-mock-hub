@@ -1,8 +1,8 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { schemaToFields, withIdField } from "@workspace/mockgen/convertSchema"
-import { generateDummyData } from "@workspace/mockgen/generateData"
-import { resolveMockApiParams, type SchemaObject } from "@workspace/types"
+import { generateDummyData, generateSingleObjectData } from "@workspace/mockgen/generateData"
+import { resolveMockApiParams, type MockResourceType, type SchemaObject } from "@workspace/types"
 import type { ApiClient } from "../api-client"
 import type { McpConfig } from "../config"
 import { ensureFolderPath } from "../folder-path"
@@ -23,6 +23,7 @@ interface CreateArgs {
   parentPath: string
   count: number
   locale: "ko" | "en"
+  resourceType?: MockResourceType
   fakerHints?: Record<string, string>
   pagination?: { pageParam: string; limitParam: string }
   sort?: { sortParam: string; orderParam: string }
@@ -40,6 +41,7 @@ export async function handleCreateMockApi(
     parentPath,
     count,
     locale,
+    resourceType = "collection",
     fakerHints,
     pagination,
     sort,
@@ -47,9 +49,10 @@ export async function handleCreateMockApi(
     createParents,
   }: CreateArgs
 ): Promise<ToolResult> {
-  // 예약 필드 id를 스키마 최상위에 강제 주입한다 (웹 생성 흐름과 동일 계약)
-  const schemaWithId = withIdField(schema)
-  const fieldDefs = schemaToFields(schemaWithId)
+  const isObject = resourceType === "object"
+  // 컬렉션 모드에서만 예약 필드 id를 스키마 최상위에 강제 주입한다. 단일 객체 모드는 사용자 정의 스키마 보존.
+  const finalSchema = isObject ? schema : withIdField(schema)
+  const fieldDefs = schemaToFields(finalSchema)
 
   if (fakerHints) {
     const { errors } = applyFakerHints(fieldDefs, fakerHints)
@@ -98,20 +101,43 @@ export async function handleCreateMockApi(
     )
   }
 
-  const json = generateDummyData(fieldDefs, count, locale)
-  const options = buildMockApiOptions(null, { pagination, sort, search })
+  const json = isObject
+    ? generateSingleObjectData(fieldDefs, locale)
+    : generateDummyData(fieldDefs, count, locale)
+  const options = buildMockApiOptions(null, {
+    resourceType,
+    pagination,
+    sort,
+    search,
+  })
 
   const created = await client.createItem({
     name,
     itemType: "File",
     parentId,
-    schema: schemaWithId as SchemaObject,
+    schema: finalSchema as SchemaObject,
     json,
     options,
     fieldDefs,
   })
 
   const mockUrl = `${getMockApiBaseUrl(config.MOCK_HUB_WORKSPACE_ID, config.MOCK_DOMAIN)}${created.path}`
+
+  if (isObject) {
+    const lines = [
+      "mock API가 생성되었습니다. (단일 객체 모드)",
+      `- 경로: ${created.path}`,
+      `- 단일 객체 URL: ${mockUrl}`,
+      `- 단건 조회/수정/삭제: ${mockUrl}`,
+      "",
+      "샘플 데이터:",
+      "```json",
+      JSON.stringify(json, null, 2),
+      "```",
+    ]
+    return toolText(lines.join("\n"))
+  }
+
   const lines = [
     "mock API가 생성되었습니다.",
     `- 경로: ${created.path}`,
@@ -127,15 +153,20 @@ export async function handleCreateMockApi(
   }
   if (params.sort) {
     lines.push(
-      `- 정렬: ${mockUrl}?${params.sort.sortParam}=필드명&${params.sort.orderParam}=asc`
+      `- 정렬: ${mockUrl}?${params.sort.sortParam}=<field>&${params.sort.orderParam}=asc`
     )
   }
   if (params.search) {
-    lines.push(`- 전문검색: ${mockUrl}?${params.search.searchParam}=검색어`)
+    lines.push(`- 전문검색: ${mockUrl}?${params.search.searchParam}=<query>`)
   }
 
-  lines.push("", "샘플 데이터 (앞 2건):", "```json")
-  lines.push(JSON.stringify(json.slice(0, 2), null, 2), "```")
+  const sampleList = (json as any[]).slice(0, 2)
+  const sampleLabel =
+    (json as any[]).length <= 2
+      ? `샘플 데이터 (${sampleList.length}건):`
+      : `샘플 데이터 (앞 ${sampleList.length}건):`
+  lines.push("", sampleLabel, "```json")
+  lines.push(JSON.stringify(sampleList, null, 2), "```")
   return toolText(lines.join("\n"))
 }
 
@@ -150,7 +181,8 @@ export function registerCreateMockApi(
       title: "Mock API 생성",
       description:
         "스키마 정의로부터 mock 데이터를 생성하여 새 Mock API 엔드포인트를 등록하고 즉시 호출 가능한 URL을 반환합니다. " +
-        "최상위 'id' 필드는 1부터 시작하는 자동 증가 number로 시스템이 자동 주입하므로 schema에 정의하지 마세요. " +
+        "컬렉션 모드에서는 최상위 'id' 필드는 1부터 시작하는 자동 증가 number로 시스템이 자동 주입하므로 schema에 정의하지 마세요. " +
+        "단일 객체 모드(resourceType: 'object')에서는 최상위 'id' 필드를 포함한 자유로운 스키마가 허용됩니다. " +
         SCHEMA_VALUE_TYPES_HINT,
       annotations: { readOnlyHint: false, destructiveHint: false },
       inputSchema: {
@@ -164,6 +196,12 @@ export function registerCreateMockApi(
             "리소스 단일 이름 (슬래시 제외, URL의 마지막 세그먼트가 됨. 영문/한글/숫자/-/_, 예: products)"
           ),
         schema: schemaObjectInput,
+        resourceType: z
+          .enum(["collection", "object"])
+          .default("collection")
+          .describe(
+            "리소스 형태. 'collection'(기본값, 배열/목록 CRUD) 또는 'object'(단일 객체, 예: /me, /settings)"
+          ),
         parentPath: z
           .string()
           .default("/")
@@ -176,7 +214,9 @@ export function registerCreateMockApi(
           .min(1)
           .max(50)
           .default(10)
-          .describe("생성할 mock 데이터 건수 (1~50, 기본값 10)"),
+          .describe(
+            "생성할 mock 데이터 건수 (1~50, 기본값 10, 단일 객체 모드에서는 무시됨)"
+          ),
         locale: z.enum(["ko", "en"]).default("ko"),
         fakerHints: z
           .record(z.string())

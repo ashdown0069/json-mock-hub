@@ -133,4 +133,32 @@ describe("handleDescribeMockApi", () => {
 
     expect(result.isError).toBe(true)
   })
+
+  it("단일 객체(resourceType: 'object') mock API는 단일 객체 실효 데이터를 크래시 없이 출력한다", async () => {
+    const objectItem: FileBrowserItemRes = {
+      ...item,
+      name: "settings",
+      path: "/settings",
+      options: { resourceType: "object", pagination: false, sort: false, search: false },
+      schema: { theme: "string" },
+      json: { theme: "light" },
+    }
+    const client = makeClient({
+      getItems: async () => [objectItem],
+      getItem: async () => objectItem,
+      getEffectiveJson: async () => ({ theme: "dark", fontSize: 16 }),
+    })
+
+    const result = await handleDescribeMockApi(client, config, {
+      path: "/settings",
+      includeData: true,
+    })
+
+    const text = textOf(result)
+    expect(text).toContain("단일 객체 URL:")
+    expect(text).toContain("리소스 형태: 단일 객체 (Object)")
+    expect(text).toContain("## 런타임 실효 데이터 (단일 객체)")
+    expect(text).toContain('"theme": "dark"')
+    expect(text).toContain('"fontSize": 16')
+  })
 })

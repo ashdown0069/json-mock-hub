@@ -4,6 +4,7 @@ import type {
   MockApiOptions,
   SchemaObject,
   CreatedItemResponse,
+  EffectiveMockJson,
 } from "@workspace/types"
 import type { McpConfig } from "./config"
 import { API_PATHS } from "./api-paths"
@@ -137,7 +138,7 @@ export class ApiClient {
    * 저장된 mock JSON에 Redis 오버레이(CUD 조작 결과)가 반영된 런타임 실효 데이터.
    * 컨트롤러가 GET :workspaceId/mockstate/effective?path=... 형태로 받아 배열로 반환한다.
    */
-  getEffectiveJson(path: string): Promise<unknown[]> {
+  getEffectiveJson(path: string): Promise<EffectiveMockJson> {
     const encoded = encodeURIComponent(path)
     return this.request("GET", `${API_PATHS.effectiveJson}?path=${encoded}`)
   }

@@ -8,6 +8,10 @@ jest.mock("@workspace/mockgen/generateData", () => ({
     generateCalls.push(args)
     return [{ title: "t1" }, { title: "t2" }]
   },
+  generateSingleObjectData: (...args: unknown[]) => {
+    generateCalls.push(args)
+    return { title: "single-object" }
+  },
 }))
 
 const config = {
@@ -384,6 +388,154 @@ describe("handleUpdateMockApi — sort·search 옵션", () => {
     const sent = updateItem.mock.calls[0][0].options
     expect(sent.sort).toBe(false)
     expect(sent.search).toBe(true)
+  })
+
+  it("단일 객체(resourceType: 'object') API 갱신 시 withIdField를 생략하고 generateSingleObjectData로 단일 객체를 보존한다", async () => {
+    const updateItem = jest.fn().mockResolvedValue({ isSuccess: true })
+    const singleObjectItem: FileBrowserItemRes = {
+      id: "s1",
+      name: "settings",
+      itemType: "File",
+      parentId: null,
+      options: { resourceType: "object", pagination: false, sort: false, search: false },
+      schema: { id: "uuid", theme: "string" },
+      fieldDefs: null,
+      json: { id: "u-1", theme: "light" },
+      path: "/settings",
+      depth: 0,
+      workspace: "ws1",
+    }
+    const client = {
+      getItems: async () => [singleObjectItem],
+      getItem: async () => singleObjectItem,
+      updateItem,
+    } as any
+
+    const res = await handleUpdateMockApi(client, config, {
+      path: "/settings",
+      schema: { id: "uuid", theme: "string", fontSize: "number" } as any,
+      count: 1,
+      locale: "ko",
+    })
+
+    expect(updateItem).toHaveBeenCalledTimes(1)
+    const sent = updateItem.mock.calls[0][0]
+    // withIdField가 강제 적용되어 id가 'number'로 덮어써지지 않고 'uuid' 유지
+    expect(sent.schema.id).toBe("uuid")
+    expect(sent.schema.fontSize).toBe("number")
+    expect(sent.json).toEqual({ title: "single-object" })
+
+    const text = (res.content[0] as any).text
+    expect(text).toContain("(단일 객체 모드)")
+    expect(text).toContain("- 단일 객체 URL:")
+    expect(text).toContain("- 단건 조회/수정/삭제:")
+  })
+
+  it("컬렉션 모드 갱신 시 단건조회, 페이지네이션, 정렬, 검색 URL 안내가 정상 출력된다 (1위 결함 수정)", async () => {
+    const updateItem = jest.fn().mockResolvedValue({ isSuccess: true })
+    const client = makeClient({
+      updateItem,
+    })
+
+    const res = await handleUpdateMockApi(client, config, {
+      path: "/shop/users",
+      schema: { name: "string" },
+      count: 2,
+      locale: "ko",
+      pagination: { pageParam: "page", limitParam: "limit" },
+      sort: { sortParam: "sort", orderParam: "order" },
+      search: { searchParam: "q" },
+    })
+
+    const text = (res.content[0] as any).text
+    expect(text).toContain("- 컬렉션 URL: http://ws1.localhost:3000/api/shop/users")
+    expect(text).toContain("- 단건 조회: http://ws1.localhost:3000/api/shop/users/{id}")
+    expect(text).toContain("- 페이지네이션: http://ws1.localhost:3000/api/shop/users?page=1&limit=10 (limit 최대 100)")
+    expect(text).toContain("- 정렬: http://ws1.localhost:3000/api/shop/users?sort=<field>&order=asc")
+    expect(text).toContain("- 전문검색: http://ws1.localhost:3000/api/shop/users?q=<query>")
+    expect(text).toContain("샘플 데이터 (2건):")
+  })
+
+  it("컬렉션 API를 단일 객체(resourceType: 'object')로 전환 시 옵션이 초기화되고 단일 객체로 갱신된다 (7위)", async () => {
+    const updateItem = jest.fn().mockResolvedValue({ isSuccess: true })
+    const collectionItem: FileBrowserItemRes = {
+      ...item,
+      options: {
+        resourceType: "collection",
+        pagination: true,
+        paginationParams: { pageParam: "page", limitParam: "limit" },
+        sort: true,
+        sortParams: { sortParam: "sort", orderParam: "order" },
+      },
+    }
+    const client = {
+      getItems: async () => [collectionItem],
+      getItem: async () => collectionItem,
+      updateItem,
+    } as any
+
+    const res = await handleUpdateMockApi(client, config, {
+      path: "/shop/users",
+      resourceType: "object",
+      count: 1,
+      locale: "ko",
+    })
+
+    expect(updateItem).toHaveBeenCalledTimes(1)
+    const sent = updateItem.mock.calls[0][0]
+    expect(sent.options.resourceType).toBe("object")
+    expect(sent.options.pagination).toBe(false)
+    expect(sent.options.sort).toBe(false)
+    expect(sent.options.paginationParams).toBeUndefined()
+    expect(sent.json).toEqual({ title: "single-object" })
+
+    const text = (res.content[0] as any).text
+    expect(text).toContain("(단일 객체 모드)")
+    expect(text).toContain("- 단일 객체 URL:")
+  })
+
+  it("단일 객체 API를 컬렉션(resourceType: 'collection')으로 전환 시 id 필드가 주입되고 배열 데이터로 갱신된다 (7위)", async () => {
+    const updateItem = jest.fn().mockResolvedValue({ isSuccess: true })
+    const singleItem: FileBrowserItemRes = {
+      id: "s1",
+      name: "profile",
+      itemType: "File",
+      parentId: null,
+      options: { resourceType: "object", pagination: false, sort: false, search: false },
+      schema: { nickname: "string", bio: "string" },
+      fieldDefs: [{ id: "f1", name: "nickname", type: "string" }],
+      json: { nickname: "alice", bio: "hello" },
+      path: "/profile",
+      depth: 0,
+      workspace: "ws1",
+    }
+    const client = {
+      getItems: async () => [singleItem],
+      getItem: async () => singleItem,
+      updateItem,
+    } as any
+
+    const res = await handleUpdateMockApi(client, config, {
+      path: "/profile",
+      resourceType: "collection",
+      count: 5,
+      locale: "ko",
+    })
+
+    expect(updateItem).toHaveBeenCalledTimes(1)
+    const sent = updateItem.mock.calls[0][0]
+    expect(sent.options.resourceType).toBe("collection")
+    // 컬렉션으로 바뀌었으므로 최상위 id가 주입됨
+    expect(sent.schema.id).toBe("number")
+    expect(sent.schema.nickname).toBe("string")
+    // 배열 더미 데이터 생성됨
+    expect(Array.isArray(sent.json)).toBe(true)
+
+    const text = (res.content[0] as any).text
+    expect(text).toContain("mock API가 갱신되었습니다: /profile")
+    expect(text).not.toContain("(단일 객체 모드)")
+    expect(text).toContain("- 컬렉션 URL:")
+    expect(text).toContain("- 단건 조회:")
   })
 })
 

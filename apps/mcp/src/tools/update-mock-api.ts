@@ -5,8 +5,15 @@ import {
   schemaToFields,
   withIdField,
 } from "@workspace/mockgen/convertSchema"
-import { generateDummyData } from "@workspace/mockgen/generateData"
-import type { SchemaObject } from "@workspace/types"
+import {
+  generateDummyData,
+  generateSingleObjectData,
+} from "@workspace/mockgen/generateData"
+import {
+  resolveMockApiParams,
+  type MockResourceType,
+  type SchemaObject,
+} from "@workspace/types"
 import type { ApiClient } from "../api-client"
 import type { McpConfig } from "../config"
 import {
@@ -27,6 +34,8 @@ interface UpdateArgs {
   count: number
   locale: "ko" | "en"
   fakerHints?: Record<string, string>
+  /** 리소스 형태를 변경할 때 지정 (생략 시 기존 설정 유지) */
+  resourceType?: MockResourceType
   /** 지정하면 켜고, 생략하면 기존 설정을 유지한다 */
   pagination?: { pageParam: string; limitParam: string }
   sort?: { sortParam: string; orderParam: string }
@@ -52,6 +61,7 @@ export async function handleUpdateMockApi(
     disablePagination,
     disableSort,
     disableSearch,
+    resourceType,
   }: UpdateArgs
 ) {
   // 저장된 schema/options를 재사용해야 하므로 단건 전체를 가져온다
@@ -74,22 +84,31 @@ export async function handleUpdateMockApi(
     )
   }
 
-  // 예약 필드 id를 스키마 최상위에 강제 주입한다 (웹 생성 흐름과 동일 계약)
-  const schemaWithId = withIdField(sourceSchema)
+  // resourceType 인자가 주어지면 변경하고, 생략 시 기존 설정을 유지한다.
+  const currentResourceType = item.options?.resourceType ?? "collection"
+  const targetResourceType = resourceType ?? currentResourceType
+  const isObject = targetResourceType === "object"
+  const isModeChanged =
+    resourceType !== undefined && resourceType !== currentResourceType
+
+  // 컬렉션 모드에서만 예약 필드 id를 스키마 최상위에 강제 주입한다. 단일 객체 모드는 원본/사용자 스키마를 보존한다.
+  const finalSchema = isObject ? sourceSchema : withIdField(sourceSchema)
 
   // schemaToFields는 모든 필드에 fakerMethod: "none"을 넣는다(convertSchema.ts:60,70,84).
   // 스키마를 재사용하는 경로에서 그대로 쓰면 사용자가 웹에서 지정한 faker 설정이
   // 저장까지 덮어써져 사라진다(웹의 hydrateFromItem이 fieldDefs를 진실 원천으로 쓴다).
-  // 스키마를 명시적으로 대체한 경우에만 재생성한다.
+  // 단, 모드가 변경된 경우(isModeChanged)에는 기존 fieldDefs의 id 필드 유무가 달라지므로 새로 생성한다.
   const reuseStoredFieldDefs =
-    schema === undefined && (item.fieldDefs?.length ?? 0) > 0
+    !isModeChanged &&
+    schema === undefined &&
+    (item.fieldDefs?.length ?? 0) > 0
   const fieldDefs = reuseStoredFieldDefs
     ? // 저장된 fieldDefs는 무검증이라 지원하지 않는 타입이 섞여 있을 수 있다.
       // 그대로 generateDummyData에 넘기면 그 필드가 조용히 null이 된다.
       // normalizeFieldDefs는 노드를 새로 만들어 돌려주므로, 아래 applyFakerHints가
       // in-place로 수정해도 저장된 원본이 오염되지 않는다(별도 복제 불필요).
       normalizeFieldDefs(item.fieldDefs)
-    : schemaToFields(schemaWithId)
+    : schemaToFields(finalSchema)
 
   if (fakerHints) {
     const { errors } = applyFakerHints(fieldDefs, fakerHints)
@@ -98,11 +117,14 @@ export async function handleUpdateMockApi(
     }
   }
 
-  const json = generateDummyData(fieldDefs, count, locale)
+  const json = isObject
+    ? generateSingleObjectData(fieldDefs, locale)
+    : generateDummyData(fieldDefs, count, locale)
 
   // API는 options를 통째로 대체하므로, 미지정 기능은 기존 값을 그대로 되돌려보내
   // 웹에서 켜 둔 pagination/sort/search가 꺼지지 않게 한다.
   const options = buildMockApiOptions(item.options, {
+    resourceType,
     pagination,
     sort,
     search,
@@ -117,22 +139,56 @@ export async function handleUpdateMockApi(
     name: item.name,
     itemType: "File",
     parentId: item.parentId,
-    schema: schemaWithId as SchemaObject,
+    schema: finalSchema as SchemaObject,
     json,
     options,
     fieldDefs,
   })
 
   const mockUrl = `${getMockApiBaseUrl(config.MOCK_HUB_WORKSPACE_ID, config.MOCK_DOMAIN)}${item.path}`
+
+  if (isObject) {
+    const lines = [
+      `mock API가 갱신되었습니다: ${item.path} (단일 객체 모드)`,
+      `- 단일 객체 URL: ${mockUrl}`,
+      `- 단건 조회/수정/삭제: ${mockUrl}`,
+      "",
+      "샘플 데이터:",
+      "```json",
+      JSON.stringify(json, null, 2),
+      "```",
+    ]
+    return toolText(lines.join("\n"))
+  }
+
   const lines = [
     `mock API가 갱신되었습니다: ${item.path}`,
     `- 컬렉션 URL: ${mockUrl}`,
-    "",
-    "샘플 데이터 (앞 2건):",
-    "```json",
-    JSON.stringify(json.slice(0, 2), null, 2),
-    "```",
+    `- 단건 조회: ${mockUrl}/{id}`,
   ]
+
+  const params = resolveMockApiParams(options)
+  if (params.pagination) {
+    lines.push(
+      `- 페이지네이션: ${mockUrl}?${params.pagination.pageParam}=1&${params.pagination.limitParam}=10 (limit 최대 100)`
+    )
+  }
+  if (params.sort) {
+    lines.push(
+      `- 정렬: ${mockUrl}?${params.sort.sortParam}=<field>&${params.sort.orderParam}=asc`
+    )
+  }
+  if (params.search) {
+    lines.push(`- 전문검색: ${mockUrl}?${params.search.searchParam}=<query>`)
+  }
+
+  const sampleList = (json as any[]).slice(0, 2)
+  const sampleLabel =
+    (json as any[]).length <= 2
+      ? `샘플 데이터 (${sampleList.length}건):`
+      : `샘플 데이터 (앞 ${sampleList.length}건):`
+  lines.push("", sampleLabel, "```json")
+  lines.push(JSON.stringify(sampleList, null, 2), "```")
   return toolText(lines.join("\n"))
 }
 
@@ -166,13 +222,21 @@ export function registerUpdateMockApi(
           .describe(
             "새로 대체할 전체 스키마 객체. 생략 시 기존 저장된 스키마를 그대로 유지합니다. (최상위 id는 자동 생성되므로 포함하지 마세요)"
           ),
+        resourceType: z
+          .enum(["collection", "object"])
+          .optional()
+          .describe(
+            "리소스 형태를 변경할 때 지정합니다. 'collection'(기본값, 배열/목록 CRUD) 또는 'object'(단일 객체, 예: /me, /settings). 생략 시 기존 설정을 유지합니다."
+          ),
         count: z
           .number()
           .int()
           .min(1)
           .max(50)
           .default(10)
-          .describe("생성할 mock 데이터 건수 (1~50, 기본값 10)"),
+          .describe(
+            "생성할 mock 데이터 건수 (1~50, 기본값 10, 단일 객체 모드에서는 무시됨)"
+          ),
         locale: z.enum(["ko", "en"]).default("ko"),
         fakerHints: z
           .record(z.string())

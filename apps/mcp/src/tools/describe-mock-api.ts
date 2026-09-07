@@ -48,30 +48,41 @@ export async function handleDescribeMockApi(
   }
 
   const params = resolveMockApiParams(item.options)
+  const isObject = params.resourceType === "object"
   const mockUrl = `${getMockApiBaseUrl(item.workspace, config.MOCK_DOMAIN)}${item.path}`
 
   const lines = [
     `# ${item.path}`,
-    `- 컬렉션 URL: ${mockUrl}`,
-    `- 페이지네이션: ${
-      params.pagination
-        ? `켜짐 (?${params.pagination.pageParam}=1&${params.pagination.limitParam}=10)`
-        : "꺼짐"
-    }`,
-    `- 정렬: ${
-      params.sort
-        ? `켜짐 (?${params.sort.sortParam}=필드명&${params.sort.orderParam}=asc|desc)`
-        : "꺼짐"
-    }`,
-    `- 전문검색: ${
-      params.search ? `켜짐 (?${params.search.searchParam}=검색어)` : "꺼짐"
-    }`,
+    isObject ? `- 단일 객체 URL: ${mockUrl}` : `- 컬렉션 URL: ${mockUrl}`,
+  ]
+
+  if (isObject) {
+    lines.push("- 리소스 형태: 단일 객체 (Object)")
+  } else {
+    lines.push(
+      `- 페이지네이션: ${
+        params.pagination
+          ? `켜짐 (?${params.pagination.pageParam}=1&${params.pagination.limitParam}=10)`
+          : "꺼짐"
+      }`,
+      `- 정렬: ${
+        params.sort
+          ? `켜짐 (?${params.sort.sortParam}=<field>&${params.sort.orderParam}=asc|desc)`
+          : "꺼짐"
+      }`,
+      `- 전문검색: ${
+        params.search ? `켜짐 (?${params.search.searchParam}=<query>)` : "꺼짐"
+      }`
+    )
+  }
+
+  lines.push(
     "",
     "## 저장된 스키마",
     "```json",
     JSON.stringify(item.schema ?? {}, null, 2),
-    "```",
-  ]
+    "```"
+  )
 
   const hints = collectFakerHints(item.fieldDefs)
   if (hints.length > 0) {
@@ -80,16 +91,26 @@ export async function handleDescribeMockApi(
 
   if (includeData) {
     const effective = await client.getEffectiveJson(item.path)
-    lines.push(
-      "",
-      `## 런타임 실효 데이터 (총 ${effective.length}건 중 앞 ${Math.min(
-        PREVIEW_COUNT,
-        effective.length
-      )}건)`,
-      "```json",
-      JSON.stringify(effective.slice(0, PREVIEW_COUNT), null, 2),
-      "```"
-    )
+    if (Array.isArray(effective)) {
+      lines.push(
+        "",
+        `## 런타임 실효 데이터 (총 ${effective.length}건 중 앞 ${Math.min(
+          PREVIEW_COUNT,
+          effective.length
+        )}건)`,
+        "```json",
+        JSON.stringify(effective.slice(0, PREVIEW_COUNT), null, 2),
+        "```"
+      )
+    } else {
+      lines.push(
+        "",
+        "## 런타임 실효 데이터 (단일 객체)",
+        "```json",
+        JSON.stringify(effective, null, 2),
+        "```"
+      )
+    }
   }
 
   return toolText(lines.join("\n"))
