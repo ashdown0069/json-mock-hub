@@ -226,7 +226,7 @@ describe('MockserverService', () => {
   it('존재하지 않는 id에 대한 PUT 요청은 404를 반환한다 (GET과 일관성)', async () => {
     const mockItem = {
       json: [{ id: 1, name: 'kim' }],
-      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+      fields: [{ id: '1', name: 'name', type: 'string' }],
       options: null,
     };
     findOneMock.mockReturnValueOnce({
@@ -250,7 +250,7 @@ describe('MockserverService', () => {
   it('PUT 병합 응답은 저장된 id의 타입(숫자)을 보존한다', async () => {
     const mockItem = {
       json: [{ id: 1, name: 'kim' }],
-      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+      fields: [{ id: '1', name: 'name', type: 'string' }],
       options: null,
     };
     findOneMock.mockReturnValueOnce({
@@ -278,7 +278,7 @@ describe('MockserverService', () => {
     const mockItem = {
       path: '/users',
       json: [{ id: 1, name: 'kim' }],
-      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+      fields: [{ id: '1', name: 'name', type: 'string' }],
       options: null,
     };
     findOneMock.mockReturnValue({
@@ -328,7 +328,7 @@ describe('MockserverService', () => {
     const sampleItem = {
       path: '/users',
       json: [{ id: 1, name: 'kim', age: 20 }],
-      fieldDefs: [
+      fields: [
         { id: '1', name: 'name', type: 'string' },
         { id: '2', name: 'age', type: 'number' },
       ],
@@ -452,14 +452,14 @@ describe('MockserverService', () => {
       expect(mockStateService.mutate).toHaveBeenCalled();
     });
 
-    it('fieldDefs가 없으면 schema를 폴백으로 사용하여 검증한다', async () => {
-      const legacyItem = {
+    it('fields가 정의되어 있으면 유효성을 검증하여 201을 반환한다', async () => {
+      const mockFileItem = {
         path: '/users',
         json: [{ id: 1, title: 'hello' }],
-        schema: { id: 'number', title: 'string' },
+        fields: [{ id: '1', name: 'title', type: 'string' }],
         options: null,
       };
-      mockFindOneResult(legacyItem);
+      mockFindOneResult(mockFileItem);
 
       const validRes = await service.resolveRequest(
         WORKSPACE_ID,
@@ -471,13 +471,13 @@ describe('MockserverService', () => {
       expect(validRes.status).toBe(201);
     });
 
-    it('fieldDefs와 schema가 모두 없으면 400으로 쓰기를 거절한다', async () => {
-      const emptySchemaItem = {
+    it('fields가 없으면 400으로 쓰기를 거절한다', async () => {
+      const emptyFieldsItem = {
         path: '/users',
         json: [{ id: 1 }],
         options: null,
       };
-      mockFindOneResult(emptySchemaItem);
+      mockFindOneResult(emptyFieldsItem);
 
       const res = await service.resolveRequest(
         WORKSPACE_ID,
@@ -491,15 +491,15 @@ describe('MockserverService', () => {
   });
 
   describe('쓰기 경로의 임계구역', () => {
-    const itemWithFieldDefs = {
+    const itemWithFields = {
       path: '/users',
       json: [{ id: 1 }],
-      fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+      fields: [{ id: '1', name: 'name', type: 'string' }],
       options: null,
     };
 
     it('POST는 mutate 안에서 오버레이를 갱신한다', async () => {
-      mockFindOneResult(itemWithFieldDefs);
+      mockFindOneResult(itemWithFields);
 
       const result = await service.resolveRequest(
         WORKSPACE_ID,
@@ -520,7 +520,7 @@ describe('MockserverService', () => {
     });
 
     it('POST 콜백은 락 안에서 읽은 오버레이로 실효 컬렉션을 다시 계산한다', async () => {
-      mockFindOneResult(itemWithFieldDefs);
+      mockFindOneResult(itemWithFields);
       // 락을 잡은 뒤 다른 요청이 이미 id 2를 만들어 둔 상황
       mockStateService.getOverlay.mockResolvedValue({
         created: [{ id: 2, name: 'other' }],
@@ -552,7 +552,7 @@ describe('MockserverService', () => {
               Promise.resolve({
                 path: '/users',
                 json: [{ id: 1 }],
-                fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+                fields: [{ id: '1', name: 'name', type: 'string' }],
                 options: null,
               }),
           } as any),
@@ -602,7 +602,7 @@ describe('MockserverService', () => {
       mockFindOneResult({
         path: '/users',
         json: [],
-        fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+        fields: [{ id: '1', name: 'name', type: 'string' }],
         options: null,
       });
       mockStateService.getOverlay.mockResolvedValue({
@@ -629,7 +629,7 @@ describe('MockserverService', () => {
       mockFindOneResult({
         path: '/users',
         json: [{ id: 1 }],
-        fieldDefs: [{ id: '1', name: 'name', type: 'string' }],
+        fields: [{ id: '1', name: 'name', type: 'string' }],
         options: null,
       });
       mockStateService.getOverlay.mockResolvedValue({
@@ -695,7 +695,7 @@ describe('MockserverService', () => {
       itemType: 'File',
       json: { theme: 'light', fontSize: 14 },
       options: { resourceType: 'object' },
-      fieldDefs: [
+      fields: [
         { id: '1', name: 'theme', type: 'string' },
         { id: '2', name: 'fontSize', type: 'number' },
       ],
@@ -742,7 +742,7 @@ describe('MockserverService', () => {
         itemType: 'File',
         json: { id: 'pop-1', title: '공지' },
         options: { resourceType: 'object' },
-        fieldDefs: [
+        fields: [
           { id: '1', name: 'id', type: 'string' },
           { id: '2', name: 'title', type: 'string' },
         ],

@@ -1,7 +1,11 @@
 import { Expose, Transform } from 'class-transformer';
-import type { FileBrowserItemContract, MockApiOptions } from '@workspace/types';
+import type {
+  FileBrowserItemContract,
+  FieldSchema,
+  MockApiOptions,
+} from '@workspace/types';
 
-export class FilebrowserItems {
+export class FilebrowserItems implements FileBrowserItemContract {
   // class-transformer(0.5.1)는 @Type() 없이 ObjectId처럼 "인자 없는 생성자 호출에
   // 부작용이 있는" 값을 변환할 때, new value.constructor()로 새 인스턴스를 만들어
   // 복제하려 시도한다(Date/Buffer는 예외 처리되지만 ObjectId는 아니다). 그 결과
@@ -33,13 +37,8 @@ export class FilebrowserItems {
   json: any;
 
   @Expose()
-  @Transform(({ obj }) => obj.schema ?? null)
-  schema: any;
-
-  // 에디터 필드 정의 원본(FieldSchema[] 재귀 구조). 레거시 문서는 null
-  @Expose()
-  @Transform(({ obj }) => obj.fieldDefs ?? null)
-  fieldDefs: any;
+  @Transform(({ obj }) => obj.fields ?? null)
+  fields: FieldSchema[] | null;
 
   @Expose()
   path: string;
@@ -53,7 +52,7 @@ export class FilebrowserItems {
 }
 
 // 컴파일 타임 계약 검사 — DTO가 공유 계약에서 필드를 빠뜨리거나 타입이 어긋나면
-// 여기서 컴파일이 깨진다. 런타임 비용은 없다.
+// 여기서 컴파일이 깨진다.
 type AssertContract = FilebrowserItems extends FileBrowserItemContract
   ? true
   : never;

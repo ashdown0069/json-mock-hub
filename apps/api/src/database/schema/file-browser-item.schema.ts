@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Schema as MongooseSchema, Types, HydratedDocument } from 'mongoose';
 
+import type { FieldSchema } from '@workspace/types';
+
 export type FileBrowserItemDocument = HydratedDocument<FileBrowserItem>;
 
 @Schema({ timestamps: true, collection: 'filebrowseritems' })
@@ -18,8 +20,8 @@ export class FileBrowserItem {
   @Prop({ type: String, enum: ['File', 'Folder'], required: true })
   itemType: 'File' | 'Folder';
 
-  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
-  schema?: Record<string, any>;
+  @Prop({ type: [Object], default: null })
+  fields?: FieldSchema[] | null;
 
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   json?: any;
@@ -28,9 +30,6 @@ export class FileBrowserItem {
   // 고정 서브도큐먼트로 선언하면 스키마에 없는 키(sort/search 등)가 캐스팅 단계에서 유실된다.
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   options?: any;
-
-  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
-  fieldDefs?: any;
 
   @Prop({ type: String, default: '/' })
   path: string;

@@ -154,8 +154,7 @@ export class MockserverService {
 
       if (upperMethod === 'POST') {
         const validationFields = resolveValidationFields(
-          item.fieldDefs,
-          item.schema,
+          item.fields,
           'object',
         );
         const validation = validateMockBody(
@@ -190,8 +189,7 @@ export class MockserverService {
       if (upperMethod === 'PUT' || upperMethod === 'PATCH') {
         const mode: MockWriteMethod = upperMethod === 'PUT' ? 'put' : 'patch';
         const validationFields = resolveValidationFields(
-          item.fieldDefs,
-          item.schema,
+          item.fields,
           'object',
         );
         const validation = validateMockBody(
@@ -265,8 +263,8 @@ export class MockserverService {
 
       if (upperMethod === 'POST') {
         const validationFields = resolveValidationFields(
-          item.fieldDefs,
-          item.schema,
+          item.fields,
+          'collection',
         );
         const validation = validateMockBody(reqBody, validationFields, 'post');
 
@@ -329,8 +327,8 @@ export class MockserverService {
       if (upperMethod === 'PUT' || upperMethod === 'PATCH') {
         const mode: MockWriteMethod = upperMethod === 'PUT' ? 'put' : 'patch';
         const validationFields = resolveValidationFields(
-          item.fieldDefs,
-          item.schema,
+          item.fields,
+          'collection',
         );
         const validation = validateMockBody(reqBody, validationFields, mode);
 

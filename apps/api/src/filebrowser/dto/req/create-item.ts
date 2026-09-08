@@ -101,10 +101,6 @@ export class CreateItemDto {
   parentId: string | null;
 
   @IsOptional()
-  @IsObject()
-  schema?: Record<string, any>;
-
-  @IsOptional()
   json?: any;
 
   @IsOptional()
@@ -116,5 +112,5 @@ export class CreateItemDto {
   @IsOptional()
   @IsArray()
   @IsUniqueFieldNames()
-  fieldDefs?: Record<string, any>[];
+  fields?: Record<string, any>[];
 }

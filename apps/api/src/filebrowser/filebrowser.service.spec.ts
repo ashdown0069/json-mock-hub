@@ -109,21 +109,21 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
       );
     });
 
-    it('아이템 생성 시 fieldDefs가 인자에 포함되어 저장된다', async () => {
+    it('아이템 생성 시 fields가 인자에 포함되어 저장된다', async () => {
       mockItemModel.exists.mockResolvedValue(null);
       mockItemModel.create.mockResolvedValue({ name: 'test.json' });
 
-      const fieldDefsMock = [{ id: 'f1', name: 'title', type: 'string' }];
+      const fieldsMock = [{ id: 'f1', name: 'title', type: 'string' }];
       await service.createItem(MOCK_WORKSPACE_ID, {
         name: 'test.json',
         itemType: 'File',
         parentId: null,
-        fieldDefs: fieldDefsMock,
+        fields: fieldsMock,
       } as any);
 
       expect(mockItemModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          fieldDefs: fieldDefsMock,
+          fields: fieldsMock,
         }),
       );
     });
@@ -139,10 +139,9 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
         itemType: 'File',
         path: '/old-name.json',
         parentId: null,
-        schema: null,
         json: null,
         options: null,
-        fieldDefs: null,
+        fields: null,
       };
       mockItemModel.findOne.mockResolvedValue(mockItemInstance);
       mockItemModel.findOneAndUpdate.mockReturnValue({
@@ -210,7 +209,7 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
       const result = await service.updateItem(
         {
           itemId: mockItemInstance._id.toString(),
-          fieldDefs: [{ id: 'f1', name: 'title', type: 'string' }],
+          fields: [{ id: 'f1', name: 'title', type: 'string' }],
           json: { updated: true },
         } as any,
         MOCK_WORKSPACE_ID,
@@ -225,7 +224,7 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
         },
         {
           $set: {
-            fieldDefs: [{ id: 'f1', name: 'title', type: 'string' }],
+            fields: [{ id: 'f1', name: 'title', type: 'string' }],
             json: { updated: true },
           },
         },
@@ -756,7 +755,7 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
       expect(select).not.toHaveBeenCalled();
     });
 
-    it("view가 'tree'면 json/schema/fieldDefs를 제외한 투영을 적용한다", async () => {
+    it("view가 'tree'면 json/fields를 제외한 투영을 적용한다", async () => {
       const { service, select } = createService();
 
       await service.getItems(WS_ID, 'tree');
@@ -769,8 +768,7 @@ describe('FilebrowserService (ObjectId workspace 매핑)', () => {
         path: 1,
       });
       expect(projection).not.toHaveProperty('json');
-      expect(projection).not.toHaveProperty('schema');
-      expect(projection).not.toHaveProperty('fieldDefs');
+      expect(projection).not.toHaveProperty('fields');
     });
 
     it('getItem은 workspace 스코프로 단건을 조회한다', async () => {

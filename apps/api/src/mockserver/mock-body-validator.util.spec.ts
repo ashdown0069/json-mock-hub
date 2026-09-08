@@ -226,33 +226,30 @@ describe('Mock API Body 검증 (validateMockBody)', () => {
     });
   });
 
-  describe('resolveValidationFields (fieldDefs 우선, schema 폴백)', () => {
-    it('fieldDefs가 있으면 fieldDefs를 우선 사용하고 id 필드를 제외한다', () => {
+  describe('resolveValidationFields (검증 대상 필드 추출)', () => {
+    it('컬렉션 모드에서 fields가 있으면 id 필드를 제외하고 반환한다', () => {
       const fields: FieldSchema[] = [
         { id: '1', name: 'id', type: 'number' },
         { id: '2', name: 'title', type: 'string' },
       ];
-      const resolved = resolveValidationFields(fields, null);
+      const resolved = resolveValidationFields(fields, 'collection');
       expect(resolved).toHaveLength(1);
       expect(resolved[0]?.name).toBe('title');
     });
 
-    it('fieldDefs가 없으면 schema를 변환하여 사용하고 id 필드를 제외한다', () => {
-      const schema = {
-        id: 'number',
-        title: 'string',
-        viewCount: 'number',
-      };
-      const resolved = resolveValidationFields(null, schema);
-      expect(resolved.map((f) => f.name).sort()).toEqual([
-        'title',
-        'viewCount',
-      ]);
+    it('단일 객체(object) 모드에서는 사용자가 정의한 id 필드를 보존한다', () => {
+      const fields: FieldSchema[] = [
+        { id: '1', name: 'id', type: 'string' },
+        { id: '2', name: 'title', type: 'string' },
+      ];
+      const resolved = resolveValidationFields(fields, 'object');
+      expect(resolved).toHaveLength(2);
+      expect(resolved.map((f) => f.name)).toEqual(['id', 'title']);
     });
 
-    it('fieldDefs와 schema가 모두 없거나 입력 필드가 없으면 빈 배열을 반환한다', () => {
-      expect(resolveValidationFields(null, null)).toEqual([]);
-      expect(resolveValidationFields([], {})).toEqual([]);
+    it('fields가 없거나 빈 배열이면 빈 배열을 반환한다', () => {
+      expect(resolveValidationFields(null)).toEqual([]);
+      expect(resolveValidationFields([])).toEqual([]);
     });
   });
 });

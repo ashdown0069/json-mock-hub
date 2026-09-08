@@ -171,83 +171,32 @@ function validateFieldValue(
 }
 
 /**
- * Record<string, unknown> (FileItem.schema) → FieldSchema[] 변환
- */
-function schemaToFieldSchemas(
-  schema: Record<string, unknown> | null | undefined,
-  depth = 0,
-): FieldSchema[] {
-  if (!schema || typeof schema !== 'object' || depth >= MAX_SCHEMA_DEPTH) {
-    return [];
-  }
-
-  return Object.entries(schema).map(([name, value], index) => {
-    const id = `${depth}-${index}-${name}`;
-    if (typeof value === 'string') {
-      return {
-        id,
-        name,
-        type: (isSchemaPrimitive(value) ? value : 'string') as FieldType,
-      };
-    }
-
-    const v = value as Record<string, unknown>;
-    if (v && v.type === 'array' && 'items' in v) {
-      const items = v.items;
-      const isObjectItems = typeof items === 'object' && items !== null;
-      return {
-        id,
-        name,
-        type: 'array',
-        fields: isObjectItems
-          ? schemaToFieldSchemas(items as Record<string, unknown>, depth + 1)
-          : undefined,
-        arrayItemType:
-          typeof items === 'string' && isSchemaPrimitive(items)
-            ? items
-            : 'string',
-      };
-    }
-
-    return {
-      id,
-      name,
-      type: 'object',
-      fields: schemaToFieldSchemas(v, depth + 1),
-    };
-  });
-}
-
-/**
- * fieldDefs를 우선하고 schema를 폴백으로 정규화된 검증 대상 필드 목록을 도출한다.
+ * 저장된 fields로부터 정규화된 검증 대상 필드 목록을 도출한다.
  * 단일 객체('object') 모드가 아닐 때, 서버 관리 필드인 'id'는 검증 대상에서 제외된다.
  */
 export function resolveValidationFields(
-  fieldDefs: unknown,
-  schema: unknown,
+  fields: unknown,
   resourceType: MockResourceType = 'collection',
 ): FieldSchema[] {
-  let fields: FieldSchema[] = [];
+  let list: FieldSchema[] = [];
 
-  if (Array.isArray(fieldDefs) && fieldDefs.length > 0) {
-    fields = fieldDefs.filter(
+  if (Array.isArray(fields) && fields.length > 0) {
+    list = fields.filter(
       (f): f is FieldSchema =>
         typeof f === 'object' &&
         f !== null &&
         typeof f.name === 'string' &&
         f.name.trim() !== '',
     );
-  } else if (schema && typeof schema === 'object' && !Array.isArray(schema)) {
-    fields = schemaToFieldSchemas(schema as Record<string, unknown>);
   }
 
   // 단일 객체 리소스는 사용자가 정의한 id 필드를 보존한다
   if (resourceType === 'object') {
-    return fields;
+    return list;
   }
 
-  // 컬렉션 리소스의 최상위 'id' 필드는 서버 관리 필드이므로 클라이언트 입력 스키마에서 제외한다.
-  return fields.filter((f) => f.name.trim() !== 'id');
+  // 컬렉션 리소스의 최상위 'id' 필드는 서버가 자동 관리하므로 요청 본문 검증 대상 필드(validation fields)에서 제외한다.
+  return list.filter((f) => f.name.trim() !== 'id');
 }
 
 /**

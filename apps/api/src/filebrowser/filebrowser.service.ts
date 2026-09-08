@@ -28,7 +28,7 @@ export class FilebrowserService {
 
   /**
    * 트리 렌더링·경로 해석에 필요한 최소 필드.
-   * mock json/schema/fieldDefs 원본을 제외해 목록 응답 크기를 줄인다
+   * mock json/fields 원본을 제외해 목록 응답 크기를 줄인다
    * (파일당 최대 100KB × 아이템 수만큼 매번 전송되던 문제).
    */
   private static readonly TREE_PROJECTION = {
@@ -55,7 +55,7 @@ export class FilebrowserService {
     return query.lean().exec();
   }
 
-  /** 상세 패널·코드 생성용 단건 조회. 목록에서 제외한 json/schema/fieldDefs를 여기서 가져온다. */
+  /** 상세 패널·코드 생성용 단건 조회. 목록에서 제외한 json/fields를 여기서 가져온다. */
   async getItem(workspaceId: string, itemId: string): Promise<FileBrowserItem> {
     const item = await this.itemModel
       .findOne({ _id: itemId, workspace: new Types.ObjectId(workspaceId) })
@@ -162,10 +162,9 @@ export class FilebrowserService {
       path: newPath,
       depth: parentDepth + 1,
       parentId: parentIdObj,
-      ...(body.schema != null && { schema: body.schema }),
       ...(body.json != null && { json: body.json }),
       ...(body.options != null && { options: body.options }),
-      ...(body.fieldDefs != null && { fieldDefs: body.fieldDefs }),
+      ...(body.fields != null && { fields: body.fields }),
     });
 
     return newItem;
@@ -435,14 +434,13 @@ export class FilebrowserService {
   ): Promise<{ isSuccess: boolean; item: FileBrowserItem | undefined }> {
     const wsObjectId = new Types.ObjectId(workspaceId);
 
-    // 1. 이름 변경이 없는 경우 (대부분의 mock 데이터/스키마/옵션 수정)
+    // 1. 이름 변경이 없는 경우 (대부분의 mock json/fields/options 수정)
     //    단일 문서에 대해 Atomic $set update를 수행하여 Lost Update(Read-Modify-Save)를 원천 차단한다.
     if (!body.name) {
       const update: Record<string, unknown> = {};
-      if (body.schema !== undefined) update.schema = body.schema as any;
       if (body.json !== undefined) update.json = body.json;
       if (body.options !== undefined) update.options = body.options as any;
-      if (body.fieldDefs !== undefined) update.fieldDefs = body.fieldDefs;
+      if (body.fields !== undefined) update.fields = body.fields;
 
       const item = await this.itemModel
         .findOneAndUpdate(
@@ -469,10 +467,9 @@ export class FilebrowserService {
         const paths: string[] = [oldPath];
 
         const update: Record<string, unknown> = {};
-        if (body.schema !== undefined) update.schema = body.schema as any;
         if (body.json !== undefined) update.json = body.json;
         if (body.options !== undefined) update.options = body.options as any;
-        if (body.fieldDefs !== undefined) update.fieldDefs = body.fieldDefs;
+        if (body.fields !== undefined) update.fields = body.fields;
 
         if (body.name !== item.name) {
           await this.assertNameAvailable(

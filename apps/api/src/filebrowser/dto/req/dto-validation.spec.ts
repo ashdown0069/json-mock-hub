@@ -76,14 +76,14 @@ describe('filebrowser 요청 DTO 검증', () => {
 
   // 웹 UI가 막더라도 API 직접 호출·MCP 경로가 남아 있으므로 서버에서도 막는다.
   // 판정 규칙은 @workspace/types가 단독 소유한다.
-  describe('CreateItemDto fieldDefs 중복 필드명', () => {
+  describe('CreateItemDto fields 중복 필드명', () => {
     const base = {
       name: 'users',
       itemType: 'File' as const,
       parentId: null,
     };
 
-    it('fieldDefs가 없으면 검증을 통과한다', async () => {
+    it('fields가 없으면 검증을 통과한다', async () => {
       const dto = plainToInstance(CreateItemDto, base);
 
       const errors = await validate(dto);
@@ -93,7 +93,7 @@ describe('filebrowser 요청 DTO 검증', () => {
     it('필드명이 모두 다르면 검증을 통과한다', async () => {
       const dto = plainToInstance(CreateItemDto, {
         ...base,
-        fieldDefs: [{ name: 'email' }, { name: 'title' }],
+        fields: [{ name: 'email' }, { name: 'title' }],
       });
 
       const errors = await validate(dto);
@@ -103,18 +103,18 @@ describe('filebrowser 요청 DTO 검증', () => {
     it('같은 스코프에 필드명이 겹치면 검증에 실패한다', async () => {
       const dto = plainToInstance(CreateItemDto, {
         ...base,
-        fieldDefs: [{ name: 'email' }, { name: 'email' }],
+        fields: [{ name: 'email' }, { name: 'email' }],
       });
 
       const errors = await validate(dto);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]?.property).toBe('fieldDefs');
+      expect(errors[0]?.property).toBe('fields');
     });
 
     it('앞뒤 공백만 다른 필드명도 중복으로 본다', async () => {
       const dto = plainToInstance(CreateItemDto, {
         ...base,
-        fieldDefs: [{ name: 'email' }, { name: '  email  ' }],
+        fields: [{ name: 'email' }, { name: '  email  ' }],
       });
 
       const errors = await validate(dto);
@@ -124,7 +124,7 @@ describe('filebrowser 요청 DTO 검증', () => {
     it('대소문자가 다르면 중복이 아니다', async () => {
       const dto = plainToInstance(CreateItemDto, {
         ...base,
-        fieldDefs: [{ name: 'email' }, { name: 'Email' }],
+        fields: [{ name: 'email' }, { name: 'Email' }],
       });
 
       const errors = await validate(dto);
@@ -134,7 +134,7 @@ describe('filebrowser 요청 DTO 검증', () => {
     it('중첩 하위의 중복도 검증에 실패한다', async () => {
       const dto = plainToInstance(CreateItemDto, {
         ...base,
-        fieldDefs: [{ name: 'user', fields: [{ name: 'tag' }, { name: 'tag' }] }],
+        fields: [{ name: 'user', fields: [{ name: 'tag' }, { name: 'tag' }] }],
       });
 
       const errors = await validate(dto);
@@ -144,7 +144,7 @@ describe('filebrowser 요청 DTO 검증', () => {
     it('서로 다른 부모 아래의 동명 필드는 통과한다', async () => {
       const dto = plainToInstance(CreateItemDto, {
         ...base,
-        fieldDefs: [
+        fields: [
           { name: 'user', fields: [{ name: 'name' }] },
           { name: 'company', fields: [{ name: 'name' }] },
         ],
@@ -158,7 +158,7 @@ describe('filebrowser 요청 DTO 검증', () => {
       const dto = plainToInstance(UpdateItemDto, {
         ...base,
         itemId: VALID_ID,
-        fieldDefs: [{ name: 'email' }, { name: 'email' }],
+        fields: [{ name: 'email' }, { name: 'email' }],
       });
 
       const errors = await validate(dto);

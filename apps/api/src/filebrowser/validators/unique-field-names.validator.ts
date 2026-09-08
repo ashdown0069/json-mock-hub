@@ -6,7 +6,7 @@ import {
 import { collectDuplicateFieldNames } from '@workspace/types';
 
 /**
- * fieldDefs 트리에서 같은 부모 아래 필드명이 겹치는지 검사한다.
+ * fields 트리에서 같은 부모 아래 필드명이 겹치는지 검사한다.
  *
  * 판정 규칙(trim·대소문자 구분·형제 스코프·빈 이름 제외)은 @workspace/types가
  * 단독 소유한다 — 여기서 다시 구현하면 웹 UI는 통과시키고 서버는 거부하는

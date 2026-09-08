@@ -41,8 +41,7 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
             },
           },
         },
-        schema: undefined,
-        fieldDefs: undefined,
+        fields: undefined,
         path: '/test',
         depth: 1,
         workspace: 'workspace-1',
@@ -55,44 +54,70 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
       expect(result.json).toEqual(plainData.json);
       expect(result.json.records).toHaveLength(2);
       expect(result.json.metadata.nested.deep.value).toBe('preserved');
+      // 과거 레거시 필드(schema, fieldDefs)가 응답 객체에 유출되지 않도록 회귀 방지(Regression Guard)
+      expect(result).not.toHaveProperty('schema');
+      expect(result).not.toHaveProperty('fieldDefs');
     });
   });
 
-  describe('schema 필드 (타입 정보 구조)', () => {
-    it('② schema의 중첩 객체가 보존되어야 한다', () => {
-      // schema가 타입/제약 정보를 담으면서 구조가 보존되어야 함
+  describe('fields 필드 (FieldSchema[] 단일 모델)', () => {
+    it('② fields의 재귀 구조가 보존되어야 하고 schema/fieldDefs는 노출되지 않는다', () => {
       const plainData = {
         _id: 'item-2',
-        name: 'schema-item',
+        name: 'fields-item',
         itemType: 'File' as const,
         parentId: null,
         options: undefined,
         json: undefined,
-        schema: {
-          tags: {
-            type: 'array',
-            items: 'string',
+        fields: [
+          {
+            id: 'f1',
+            name: 'title',
+            type: 'string',
+            fakerMethod: 'none',
           },
-          properties: {
-            name: {
-              type: 'string',
-              required: true,
-            },
+          {
+            id: 'f2',
+            name: 'author',
+            type: 'object',
+            fakerMethod: 'none',
+            fields: [
+              { id: 'f2-1', name: 'name', type: 'string', fakerMethod: 'none' },
+            ],
           },
-        },
-        fieldDefs: undefined,
-        path: '/schema-test',
+        ],
+        path: '/fields-test',
         depth: 0,
         workspace: 'workspace-1',
       };
 
       const result = transformToInstance(plainData);
 
-      // schema가 빈 객체 {}가 아니어야 하고, 전체 구조가 보존되어야 함
-      expect(result.schema).not.toEqual({});
-      expect(result.schema).toEqual(plainData.schema);
-      expect(result.schema.tags.type).toBe('array');
-      expect(result.schema.properties.name.type).toBe('string');
+      expect(result.fields).not.toBeNull();
+      expect(result.fields).toEqual(plainData.fields);
+      expect(result.fields).toHaveLength(2);
+      expect(result.fields?.[1]?.fields).toHaveLength(1);
+      expect(result.fields?.[1]?.fields?.[0]?.name).toBe('name');
+      expect(result).not.toHaveProperty('schema');
+      expect(result).not.toHaveProperty('fieldDefs');
+    });
+
+    it('fields가 null/undefined이면 null이어야 한다', () => {
+      const plainData = {
+        _id: 'item-null-fields',
+        name: 'empty-item',
+        itemType: 'File' as const,
+        parentId: null,
+        options: undefined,
+        json: undefined,
+        fields: null,
+        path: '/empty-test',
+        depth: 0,
+        workspace: 'workspace-1',
+      };
+
+      const result = transformToInstance(plainData);
+      expect(result.fields).toBeNull();
     });
   });
 
@@ -112,8 +137,6 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
           },
         },
         json: undefined,
-        schema: undefined,
-        fieldDefs: undefined,
         path: '/options-test',
         depth: 1,
         workspace: 'workspace-2',
@@ -157,75 +180,7 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
     });
   });
 
-  describe('fieldDefs 필드 (새로운 필드)', () => {
-    it('④ fieldDefs의 재귀 구조가 보존되어야 한다', () => {
-      // fieldDefs는 FieldSchema[] 재귀 구조
-      const plainData = {
-        _id: 'item-4',
-        name: 'fielddefs-item',
-        itemType: 'File' as const,
-        parentId: null,
-        options: undefined,
-        json: undefined,
-        schema: undefined,
-        fieldDefs: [
-          {
-            name: 'field1',
-            type: 'string',
-            label: 'Field 1',
-            children: [
-              {
-                name: 'subfield1',
-                type: 'number',
-                label: 'Sub Field 1',
-              },
-            ],
-          },
-          {
-            name: 'field2',
-            type: 'object',
-            label: 'Field 2',
-          },
-        ],
-        path: '/fielddefs-test',
-        depth: 0,
-        workspace: 'workspace-1',
-      };
 
-      const result = transformToInstance(plainData);
-
-      // fieldDefs이 null이 아니어야 하고, 재귀 구조가 보존되어야 함
-      expect(result.fieldDefs).not.toBeNull();
-      expect(result.fieldDefs).toEqual(plainData.fieldDefs);
-      expect(result.fieldDefs).toHaveLength(2);
-      expect(result.fieldDefs[0].children).toHaveLength(1);
-      expect(result.fieldDefs[0].children[0].name).toBe('subfield1');
-    });
-  });
-
-  describe('fieldDefs 필드 (레거시 문서)', () => {
-    it('⑤ fieldDefs가 없으면 null이어야 한다', () => {
-      // 레거시 문서는 fieldDefs가 없음
-      const plainData = {
-        _id: 'item-5',
-        name: 'legacy-item',
-        itemType: 'File' as const,
-        parentId: null,
-        options: undefined,
-        json: undefined,
-        schema: undefined,
-        // fieldDefs 없음
-        path: '/legacy-test',
-        depth: 0,
-        workspace: 'workspace-1',
-      };
-
-      const result = transformToInstance(plainData);
-
-      // fieldDefs이 null이어야 함
-      expect(result.fieldDefs).toBeNull();
-    });
-  });
 
   describe('회귀: _id→id 변환 및 내부 필드 제외', () => {
     it('⑥ _id→id 변환이 유지되고, _id/__v가 미노출되어야 한다', () => {
@@ -239,8 +194,7 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
           pagination: true,
         },
         json: { test: 'data' },
-        schema: { type: 'object' },
-        fieldDefs: null,
+        fields: [{ id: 'f-1', name: 'id', type: 'number' }],
         path: '/regression-test',
         depth: 0,
         workspace: 'workspace-1',
@@ -260,7 +214,9 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
       // 다른 필드들은 정상 보존
       expect(result.options?.pagination).toBe(true);
       expect(result.json.test).toBe('data');
-      expect(result.schema.type).toBe('object');
+      expect(result.fields).toBeDefined();
+      expect(result).not.toHaveProperty('schema');
+      expect(result).not.toHaveProperty('fieldDefs');
     });
   });
 
@@ -276,8 +232,6 @@ describe('FilebrowserItems 직렬화 (Serialize)', () => {
         parentId: parentObjectId,
         options: undefined,
         json: undefined,
-        schema: undefined,
-        fieldDefs: undefined,
         path: '/parent/child-item',
         depth: 1,
         workspace: new Types.ObjectId(),
