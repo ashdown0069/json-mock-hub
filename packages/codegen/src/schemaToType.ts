@@ -9,7 +9,7 @@ import { formatObjectKey } from "./identifiers"
 
 export { MAX_SCHEMA_DEPTH }
 
-// convertSchema.ts(fieldsToSchema)가 저장하는 배열 표현 { type: "array", items } 판별 가드
+// convertSchema.ts(fieldsToSchema)가 생성하는 배열 표현 { type: "array", items } 판별 가드
 export function isSchemaArray(value: SchemaType): value is SchemaArrayType {
   return (
     typeof value === "object" &&
@@ -38,8 +38,8 @@ function schemaTypeToTs(value: SchemaType, indent: number): string {
   if (isSchemaArray(value)) {
     return `${schemaTypeToTs(value.items, indent)}[]`
   }
-  // DB의 schema는 Mixed 타입이라 null/숫자 같은 값이 저장될 수 있다.
-  // Object.entries(null)이 던지던 크래시를 여기서 흡수한다.
+  // 스키마 객체 탐색 중 런타임에 null/원시값 등 비객체 타입이 유입될 경우
+  // Object.entries(null) 예외 크래시를 방지하고 안전하게 unknown으로 처리한다.
   if (typeof value !== "object" || value === null) {
     return "unknown"
   }
@@ -58,7 +58,7 @@ function objectToTs(schema: SchemaObject, indent: number): string {
   return `{\n${lines.join("\n")}\n${closePad}}`
 }
 
-/** 저장된 SchemaObject를 TS interface 선언 문자열로 변환합니다. */
+/** 파생된 SchemaObject를 TS interface 선언 문자열로 변환합니다. */
 export function schemaToTsInterface(
   schema: SchemaObject,
   typeName: string

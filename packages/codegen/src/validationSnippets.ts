@@ -23,7 +23,7 @@ function zodExpr(value: SchemaType, indent: number): string {
     return (ZOD_BY_PRIMITIVE as Record<string, string>)[value] ?? "z.unknown()"
   }
   if (isSchemaArray(value)) return `z.array(${zodExpr(value.items, indent)})`
-  // Mixed 타입 저장 경로로 null/비객체가 들어올 수 있다
+  // 런타임에 비정상 타입이나 null 등 비객체가 유입될 경우 안전하게 z.unknown()으로 폴백
   if (typeof value !== "object" || value === null) return "z.unknown()"
   return zodObject(value, indent)
 }
