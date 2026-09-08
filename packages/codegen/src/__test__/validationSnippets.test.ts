@@ -144,3 +144,49 @@ describe("원시 타입 매핑의 누락 방지", () => {
     },
   )
 })
+
+describe("buildValidationSnippet - 단일 객체(resourceType: 'object')", () => {
+  const objectCtx: CodeGenContext = {
+    resourceName: "settings",
+    typeName: "Settings",
+    baseUrl: "http://ws1.localhost:3000/api",
+    resourcePath: "/settings",
+    schema: {
+      theme: "string",
+      notifications: "boolean",
+      tags: { type: "array", items: "string" },
+    },
+    resourceType: "object",
+    pagination: null,
+    sort: null,
+    search: null,
+  }
+
+  it("zod: 최상위 settingsListSchema는 제외하고 내부 배열 필드(tags) 검증은 보존한다", () => {
+    const code = buildValidationSnippet(objectCtx, "zod", "ts")
+    expect(code).toContain("export const settingsSchema = z.object({")
+    expect(code).toContain("tags: z.array(z.string()),")
+    expect(code).toContain("export type Settings = z.infer<typeof settingsSchema>;")
+    expect(code).not.toContain("settingsListSchema")
+    expect(code).not.toContain("export const settingsListSchema")
+  })
+
+  it("yup: 최상위 settingsListSchema는 제외하고 내부 배열 필드(tags) 검증은 보존한다", () => {
+    const code = buildValidationSnippet(objectCtx, "yup", "ts")
+    expect(code).toContain("export const settingsSchema = yup.object({")
+    expect(code).toContain("tags: yup.array().of(yup.string().required()).required(),")
+    expect(code).toContain("export type Settings = yup.InferType<typeof settingsSchema>;")
+    expect(code).not.toContain("settingsListSchema")
+    expect(code).not.toContain("export const settingsListSchema")
+  })
+
+  it("joi: 최상위 settingsListSchema는 제외하고 내부 배열 필드(tags) 검증은 보존한다", () => {
+    const code = buildValidationSnippet(objectCtx, "joi", "ts")
+    expect(code).toContain("export const settingsSchema = Joi.object({")
+    expect(code).toContain("tags: Joi.array().items(Joi.string().required()).required(),")
+    expect(code).toContain("export interface Settings {")
+    expect(code).not.toContain("settingsListSchema")
+    expect(code).not.toContain("export const settingsListSchema")
+  })
+})
+

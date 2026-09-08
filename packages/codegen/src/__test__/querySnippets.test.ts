@@ -132,12 +132,13 @@ describe("buildQuerySnippet - 단일 객체(resourceType: 'object')", () => {
     search: null,
   }
 
-  it("TS: 단일 객체용 쿼리 키 및 useSettingsQuery와 3종 mutation 훅을 생성하고 ById는 제외한다", () => {
+  it("TS: 단일 객체용 쿼리 키 및 useSettingsQuery와 4종 mutation 훅을 생성하고 ById는 제외한다", () => {
     const code = buildQuerySnippet(objectCtx, "ts")
     expect(code).toContain("export const settingsKeys = {")
     expect(code).toContain('all: ["settings"] as const,')
     expect(code).not.toContain("detail:")
 
+    expect(code).toContain("patchSettings,")
     expect(code).toContain("export function useSettingsQuery() {")
     expect(code).toContain("queryKey: settingsKeys.all,")
     expect(code).toContain("queryFn: () => getSettings(),")
@@ -145,8 +146,13 @@ describe("buildQuerySnippet - 단일 객체(resourceType: 'object')", () => {
     expect(code).toContain("export function useCreateSettingsMutation() {")
     expect(code).toContain("mutationFn: createSettings,")
 
+    // PUT 계약: 전체 payload: Settings
     expect(code).toContain("export function useUpdateSettingsMutation() {")
-    expect(code).toContain("mutationFn: (payload: Partial<Settings>) => updateSettings(payload),")
+    expect(code).toContain("mutationFn: (payload: Settings) => updateSettings(payload),")
+
+    // PATCH 계약: 부분 payload: Partial<Settings>
+    expect(code).toContain("export function usePatchSettingsMutation() {")
+    expect(code).toContain("mutationFn: (payload: Partial<Settings>) => patchSettings(payload),")
 
     expect(code).toContain("export function useDeleteSettingsMutation() {")
     expect(code).toContain("mutationFn: () => deleteSettings(),")
@@ -159,6 +165,7 @@ describe("buildQuerySnippet - 단일 객체(resourceType: 'object')", () => {
     const code = buildQuerySnippet(objectCtx, "js")
     expect(code).toContain("export function useSettingsQuery() {")
     expect(code).toContain("mutationFn: (payload) => updateSettings(payload),")
+    expect(code).toContain("mutationFn: (payload) => patchSettings(payload),")
     expect(code).not.toContain("as const")
     expect(code).not.toContain("import type")
   })

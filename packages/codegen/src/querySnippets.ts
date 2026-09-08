@@ -20,6 +20,7 @@ export function buildQuerySnippet(
       `  get${typeName},`,
       `  create${typeName},`,
       `  update${typeName},`,
+      `  patch${typeName},`,
       `  delete${typeName},`,
       `} from "./${resourceName}Api";`,
     ]
@@ -55,8 +56,20 @@ export function buildQuerySnippet(
       `  const queryClient = useQueryClient();`,
       `  return useMutation({`,
       ts
-        ? `    mutationFn: (payload: Partial<${typeName}>) => update${typeName}(payload),`
+        ? `    mutationFn: (payload: ${typeName}) => update${typeName}(payload),`
         : `    mutationFn: (payload) => update${typeName}(payload),`,
+      `    onSuccess: () => {`,
+      `      queryClient.invalidateQueries({ queryKey: ${keysVar}.all });`,
+      `    },`,
+      `  });`,
+      `}`,
+      ``,
+      `export function usePatch${typeName}Mutation() {`,
+      `  const queryClient = useQueryClient();`,
+      `  return useMutation({`,
+      ts
+        ? `    mutationFn: (payload: Partial<${typeName}>) => patch${typeName}(payload),`
+        : `    mutationFn: (payload) => patch${typeName}(payload),`,
       `    onSuccess: () => {`,
       `      queryClient.invalidateQueries({ queryKey: ${keysVar}.all });`,
       `    },`,

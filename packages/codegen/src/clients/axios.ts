@@ -38,9 +38,16 @@ export function buildAxiosClient(ctx: CodeGenContext, lang: CodeLang): string {
       `}`,
       ``,
       ts
-        ? `export async function update${typeName}(payload: Partial<${typeName}>): Promise<${typeName}> {`
+        ? `export async function update${typeName}(payload: ${typeName}): Promise<${typeName}> {`
         : `export async function update${typeName}(payload) {`,
       `  const { data } = await api.put${ts ? `<${typeName}>` : ""}(${quotedPath}, payload);`,
+      `  return data;`,
+      `}`,
+      ``,
+      ts
+        ? `export async function patch${typeName}(payload: Partial<${typeName}>): Promise<${typeName}> {`
+        : `export async function patch${typeName}(payload) {`,
+      `  const { data } = await api.patch${ts ? `<${typeName}>` : ""}(${quotedPath}, payload);`,
       `  return data;`,
       `}`,
       ``,

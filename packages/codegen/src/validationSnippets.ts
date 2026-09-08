@@ -112,17 +112,19 @@ export function buildValidationSnippet(
   lib: ValidationLib,
   lang: CodeLang
 ): string {
-  const { schema, resourceName, typeName } = ctx
+  const { schema, resourceName, typeName, resourceType } = ctx
   const schemaVar = `${resourceName}Schema`
+  const isObject = resourceType === "object"
 
   if (lib === "zod") {
     const lines = [
       `import { z } from "zod";`,
       ``,
       `export const ${schemaVar} = ${zodObject(schema, 0)};`,
-      ``,
-      `export const ${resourceName}ListSchema = z.array(${schemaVar});`,
     ]
+    if (!isObject) {
+      lines.push(``, `export const ${resourceName}ListSchema = z.array(${schemaVar});`)
+    }
     if (lang === "ts") {
       lines.push(``, `export type ${typeName} = z.infer<typeof ${schemaVar}>;`)
     }
@@ -134,9 +136,10 @@ export function buildValidationSnippet(
       `import * as yup from "yup";`,
       ``,
       `export const ${schemaVar} = ${yupObject(schema, 0)};`,
-      ``,
-      `export const ${resourceName}ListSchema = yup.array().of(${schemaVar});`,
     ]
+    if (!isObject) {
+      lines.push(``, `export const ${resourceName}ListSchema = yup.array().of(${schemaVar});`)
+    }
     if (lang === "ts") {
       lines.push(
         ``,
@@ -151,11 +154,13 @@ export function buildValidationSnippet(
     `import Joi from "joi";`,
     ``,
     `export const ${schemaVar} = ${joiObject(schema, 0)};`,
-    ``,
-    `export const ${resourceName}ListSchema = Joi.array().items(${schemaVar});`,
   ]
+  if (!isObject) {
+    lines.push(``, `export const ${resourceName}ListSchema = Joi.array().items(${schemaVar});`)
+  }
   if (lang === "ts") {
     lines.push(``, schemaToTsInterface(schema, typeName))
   }
   return lines.join("\n")
 }
+

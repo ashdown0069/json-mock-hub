@@ -255,14 +255,18 @@ describe("buildClientSnippet - 단일 객체(resourceType: 'object')", () => {
     search: null,
   }
 
-  it("axios TS: 단일 객체용 get, create, update, delete 4종 함수를 생성하고 ById 및 List는 제외한다", () => {
+  it("axios TS: 단일 객체용 get, create, update(전체필수), patch(부분허용), delete 5종 함수를 생성한다", () => {
     const code = buildClientSnippet(objectCtx, "axios", "ts")
     expect(code).toContain("export async function getSettings(): Promise<Settings> {")
     expect(code).toContain('api.get<Settings>("/settings")')
     expect(code).toContain("export async function createSettings(payload: Settings): Promise<Settings> {")
     expect(code).toContain('api.post<Settings>("/settings", payload)')
-    expect(code).toContain("export async function updateSettings(payload: Partial<Settings>): Promise<Settings> {")
+    // 서버 계약 일치: PUT은 전체 필드가 필수이므로 payload: Settings
+    expect(code).toContain("export async function updateSettings(payload: Settings): Promise<Settings> {")
     expect(code).toContain('api.put<Settings>("/settings", payload)')
+    // 서버 계약 일치: PATCH는 부분 수정이므로 payload: Partial<Settings>
+    expect(code).toContain("export async function patchSettings(payload: Partial<Settings>): Promise<Settings> {")
+    expect(code).toContain('api.patch<Settings>("/settings", payload)')
     expect(code).toContain("export async function deleteSettings(): Promise<void> {")
     expect(code).toContain('api.delete("/settings")')
 
@@ -271,25 +275,42 @@ describe("buildClientSnippet - 단일 객체(resourceType: 'object')", () => {
     expect(code).not.toContain("SettingsListResponse")
   })
 
-  it("axios JS: 타입 표기 없이 단일 객체 함수를 생성한다", () => {
+  it("axios JS: 타입 표기 없이 단일 객체 함수 5종을 생성한다", () => {
     const code = buildClientSnippet(objectCtx, "axios", "js")
     expect(code).toContain("export async function getSettings() {")
     expect(code).toContain("export async function updateSettings(payload) {")
+    expect(code).toContain("export async function patchSettings(payload) {")
     expect(code).not.toContain(": Promise<")
   })
 
-  it("fetch TS: 단일 객체용 fetch 함수 4종을 생성한다", () => {
+  it("fetch TS: 단일 객체용 fetch 함수 5종을 생성하고 PUT/PATCH 계약을 일치시킨다", () => {
     const code = buildClientSnippet(objectCtx, "fetch", "ts")
     expect(code).toContain("export async function getSettings(): Promise<Settings> {")
     expect(code).toContain("await fetch(`${BASE_URL}/settings`)")
     expect(code).toContain("export async function createSettings(payload: Settings): Promise<Settings> {")
-    expect(code).toContain("export async function updateSettings(payload: Partial<Settings>): Promise<Settings> {")
-    expect(code).toContain("method: \"PUT\"")
+    expect(code).toContain("export async function updateSettings(payload: Settings): Promise<Settings> {")
+    expect(code).toContain('method: "PUT"')
+    expect(code).toContain("export async function patchSettings(payload: Partial<Settings>): Promise<Settings> {")
+    expect(code).toContain('method: "PATCH"')
     expect(code).toContain("export async function deleteSettings(): Promise<void> {")
-    expect(code).toContain("method: \"DELETE\"")
+    expect(code).toContain('method: "DELETE"')
 
     expect(code).not.toContain("getSettingsById")
     expect(code).not.toContain("getSettingsList")
+  })
+
+  it("fetch TS: resourceType이 'object'이면 pagination/sort/search 옵션이 주입되어도 목록 인터페이스가 출력되지 않는다 (조기 반환 방어)", () => {
+    const malformedCtx: CodeGenContext = {
+      ...objectCtx,
+      pagination: { pageParam: "page", limitParam: "limit" },
+      sort: { sortParam: "_sort", orderParam: "_order" },
+      search: { searchParam: "q" },
+    }
+    const code = buildClientSnippet(malformedCtx, "fetch", "ts")
+    expect(code).not.toContain("SettingsListResponse")
+    expect(code).not.toContain("SettingsListQuery")
+    expect(code).not.toContain("getSettingsList")
+    expect(code).toContain("export async function getSettings(): Promise<Settings> {")
   })
 })
 
