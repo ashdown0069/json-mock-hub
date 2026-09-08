@@ -18,8 +18,8 @@ const ARRAY_ITEM_COUNT = 3
  *
  * 옵셔널 체이닝(?.())은 null/undefined만 단락시키므로 "constructor.name"이나
  * "__proto__.toString"처럼 존재하지만 의도치 않은 프로퍼티에서 TypeError나
- * 엉뚱한 값이 나왔다. fieldDefs 저장 경로는 @IsArray()만 걸려 무검증이므로
- * 라이브러리에서 허용 목록으로 막는다.
+ * 엉뚱한 값이 나올 수 있다. fields 저장 경로 및 런타임 입력의 잠재적 오염을
+ * 방지하기 위해 라이브러리 차원에서 허용 목록으로 엄격하게 제한한다.
  *
  * date 계열은 Date 인스턴스를 돌려주므로 JSON 저장을 위해 ISO 문자열로 정규화한다.
  * 쓸 수 없는 조합이면 undefined를 반환해, 호출부가 필드 타입에 맞는 기본값으로 폴백하게 한다.

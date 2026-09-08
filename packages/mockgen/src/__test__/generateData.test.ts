@@ -38,7 +38,7 @@ describe("generateDummyData - 스칼라 배열 원소 타입", () => {
     }
   })
 
-  it("arrayItemType이 없으면 문자열로 폴백한다 (하위호환)", () => {
+  it("arrayItemType이 없으면 기본 문자열(string)로 폴백한다", () => {
     const fields: FieldSchema[] = [
       { id: "1", name: "tags", type: "array", fakerMethod: "none" },
     ]

@@ -1,6 +1,6 @@
 import {
   fieldsToSchema,
-  normalizeFieldDefs,
+  normalizeFields,
   schemaToFields,
   withIdField,
 } from "../convertSchema"
@@ -307,16 +307,16 @@ describe("schemaToFields - 지원하지 않는 원시 타입 교정", () => {
   })
 })
 
-describe("normalizeFieldDefs", () => {
+describe("normalizeFields", () => {
   it("지원하지 않는 타입을 string으로 교정한다", () => {
-    const fields = normalizeFieldDefs([
+    const fields = normalizeFields([
       { id: "f1", name: "_id", type: "objectId", fakerMethod: "none" },
     ])
     expect(fields[0]?.type).toBe("string")
   })
 
   it("object/array는 원시 타입이 아니지만 유효하므로 보존한다", () => {
-    const fields = normalizeFieldDefs([
+    const fields = normalizeFields([
       { id: "f1", name: "author", type: "object", fields: [] },
       { id: "f2", name: "tags", type: "array", fields: [] },
     ])
@@ -324,7 +324,7 @@ describe("normalizeFieldDefs", () => {
   })
 
   it("중첩 필드도 재귀적으로 교정한다", () => {
-    const fields = normalizeFieldDefs([
+    const fields = normalizeFields([
       {
         id: "f1",
         name: "author",
@@ -336,7 +336,7 @@ describe("normalizeFieldDefs", () => {
   })
 
   it("스칼라 배열의 원소 타입도 교정한다", () => {
-    const fields = normalizeFieldDefs([
+    const fields = normalizeFields([
       { id: "f1", name: "ids", type: "array", arrayItemType: "objectId" },
     ])
     expect(fields[0]?.arrayItemType).toBe("string")
@@ -344,7 +344,7 @@ describe("normalizeFieldDefs", () => {
 
   it("fakerMethod 등 나머지 속성은 보존한다", () => {
     // 교정이 faker 선택을 지우면 MCP 재사용 경로에서 사용자 설정이 사라진다
-    const fields = normalizeFieldDefs([
+    const fields = normalizeFields([
       { id: "f1", name: "email", type: "string", fakerMethod: "internet.email" },
     ])
     expect(fields[0]).toMatchObject({
@@ -355,12 +355,18 @@ describe("normalizeFieldDefs", () => {
   })
 
   it("배열이 아니거나 객체가 아닌 항목은 예외 없이 걸러낸다", () => {
-    // fieldDefs는 @IsArray()만 걸린 채 저장되므로 형태를 단정할 수 없다
-    expect(normalizeFieldDefs(null)).toEqual([])
-    expect(normalizeFieldDefs("nope")).toEqual([])
+    // fields는 @IsArray()만 걸린 채 저장되므로 형태를 단정할 수 없다
+    expect(normalizeFields(null)).toEqual([])
+    expect(normalizeFields("nope")).toEqual([])
     expect(
-      normalizeFieldDefs([null, "x", { id: "f1", name: "ok", type: "string" }]),
+      normalizeFields([null, "x", { id: "f1", name: "ok", type: "string" }]),
     ).toHaveLength(1)
+  })
+
+  it("normalizeFields가 유효하지 않은 원시 타입을 string으로 자동 교정한다", () => {
+    const raw = [{ name: "age", type: "invalid_type" }]
+    const normalized = normalizeFields(raw)
+    expect(normalized[0]?.type).toBe("string")
   })
 })
 

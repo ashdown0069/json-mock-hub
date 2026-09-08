@@ -24,17 +24,11 @@ function normalizeFieldType(type: unknown): FieldType {
 }
 
 /**
- * 저장된 fieldDefs를 현재 타입 목록에 맞게 교정한다.
+ * 저장된 fields를 현재 타입 목록에 맞게 교정한다.
  *
- * fieldDefs는 @IsArray()만 걸린 채 저장되고, 웹(hydrateFromItem)과
- * MCP(update_mock_api의 스키마 재사용 경로)가 이 값을 schema 역변환 없이
- * 그대로 생성기에 넘긴다. 즉 schemaToFields의 교정이 이 경로에는 닿지 않으므로
- * 읽는 쪽에서 한 번 걸러야 한다.
- *
- * 교정은 타입에만 적용하고 나머지 속성(fakerMethod 등)은 보존한다 —
- * 여기서 지우면 사용자가 웹에서 지정한 faker 설정이 재생성 때 사라진다.
+ * 교정은 타입에만 적용하고 나머지 속성(fakerMethod 등)은 보존한다.
  */
-export function normalizeFieldDefs(
+export function normalizeFields(
   fields: unknown,
   depth = 0
 ): FieldSchema[] {
@@ -53,21 +47,19 @@ export function normalizeFieldDefs(
           ...field,
           type: normalizeFieldType(field.type),
           ...(field.fields !== undefined && {
-            fields: normalizeFieldDefs(field.fields, depth + 1),
+            fields: normalizeFields(field.fields, depth + 1),
           }),
           ...(field.arrayItemType !== undefined && {
             arrayItemType: isSchemaPrimitive(field.arrayItemType)
               ? field.arrayItemType
               : FALLBACK_PRIMITIVE,
           }),
-          // 타입 축(FieldType/SchemaPrimitive)은 위에서 전부 좁혔다. id·name은
-          // 소비처가 이미 방어한다(generateData는 빈 이름을 건너뛴다).
         }) as FieldSchema
     )
 }
 
 /**
- * FieldSchema[] (UI 폼 데이터) → Record<string, unknown> (FileItem.schema)
+ * FieldSchema[] (UI 필드 정의) → Record<string, unknown> (JSON Schema 파생 객체)
  */
 export function fieldsToSchema(
   fields: FieldSchema[],
@@ -106,7 +98,10 @@ export function fieldsToSchema(
   return result
 }
 
-/** Record<string, unknown> (FileItem.schema) → FieldSchema[] — fieldsToSchema의 역함수 */
+/**
+ * 외부 JSON Schema 객체(예: MCP 도구 입력) → FieldSchema[] (목데이터 필드 명세)
+ * UI 폼이나 MCP에서 수신한 스키마 정의를 정규화된 fields 배열로 변환하는 순수 파서입니다.
+ */
 export function schemaToFields(
   schema: Record<string, unknown> | null | undefined,
   depth = 0
