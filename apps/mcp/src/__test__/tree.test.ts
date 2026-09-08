@@ -3,7 +3,7 @@ import type { FileBrowserItemRes } from "../api-client"
 
 const item = (over: Partial<FileBrowserItemRes>): FileBrowserItemRes => ({
   id: "id", name: "n", itemType: "File", parentId: null, options: null,
-  json: null, schema: null, fieldDefs: null, path: "/n", depth: 0, workspace: "w",
+  json: null, fields: null, path: "/n", depth: 0, workspace: "w",
   ...over,
 })
 

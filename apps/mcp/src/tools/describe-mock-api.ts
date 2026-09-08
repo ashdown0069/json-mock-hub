@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+import { fieldsToSchema } from "@workspace/mockgen/convertSchema"
 import { resolveMockApiParams, type FieldSchema } from "@workspace/types"
 import type { ApiClient } from "../api-client"
 import type { McpConfig } from "../config"
@@ -12,8 +13,8 @@ import { withApiErrors } from "../tool-errors"
 const PREVIEW_COUNT = 2
 
 /**
- * fieldDefs에서 사용자가 실제로 지정한 faker 메서드만 dot-path로 추린다.
- * "none"은 schemaToFields가 모든 필드에 넣는 기본값이라 보여줄 정보가 없다.
+ * fields에서 사용자가 실제로 지정한 faker 메서드만 dot-path로 추린다.
+ * "none"은 Faker 미지정 상태를 나타내는 기본값이므로 힌트 출력에서 제외한다.
  */
 function collectFakerHints(
   fields: FieldSchema[] | null | undefined,
@@ -36,7 +37,7 @@ export async function handleDescribeMockApi(
   config: McpConfig,
   { path, includeData }: { path: string; includeData: boolean }
 ): Promise<ToolResult> {
-  // 저장된 schema/fieldDefs가 필요하므로 단건 전체를 가져온다
+  // 저장된 fields가 필요하므로 단건 전체를 가져온다
   const item = await findFullItemByPath(client, path)
   if (!item) {
     return toolError(
@@ -76,15 +77,16 @@ export async function handleDescribeMockApi(
     )
   }
 
+  const schemaView = item.fields ? fieldsToSchema(item.fields) : {}
   lines.push(
     "",
-    "## 저장된 스키마",
+    "## 스키마 (fields 파생)",
     "```json",
-    JSON.stringify(item.schema ?? {}, null, 2),
+    JSON.stringify(schemaView, null, 2),
     "```"
   )
 
-  const hints = collectFakerHints(item.fieldDefs)
+  const hints = collectFakerHints(item.fields)
   if (hints.length > 0) {
     lines.push("", "## Faker 설정", ...hints)
   }

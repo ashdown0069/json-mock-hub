@@ -62,7 +62,7 @@ export function findItemByPath(
 }
 
 /**
- * 경로로 항목을 찾아 전체 필드(schema/json/fieldDefs 포함)까지 가져옵니다.
+ * 경로로 항목을 찾아 전체 필드(json/fields 포함)까지 가져옵니다.
  * 경량 목록으로 id만 해석한 뒤 단건 조회를 한 번 더 하므로,
  * 워크스페이스 전체 mock json을 내려받지 않습니다.
  */

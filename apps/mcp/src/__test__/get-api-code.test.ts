@@ -11,7 +11,11 @@ const config = {
 
 const fileItem: FileBrowserItemRes = {
   id: "u1", name: "users", itemType: "File", parentId: null, options: null,
-  json: null, schema: { name: "string", age: "number" }, fieldDefs: null,
+  json: null,
+  fields: [
+    { id: "1", name: "name", type: "string" },
+    { id: "2", name: "age", type: "number" },
+  ],
   path: "/users", depth: 0, workspace: "ws1",
 }
 
@@ -37,9 +41,9 @@ describe("handleGetApiCode 가드", () => {
     expect(res.isError).toBe(true)
     expect(textOf(res)).toContain("폴더")
   })
-  it("스키마가 없으면 tool error", async () => {
+  it("fields가 없거나 비어있으면 tool error", async () => {
     const res = await handleGetApiCode(
-      clientOf({ getItems: async () => [{ ...fileItem, schema: null }] }), config, full)
+      clientOf({ getItems: async () => [{ ...fileItem, fields: null }] }), config, full)
     expect(res.isError).toBe(true)
   })
 })
@@ -99,7 +103,7 @@ describe("handleGetApiCode — elicitInput 실패 처리", () => {
     itemType: "File" as const,
     parentId: null,
     path: "/users",
-    schema: { id: "number" },
+    fields: [{ id: "1", name: "id", type: "number" }],
     options: null,
   }
 

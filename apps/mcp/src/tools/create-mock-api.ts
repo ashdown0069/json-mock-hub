@@ -49,13 +49,17 @@ export async function handleCreateMockApi(
     createParents,
   }: CreateArgs
 ): Promise<ToolResult> {
+  if (!schema || Object.keys(schema).length === 0) {
+    return toolError("유효한 스키마 필드가 없습니다. 최소 1개 이상의 필드가 포함된 schema를 지정하세요.")
+  }
+
   const isObject = resourceType === "object"
   // 컬렉션 모드에서만 예약 필드 id를 스키마 최상위에 강제 주입한다. 단일 객체 모드는 사용자 정의 스키마 보존.
   const finalSchema = isObject ? schema : withIdField(schema)
-  const fieldDefs = schemaToFields(finalSchema)
+  const fields = schemaToFields(finalSchema)
 
   if (fakerHints) {
-    const { errors } = applyFakerHints(fieldDefs, fakerHints)
+    const { errors } = applyFakerHints(fields, fakerHints)
     if (errors.length > 0) {
       return toolError(`fakerHints 오류:\n- ${errors.join("\n- ")}`)
     }
@@ -102,8 +106,8 @@ export async function handleCreateMockApi(
   }
 
   const json = isObject
-    ? generateSingleObjectData(fieldDefs, locale)
-    : generateDummyData(fieldDefs, count, locale)
+    ? generateSingleObjectData(fields, locale)
+    : generateDummyData(fields, count, locale)
   const options = buildMockApiOptions(null, {
     resourceType,
     pagination,
@@ -115,10 +119,9 @@ export async function handleCreateMockApi(
     name,
     itemType: "File",
     parentId,
-    schema: finalSchema as SchemaObject,
     json,
     options,
-    fieldDefs,
+    fields,
   })
 
   const mockUrl = `${getMockApiBaseUrl(config.MOCK_HUB_WORKSPACE_ID, config.MOCK_DOMAIN)}${created.path}`

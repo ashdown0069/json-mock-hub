@@ -53,7 +53,7 @@ describe("handleCreateMockApi", () => {
     const client = makeClient({
       getItems: async () => [
         { id: "f1", name: "shop", itemType: "Folder", parentId: null, options: null,
-          json: null, schema: null, fieldDefs: null, path: "/shop", depth: 0, workspace: "ws1" },
+          json: null, fields: null, path: "/shop", depth: 0, workspace: "ws1" },
       ],
       createItem: async (p) => {
         received = p
@@ -73,8 +73,8 @@ describe("handleCreateMockApi", () => {
   })
 })
 
-describe("예약 필드 id 주입", () => {
-  it("createItem에 전달되는 schema 최상위에 id: number가 주입된다", async () => {
+describe("예약 필드 id 주입 및 Canonical fields 저장", () => {
+  it("createItem에 전달되는 fields 최상위에 id: number(fakerMethod: 'none')가 주입되고 schema는 전송되지 않는다", async () => {
     const client = makeClient({
       createItem: jest.fn().mockResolvedValue({ id: "x", path: "/products" }),
     })
@@ -86,11 +86,16 @@ describe("예약 필드 id 주입", () => {
       locale: "ko",
     })
     const sent = (client.createItem as jest.Mock).mock.calls[0][0]
-    expect(sent.schema.id).toBe("number")
-    expect(Object.keys(sent.schema)[0]).toBe("id")
+    expect(sent.schema).toBeUndefined()
+    expect(sent.fields[0]).toMatchObject({
+      name: "id",
+      type: "number",
+      fakerMethod: "none",
+    })
+    expect(sent.fields[1].name).toBe("title")
   })
 
-  it("사용자가 schema에 id를 정의해도 number로 덮어쓴다", async () => {
+  it("사용자가 schema에 id를 정의해도 Canonical number id로 주입된다", async () => {
     const client = makeClient({
       createItem: jest.fn().mockResolvedValue({ id: "x", path: "/products" }),
     })
@@ -102,7 +107,23 @@ describe("예약 필드 id 주입", () => {
       locale: "ko",
     })
     const sent = (client.createItem as jest.Mock).mock.calls[0][0]
-    expect(sent.schema.id).toBe("number")
+    expect(sent.fields[0].type).toBe("number")
+  })
+
+  it("빈 schema 전달 시 최소 1개 필드 검증으로 toolError를 반환한다", async () => {
+    const client = makeClient({
+      createItem: jest.fn(),
+    })
+    const res = await handleCreateMockApi(client, config, {
+      name: "products",
+      schema: {},
+      parentPath: "/",
+      count: 2,
+      locale: "ko",
+    })
+    expect(res.isError).toBe(true)
+    expect((res.content[0] as any).text).toContain("유효한 스키마 필드가 없습니다")
+    expect(client.createItem).not.toHaveBeenCalled()
   })
 })
 
@@ -118,8 +139,7 @@ describe("handleCreateMockApi — 대소문자 충돌 선차단", () => {
     parentId,
     options: null,
     json: null,
-    schema: null,
-    fieldDefs: null,
+    fields: null,
     path,
     depth: 0,
     workspace: "ws1",
@@ -226,7 +246,7 @@ describe("handleCreateMockApi — createParents", () => {
   it("부모가 이미 있으면 createParents: true여도 폴더를 새로 만들지 않는다", async () => {
     const { client, calls } = makeRecordingClient([
       { id: "f1", name: "shop", itemType: "Folder", parentId: null, options: null,
-        json: null, schema: null, fieldDefs: null, path: "/shop", depth: 0, workspace: "ws1" },
+        json: null, fields: null, path: "/shop", depth: 0, workspace: "ws1" },
     ])
 
     await handleCreateMockApi(client, config, {
@@ -243,7 +263,7 @@ describe("handleCreateMockApi — createParents", () => {
   it("parentPath가 mock API(File)면 폴더로 쓸 수 없다고 알린다", async () => {
     const { client, calls } = makeRecordingClient([
       { id: "u1", name: "orders", itemType: "File", parentId: null, options: null,
-        json: null, schema: null, fieldDefs: null, path: "/orders", depth: 0, workspace: "ws1" },
+        json: null, fields: null, path: "/orders", depth: 0, workspace: "ws1" },
     ])
 
     const res = await handleCreateMockApi(client, config, {

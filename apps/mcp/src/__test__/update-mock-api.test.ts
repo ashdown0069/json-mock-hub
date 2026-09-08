@@ -21,7 +21,7 @@ const config = {
 
 const item: FileBrowserItemRes = {
   id: "u1", name: "users", itemType: "File", parentId: "f1", options: null,
-  json: null, schema: { name: "string" }, fieldDefs: null,
+  json: null, fields: [{ id: "f1", name: "name", type: "string" }],
   path: "/shop/users", depth: 1, workspace: "ws1",
 }
 
@@ -49,7 +49,7 @@ describe("handleUpdateMockApi", () => {
     expect(received.itemId).toBe("u1")
     expect(received.name).toBe("users")
     expect(received.parentId).toBe("f1")
-    expect(received.schema).toEqual({ id: "number", name: "string", age: "number" })
+    expect(received.fields.map((f: any) => f.name)).toEqual(["id", "name", "age"])
     const text = (res.content[0] as any).text
     expect(text).toContain("/shop/users")
     expect(text).not.toContain("u1") // 내부 id 미노출
@@ -70,7 +70,7 @@ describe("handleUpdateMockApi", () => {
 })
 
 describe("예약 필드 id 주입", () => {
-  it("updateItem에 전달되는 schema 최상위에 id: number가 주입된다", async () => {
+  it("updateItem에 전달되는 fields 최상위에 id: number가 주입된다", async () => {
     const client = makeClient({
       updateItem: jest.fn().mockResolvedValue({ isSuccess: true }),
     })
@@ -81,8 +81,7 @@ describe("예약 필드 id 주입", () => {
       locale: "ko",
     })
     const sent = (client.updateItem as jest.Mock).mock.calls[0][0]
-    expect(sent.schema.id).toBe("number")
-    expect(Object.keys(sent.schema)[0]).toBe("id")
+    expect(sent.fields[0]).toMatchObject({ name: "id", type: "number" })
   })
 
   it("사용자가 schema에 id를 정의해도 number로 덮어쓴다", async () => {
@@ -96,7 +95,34 @@ describe("예약 필드 id 주입", () => {
       locale: "ko",
     })
     const sent = (client.updateItem as jest.Mock).mock.calls[0][0]
-    expect(sent.schema.id).toBe("number")
+    expect(sent.fields[0].type).toBe("number")
+  })
+
+  it("빈 schema({}) 전달 시 truthy 방어로 tool error를 반환한다", async () => {
+    const client = makeClient()
+    const res = await handleUpdateMockApi(client, config, {
+      path: "/shop/users",
+      schema: {} as any,
+      count: 2,
+      locale: "ko",
+    })
+    expect(res.isError).toBe(true)
+    expect((res.content[0] as any).text).toContain("유효한 스키마 필드가 없습니다")
+  })
+
+  it("저장된 fields가 비어있고 schema도 미지정이면 tool error를 반환한다", async () => {
+    const emptyItem: FileBrowserItemRes = {
+      ...item,
+      fields: [],
+    }
+    const client = makeClient({ getItems: async () => [emptyItem] })
+    const res = await handleUpdateMockApi(client, config, {
+      path: "/shop/users",
+      count: 2,
+      locale: "ko",
+    })
+    expect(res.isError).toBe(true)
+    expect((res.content[0] as any).text).toContain("유효한 스키마 필드가 없습니다")
   })
 })
 
@@ -107,7 +133,10 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
     itemType: "File" as const,
     parentId: "1",
     path: "/shop/users",
-    schema: { id: "number", email: "string" },
+    fields: [
+      { id: "f1", name: "id", type: "number" },
+      { id: "f2", name: "email", type: "string" },
+    ],
     options: {
       pagination: true,
       paginationParams: { pageParam: "page", limitParam: "limit" },
@@ -150,9 +179,8 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
       locale: "ko",
     })
 
-    expect(client.updateItem.mock.calls[0][0].schema).toMatchObject({
-      email: "string",
-    })
+    const sent = client.updateItem.mock.calls[0][0].fields
+    expect(sent.find((f: any) => f.name === "email")).toBeDefined()
   })
 
   it("schema를 지정하면 기존 스키마를 완전히 대체한다", async () => {
@@ -165,9 +193,9 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
       locale: "ko",
     })
 
-    const sent = client.updateItem.mock.calls[0][0].schema
-    expect(sent).toMatchObject({ nickname: "string" })
-    expect(sent).not.toHaveProperty("email")
+    const sent = client.updateItem.mock.calls[0][0].fields
+    expect(sent.find((f: any) => f.name === "nickname")).toBeDefined()
+    expect(sent.find((f: any) => f.name === "email")).toBeUndefined()
   })
 
   it("pagination을 지정하면 켜고 나머지 옵션은 유지한다", async () => {
@@ -203,7 +231,7 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
 
   it("저장된 스키마도 없고 인자도 없으면 안내 오류를 반환한다", async () => {
     const client = createClient()
-    client.getItem.mockResolvedValue({ ...storedItem, schema: null })
+    client.getItem.mockResolvedValue({ ...storedItem, fields: null })
 
     const result = await handleUpdateMockApi(client as never, testConfig, {
       path: "/shop/users",
@@ -220,8 +248,7 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
   // (commerce.price는 "745.69" 문자열을 반환하므로 string 그룹에 있다).
   const itemWithFakerDefs: FileBrowserItemRes = {
     ...item,
-    schema: { name: "string", price: "number" },
-    fieldDefs: [
+    fields: [
       { id: "f1", name: "name", type: "string", fakerMethod: "person.fullName" },
       { id: "f2", name: "price", type: "number", fakerMethod: "number.float" },
     ],
@@ -231,7 +258,7 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
     generateCalls.length = 0
   })
 
-  it("schema 미지정이면 저장된 fieldDefs의 faker 설정을 유지한다", async () => {
+  it("schema 미지정이면 저장된 fields의 faker 설정을 유지한다", async () => {
     let received: any
     const client = makeClient({
       getItems: async () => [itemWithFakerDefs],
@@ -246,13 +273,13 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
 
     // 저장까지 덮어쓰면 웹 에디터에서도 설정이 사라진다
     const byName = Object.fromEntries(
-      received.fieldDefs.map((f: any) => [f.name, f.fakerMethod]),
+      received.fields.map((f: any) => [f.name, f.fakerMethod]),
     )
     expect(byName.name).toBe("person.fullName")
     expect(byName.price).toBe("number.float")
   })
 
-  it("schema 미지정이면 재생성에도 저장된 fieldDefs를 쓴다", async () => {
+  it("schema 미지정이면 재생성에도 저장된 fields를 쓴다", async () => {
     const client = makeClient({ getItems: async () => [itemWithFakerDefs] })
 
     await handleUpdateMockApi(client, config, {
@@ -268,7 +295,7 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
     expect(byName.price).toBe("number.float")
   })
 
-  it("schema를 명시하면 fieldDefs를 새로 만든다", async () => {
+  it("schema를 명시하면 fields를 새로 만든다", async () => {
     let received: any
     const client = makeClient({
       getItems: async () => [itemWithFakerDefs],
@@ -283,10 +310,10 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
     })
 
     // 스키마를 갈아치웠으므로 이전 faker 설정은 대응되는 필드가 없다
-    expect(received.fieldDefs.map((f: any) => f.name)).toEqual(["id", "title"])
+    expect(received.fields.map((f: any) => f.name)).toEqual(["id", "title"])
   })
 
-  it("fakerHints는 보존된 fieldDefs 위에 덮어쓴다", async () => {
+  it("fakerHints는 보존된 fields 위에 덮어쓴다", async () => {
     let received: any
     const client = makeClient({
       getItems: async () => [itemWithFakerDefs],
@@ -298,19 +325,19 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
       count: 3,
       locale: "ko",
       // number 타입에 허용된 값이어야 한다. 아니면 applyFakerHints가 오류를 수집해
-      // tool error가 되고 이 테스트는 fieldDefs를 검증하지 못한다.
+      // tool error가 되고 이 테스트는 fields를 검증하지 못한다.
       fakerHints: { price: "location.latitude" },
     })
 
     const byName = Object.fromEntries(
-      received.fieldDefs.map((f: any) => [f.name, f.fakerMethod]),
+      received.fields.map((f: any) => [f.name, f.fakerMethod]),
     )
     // 힌트가 지정된 필드만 바뀌고 나머지는 유지된다
     expect(byName.price).toBe("location.latitude")
     expect(byName.name).toBe("person.fullName")
   })
 
-  it("보존한 fieldDefs를 in-place 수정해도 저장된 원본을 오염시키지 않는다", async () => {
+  it("보존한 fields를 in-place 수정해도 저장된 원본을 오염시키지 않는다", async () => {
     const client = makeClient({ getItems: async () => [itemWithFakerDefs] })
 
     await handleUpdateMockApi(client, config, {
@@ -322,7 +349,7 @@ describe("handleUpdateMockApi — 부분 갱신", () => {
 
     // applyFakerHints는 in-place로 고친다(schema-input.ts:38). 복제하지 않으면
     // 같은 프로세스에서 재사용되는 응답 객체가 변조된다.
-    expect(itemWithFakerDefs.fieldDefs![1]!.fakerMethod).toBe("number.float")
+    expect(itemWithFakerDefs.fields![1]!.fakerMethod).toBe("number.float")
   })
 })
 
@@ -398,8 +425,10 @@ describe("handleUpdateMockApi — sort·search 옵션", () => {
       itemType: "File",
       parentId: null,
       options: { resourceType: "object", pagination: false, sort: false, search: false },
-      schema: { id: "uuid", theme: "string" },
-      fieldDefs: null,
+      fields: [
+        { id: "f1", name: "id", type: "uuid" },
+        { id: "f2", name: "theme", type: "string" },
+      ],
       json: { id: "u-1", theme: "light" },
       path: "/settings",
       depth: 0,
@@ -421,8 +450,8 @@ describe("handleUpdateMockApi — sort·search 옵션", () => {
     expect(updateItem).toHaveBeenCalledTimes(1)
     const sent = updateItem.mock.calls[0][0]
     // withIdField가 강제 적용되어 id가 'number'로 덮어써지지 않고 'uuid' 유지
-    expect(sent.schema.id).toBe("uuid")
-    expect(sent.schema.fontSize).toBe("number")
+    expect(sent.fields.find((f: any) => f.name === "id")?.type).toBe("uuid")
+    expect(sent.fields.find((f: any) => f.name === "fontSize")?.type).toBe("number")
     expect(sent.json).toEqual({ title: "single-object" })
 
     const text = (res.content[0] as any).text
@@ -502,8 +531,7 @@ describe("handleUpdateMockApi — sort·search 옵션", () => {
       itemType: "File",
       parentId: null,
       options: { resourceType: "object", pagination: false, sort: false, search: false },
-      schema: { nickname: "string", bio: "string" },
-      fieldDefs: [{ id: "f1", name: "nickname", type: "string" }],
+      fields: [{ id: "f1", name: "nickname", type: "string" }, { id: "f2", name: "bio", type: "string" }],
       json: { nickname: "alice", bio: "hello" },
       path: "/profile",
       depth: 0,
@@ -526,8 +554,8 @@ describe("handleUpdateMockApi — sort·search 옵션", () => {
     const sent = updateItem.mock.calls[0][0]
     expect(sent.options.resourceType).toBe("collection")
     // 컬렉션으로 바뀌었으므로 최상위 id가 주입됨
-    expect(sent.schema.id).toBe("number")
-    expect(sent.schema.nickname).toBe("string")
+    expect(sent.fields[0]).toMatchObject({ name: "id", type: "number" })
+    expect(sent.fields.find((f: any) => f.name === "nickname")).toBeDefined()
     // 배열 더미 데이터 생성됨
     expect(Array.isArray(sent.json)).toBe(true)
 

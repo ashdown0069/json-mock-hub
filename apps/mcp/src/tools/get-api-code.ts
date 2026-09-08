@@ -30,7 +30,7 @@ export async function handleGetApiCode(
   args: { path: string } & Partial<CodeOptions>,
   elicit?: ElicitFn
 ): Promise<ToolResult> {
-  // 코드 생성에는 저장된 schema가 필요하므로 단건 전체를 가져온다
+  // 코드 생성에는 저장된 fields가 필요하므로 단건 전체를 가져온다
   const item = await findFullItemByPath(client, args.path)
 
   if (!item) {
@@ -41,7 +41,7 @@ export async function handleGetApiCode(
   if (item.itemType !== "File") {
     return toolError(`"${args.path}"는 폴더입니다. mock API(File) 경로를 지정하세요.`)
   }
-  if (!item.schema || Object.keys(item.schema).length === 0) {
+  if (!item.fields || item.fields.length === 0) {
     return toolError(`"${args.path}"에 스키마 정보가 없어 코드를 생성할 수 없습니다.`)
   }
 

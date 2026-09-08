@@ -20,10 +20,9 @@ interface CreateItemPayload {
   name: string
   itemType: "File" | "Folder"
   parentId: string | null
-  schema?: SchemaObject
   json?: unknown
   options?: MockApiOptions
-  fieldDefs?: FieldSchema[]
+  fields?: FieldSchema[]
 }
 
 /** API가 트랜잭션에 걸리면 도구 호출이 영구 pending이 되어 대화 세션이 멈춘다. */
@@ -94,7 +93,7 @@ export class ApiClient {
     return this.request("GET", API_PATHS.getItems(view))
   }
 
-  /** 단건 전체 조회 — 경량 목록에서 제외된 schema/json/fieldDefs를 가져온다. */
+  /** 단건 전체 조회 — 경량 목록에서 제외된 json/fields를 가져온다. */
   getItem(itemId: string): Promise<FileBrowserItemRes> {
     return this.request("GET", API_PATHS.getItem(itemId))
   }

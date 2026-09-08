@@ -292,4 +292,46 @@ describe("ApiClient", () => {
       )
     })
   })
+
+  describe("HTTP 계약 테스트 (schema/fieldDefs 부재 단언)", () => {
+    it("createItem 호출 시 HTTP 요청 바디에 schema 및 fieldDefs 키가 포함되지 않고 fields만 전달된다", async () => {
+      let capturedBody: any = null
+      jest.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+        capturedBody = JSON.parse(init?.body as string)
+        return new Response(JSON.stringify({ id: "mock-1", ...capturedBody }), { status: 201 })
+      })
+
+      await client.createItem({
+        name: "users",
+        itemType: "File",
+        parentId: null,
+        fields: [{ id: "f1", name: "title", type: "string" }],
+      })
+
+      expect(capturedBody).toHaveProperty("fields")
+      expect(capturedBody).not.toHaveProperty("schema")
+      expect(capturedBody).not.toHaveProperty("fieldDefs")
+    })
+
+    it("updateItem 호출 시 HTTP 요청 바디에 schema 및 fieldDefs 키가 포함되지 않는다", async () => {
+      let capturedBody: any = null
+      jest.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+        capturedBody = JSON.parse(init?.body as string)
+        return new Response(JSON.stringify({ isSuccess: true }), { status: 200 })
+      })
+
+      await client.updateItem({
+        itemId: "item-1",
+        name: "users",
+        itemType: "File",
+        parentId: null,
+        fields: [{ id: "f1", name: "title", type: "string" }],
+      })
+
+      expect(capturedBody).toHaveProperty("fields")
+      expect(capturedBody).not.toHaveProperty("schema")
+      expect(capturedBody).not.toHaveProperty("fieldDefs")
+    })
+  })
 })
+

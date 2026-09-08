@@ -24,7 +24,7 @@ describe("schemaObjectInput", () => {
 })
 
 describe("applyFakerHints", () => {
-  it("유효한 dot-path 힌트를 fieldDefs에 적용한다", () => {
+  it("유효한 dot-path 힌트를 fields에 적용한다", () => {
     const fields = schemaToFields({
       price: "number",
       author: { name: "string" },

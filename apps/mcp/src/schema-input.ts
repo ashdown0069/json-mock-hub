@@ -40,7 +40,7 @@ export const schemaObjectInput = z.record(
 ) as z.ZodType<SchemaObject>
 
 /**
- * dot-path 힌트(예: { "author.name": "person.fullName" })를 fieldDefs에 적용합니다.
+ * dot-path 힌트(예: { "author.name": "person.fullName" })를 fields에 적용합니다.
  * 존재하지 않는 경로나 타입에 맞지 않는 메서드는 오류 메시지로 수집해 반환합니다 (fields는 in-place 수정).
  */
 export function applyFakerHints(

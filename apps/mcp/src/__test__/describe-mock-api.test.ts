@@ -16,15 +16,15 @@ const item: FileBrowserItemRes = {
   parentId: "f1",
   options: { pagination: true, sort: true, sortParams: { sortParam: "_sort", orderParam: "_order" } },
   json: [{ id: 1 }],
-  schema: { id: "number", email: "string" },
-  fieldDefs: [
-    { name: "id", type: "number", fakerMethod: "none" },
-    { name: "email", type: "string", fakerMethod: "internet.email" },
+  fields: [
+    { id: "1", name: "id", type: "number", fakerMethod: "none" },
+    { id: "2", name: "email", type: "string", fakerMethod: "internet.email" },
     {
+      id: "3",
       name: "author",
       type: "object",
       fakerMethod: "none",
-      fields: [{ name: "nick", type: "string", fakerMethod: "person.firstName" }],
+      fields: [{ id: "4", name: "nick", type: "string", fakerMethod: "person.firstName" }],
     },
   ] as never,
   path: "/shop/users",
@@ -45,12 +45,13 @@ const textOf = (result: { content: { text: string }[] }) =>
   result.content[0]?.text ?? ""
 
 describe("handleDescribeMockApi", () => {
-  it("저장된 스키마를 그대로 보여준다 (update 전에 LLM이 읽을 원본)", async () => {
+  it("저장된 fields로부터 역투영된 스키마를 보여준다", async () => {
     const result = await handleDescribeMockApi(makeClient(), config, {
       path: "/shop/users",
       includeData: false,
     })
 
+    expect(textOf(result)).toContain("## 스키마 (fields 파생)")
     expect(textOf(result)).toContain('"email": "string"')
   })
 
@@ -76,7 +77,7 @@ describe("handleDescribeMockApi", () => {
 
     expect(text).toContain("- email: internet.email")
     expect(text).toContain("- author.nick: person.firstName")
-    // "none"은 schemaToFields의 기본값이라 정보가 없다
+    // "none"은 Faker 미지정 상태를 나타내는 기본값이므로 제외된다
     expect(text).not.toContain("- id: none")
   })
 
@@ -140,7 +141,7 @@ describe("handleDescribeMockApi", () => {
       name: "settings",
       path: "/settings",
       options: { resourceType: "object", pagination: false, sort: false, search: false },
-      schema: { theme: "string" },
+      fields: [{ id: "1", name: "theme", type: "string", fakerMethod: "none" }],
       json: { theme: "light" },
     }
     const client = makeClient({

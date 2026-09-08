@@ -8,9 +8,9 @@ jest.mock("@workspace/mockgen/generateData", () => ({
 
 const items: FileBrowserItemRes[] = [
   { id: "f1", name: "shop", itemType: "Folder", parentId: null, options: null,
-    json: null, schema: null, fieldDefs: null, path: "/shop", depth: 0, workspace: "w" },
+    json: null, fields: null, path: "/shop", depth: 0, workspace: "w" },
   { id: "u1", name: "users", itemType: "File", parentId: "f1", options: null,
-    json: null, schema: null, fieldDefs: null, path: "/shop/users", depth: 1, workspace: "w" },
+    json: null, fields: null, path: "/shop/users", depth: 1, workspace: "w" },
 ]
 
 describe("handleDeleteMockApi", () => {
@@ -138,7 +138,7 @@ describe("handleMoveMockApi", () => {
       ...items,
       {
         id: "f2", name: "archive", itemType: "Folder" as const, parentId: null,
-        options: null, json: null, schema: null, fieldDefs: null,
+        options: null, json: null, fields: null,
         path: "/archive", depth: 0, workspace: "w",
       },
     ]
@@ -196,17 +196,17 @@ describe("handleMoveMockApi", () => {
     const mergeItems = [
       {
         id: "src", name: "shop", itemType: "Folder" as const, parentId: null,
-        options: null, json: null, schema: null, fieldDefs: null,
+        options: null, json: null, fields: null,
         path: "/shop", depth: 0, workspace: "w",
       },
       {
         id: "archive", name: "archive", itemType: "Folder" as const, parentId: null,
-        options: null, json: null, schema: null, fieldDefs: null,
+        options: null, json: null, fields: null,
         path: "/archive", depth: 0, workspace: "w",
       },
       {
         id: "dst", name: "shop", itemType: "Folder" as const, parentId: "archive",
-        options: null, json: null, schema: null, fieldDefs: null,
+        options: null, json: null, fields: null,
         path: "/archive/shop", depth: 1, workspace: "w",
       },
     ]

@@ -1,7 +1,8 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import {
-  normalizeFieldDefs,
+  fieldsToSchema,
+  normalizeFields,
   schemaToFields,
   withIdField,
 } from "@workspace/mockgen/convertSchema"
@@ -64,7 +65,7 @@ export async function handleUpdateMockApi(
     resourceType,
   }: UpdateArgs
 ) {
-  // 저장된 schema/options를 재사용해야 하므로 단건 전체를 가져온다
+  // 저장된 fields/options를 재사용해야 하므로 단건 전체를 가져온다
   const item = await findFullItemByPath(client, path)
 
   if (!item) {
@@ -76,11 +77,14 @@ export async function handleUpdateMockApi(
     return toolError(`"${path}"는 폴더입니다. mock API(File) 경로를 지정하세요.`)
   }
 
-  // 스키마 미지정 = 저장된 스키마 재사용. LLM이 추측하다 필드를 잃는 것을 막는다.
-  const sourceSchema = schema ?? item.schema
-  if (!sourceSchema) {
+  // schema가 제공되었으면 그것을 사용하고, 미지정 시 item.fields로부터 스키마를 동적으로 역투영한다.
+  const storedSchema = item.fields ? fieldsToSchema(item.fields) : undefined
+  const sourceSchema = schema ?? storedSchema
+
+  // 빈 객체 truthy 방어 및 최소 1개 필드 검증
+  if (!sourceSchema || Object.keys(sourceSchema).length === 0) {
     return toolError(
-      `"${path}"에 저장된 스키마가 없습니다. schema 인자를 지정해서 다시 호출하세요.`
+      `"${path}"에 유효한 스키마 필드가 없습니다. 최소 1개 이상의 필드가 포함된 schema를 지정하세요.`
     )
   }
 
@@ -94,32 +98,26 @@ export async function handleUpdateMockApi(
   // 컬렉션 모드에서만 예약 필드 id를 스키마 최상위에 강제 주입한다. 단일 객체 모드는 원본/사용자 스키마를 보존한다.
   const finalSchema = isObject ? sourceSchema : withIdField(sourceSchema)
 
-  // schemaToFields는 모든 필드에 fakerMethod: "none"을 넣는다(convertSchema.ts:60,70,84).
-  // 스키마를 재사용하는 경로에서 그대로 쓰면 사용자가 웹에서 지정한 faker 설정이
-  // 저장까지 덮어써져 사라진다(웹의 hydrateFromItem이 fieldDefs를 진실 원천으로 쓴다).
-  // 단, 모드가 변경된 경우(isModeChanged)에는 기존 fieldDefs의 id 필드 유무가 달라지므로 새로 생성한다.
-  const reuseStoredFieldDefs =
+  // schema 미지정: 기존 item.fields를 재사용하여 Faker 힌트 보존 (단, 모드 변경 시에는 재생성)
+  // schema 명시: 새로운 스키마로 전면 교체(초기화)
+  const reuseStoredFields =
     !isModeChanged &&
     schema === undefined &&
-    (item.fieldDefs?.length ?? 0) > 0
-  const fieldDefs = reuseStoredFieldDefs
-    ? // 저장된 fieldDefs는 무검증이라 지원하지 않는 타입이 섞여 있을 수 있다.
-      // 그대로 generateDummyData에 넘기면 그 필드가 조용히 null이 된다.
-      // normalizeFieldDefs는 노드를 새로 만들어 돌려주므로, 아래 applyFakerHints가
-      // in-place로 수정해도 저장된 원본이 오염되지 않는다(별도 복제 불필요).
-      normalizeFieldDefs(item.fieldDefs)
+    (item.fields?.length ?? 0) > 0
+  const fields = reuseStoredFields
+    ? normalizeFields(item.fields!)
     : schemaToFields(finalSchema)
 
   if (fakerHints) {
-    const { errors } = applyFakerHints(fieldDefs, fakerHints)
+    const { errors } = applyFakerHints(fields, fakerHints)
     if (errors.length > 0) {
       return toolError(`fakerHints 오류:\n- ${errors.join("\n- ")}`)
     }
   }
 
   const json = isObject
-    ? generateSingleObjectData(fieldDefs, locale)
-    : generateDummyData(fieldDefs, count, locale)
+    ? generateSingleObjectData(fields, locale)
+    : generateDummyData(fields, count, locale)
 
   // API는 options를 통째로 대체하므로, 미지정 기능은 기존 값을 그대로 되돌려보내
   // 웹에서 켜 둔 pagination/sort/search가 꺼지지 않게 한다.
@@ -139,10 +137,9 @@ export async function handleUpdateMockApi(
     name: item.name,
     itemType: "File",
     parentId: item.parentId,
-    schema: finalSchema as SchemaObject,
     json,
     options,
-    fieldDefs,
+    fields,
   })
 
   const mockUrl = `${getMockApiBaseUrl(config.MOCK_HUB_WORKSPACE_ID, config.MOCK_DOMAIN)}${item.path}`

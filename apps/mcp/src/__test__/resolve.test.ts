@@ -13,8 +13,7 @@ const item = (over: Partial<FileBrowserItemRes>): FileBrowserItemRes => ({
   parentId: null,
   options: null,
   json: null,
-  schema: null,
-  fieldDefs: null,
+  fields: null,
   path: "/n",
   depth: 0,
   workspace: "w",
@@ -102,14 +101,14 @@ describe("findFullItemByPath", () => {
       getItems: jest.fn().mockResolvedValue(light),
       getItem: jest
         .fn()
-        .mockResolvedValue({ ...light[0], schema: { id: "number" } }),
+        .mockResolvedValue({ ...light[0], fields: [{ id: "1", name: "id", type: "number" }] }),
     }
 
     const itemResult = await findFullItemByPath(client as never, "/shop/users")
 
     expect(client.getItems).toHaveBeenCalledWith("tree")
     expect(client.getItem).toHaveBeenCalledWith("2")
-    expect(itemResult?.schema).toEqual({ id: "number" })
+    expect(itemResult?.fields).toEqual([{ id: "1", name: "id", type: "number" }])
   })
 
   it("경로를 찾지 못하면 단건 조회를 하지 않고 null을 반환한다", async () => {
