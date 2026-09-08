@@ -75,7 +75,7 @@ describe("findDuplicateFieldIds", () => {
     expect(ids).toEqual(new Set(["u1", "u2"]))
   })
 
-  it("id가 없는 항목(서버 fieldDefs)은 결과에 담기지 않는다", () => {
+  it("id가 없는 항목(서버 fields)은 결과에 담기지 않는다", () => {
     expect(
       findDuplicateFieldIds([{ name: "email" }, { name: "email" }]).size,
     ).toBe(0)

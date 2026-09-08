@@ -8,7 +8,7 @@ import { FieldSchema, MAX_SCHEMA_DEPTH } from "./schema"
 /**
  * 중복 판정이 요구하는 최소 구조.
  *
- * 백엔드 DTO의 fieldDefs는 `Record<string, any>[]`라서 FieldSchema로 단정할 수 없다.
+ * 백엔드 DTO의 fields는 `Record<string, any>[]`라서 FieldSchema로 단정할 수 없다.
  * name을 unknown으로 둔 것은 의도적이다 — 문자열이 아닌 값이 들어와도
  * 이 함수가 던지지 않고 판정에서 제외해야 한다.
  */
@@ -64,7 +64,7 @@ function walkDuplicates(
 
 /**
  * 중복 그룹에 속한 필드들의 id 집합을 반환한다 (UI 하이라이트용).
- * id가 없는 항목은 결과에 담기지 않는다 — 서버 fieldDefs에는 id가 없을 수 있다.
+ * id가 없는 항목은 결과에 담기지 않는다 — 서버 fields에는 id가 없을 수 있다.
  */
 export function findDuplicateFieldIds(
   fields: readonly FieldLike[],

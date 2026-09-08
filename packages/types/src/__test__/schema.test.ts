@@ -29,7 +29,7 @@ describe("isSchemaPrimitive", () => {
   })
 
   it("목록에서 제거된 objectId는 거부한다", () => {
-    // 저장소에 남아 있던 값이 그대로 통과하면 생성기가 null을 만든다
+    // 유효하지 않은 타입 문자열이 통과하면 생성기가 null을 반환하는 오류가 발생할 수 있다
     expect(isSchemaPrimitive("objectId")).toBe(false)
   })
 
@@ -39,7 +39,7 @@ describe("isSchemaPrimitive", () => {
   })
 
   it("문자열이 아닌 값도 예외 없이 거부한다", () => {
-    // schema는 Mixed 타입으로 저장되므로 null·객체·숫자가 들어올 수 있다
+    // 런타임에 null·객체·숫자 등 비정상 타입이 유입되더라도 예외 없이 false로 안전하게 차단한다
     expect(isSchemaPrimitive(null)).toBe(false)
     expect(isSchemaPrimitive(undefined)).toBe(false)
     expect(isSchemaPrimitive({})).toBe(false)

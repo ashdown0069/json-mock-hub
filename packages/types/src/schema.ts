@@ -22,12 +22,12 @@ export type SchemaPrimitive = (typeof SCHEMA_PRIMITIVES)[number]
 const SCHEMA_PRIMITIVE_SET: ReadonlySet<string> = new Set(SCHEMA_PRIMITIVES)
 
 /**
- * 저장소에서 읽은 값이 현재 지원하는 원시 타입인지 판정한다.
+ * 런타임에 유입된 값(저장소 역직렬화, DTO 전송, 클라이언트 입력 등)이
+ * 현재 시스템에서 지원하는 원시 타입인지 판정한다.
  *
- * schema/fieldDefs는 Mixed로 저장되고 DTO도 값 타입을 검사하지 않는다. 목록에서
- * 제거된 타입(예: objectId)이나 오타가 그대로 흘러들어올 수 있으므로, 캐스팅 대신
- * 이 가드로 걸러야 한다. 걸러내지 않으면 무효 타입이 생성기·코드생성까지 내려가
- * 목데이터는 null, 생성 코드는 unknown이 되고 원인이 드러나지 않는다.
+ * 외부 입력이나 동적 스키마 변환 과정에서 미지원 타입(예: objectId)이나
+ * 오타가 그대로 통과하면 생성기·코드생성기에서 예상치 못한 null 또는 unknown이
+ * 발생할 수 있으므로, 단순 타입 캐스팅 대신 이 타입 가드로 안전하게 검증해야 한다.
  */
 export function isSchemaPrimitive(value: unknown): value is SchemaPrimitive {
   return typeof value === "string" && SCHEMA_PRIMITIVE_SET.has(value)
