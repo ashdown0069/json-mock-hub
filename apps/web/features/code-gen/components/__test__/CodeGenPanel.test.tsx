@@ -28,7 +28,7 @@ const item: FileItem = {
   name: "users",
   itemType: "File",
   path: "/users",
-  schema: { name: "string" },
+  fields: [{ id: "1", name: "name", type: "string" }],
   json: [],
   options: { pagination: false },
 }

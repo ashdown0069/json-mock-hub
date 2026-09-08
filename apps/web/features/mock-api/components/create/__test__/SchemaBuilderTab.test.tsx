@@ -94,7 +94,10 @@ describe("SchemaBuilderTab 생성 성공/실패 분리", () => {
     expect(onCreate).toHaveBeenCalledTimes(1)
     expect(onCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        fieldDefs: [{ id: "f1", name: "title", type: "string", fakerMethod: "none" }],
+        fields: [
+          { id: "system-id", name: "id", type: "number", fakerMethod: "none" },
+          { id: "f1", name: "title", type: "string", fakerMethod: "none" },
+        ],
       })
     )
     expect(onClose).not.toHaveBeenCalled()
@@ -122,7 +125,7 @@ describe("SchemaBuilderTab 생성 성공/실패 분리", () => {
 })
 
 describe("id 예약 필드와 정렬·검색 옵션 페이로드", () => {
-  it("생성 페이로드의 schema 최상위에 id: number가 포함된다", () => {
+  it("생성 페이로드의 fields 최상위에 id: number(시스템 예약 필드)가 포함되고 schema는 존재하지 않는다", () => {
     setupStore({
       apiPath: "users",
       fields: [{ id: "f1", name: "title", type: "string", fakerMethod: "none" }],
@@ -132,8 +135,13 @@ describe("id 예약 필드와 정렬·검색 옵션 페이로드", () => {
     fireEvent.click(screen.getByRole("button", { name: /엔드포인트 생성/ }))
     expect(onCreate).toHaveBeenCalledTimes(1)
     const payload = onCreate.mock.calls[0][0]
-    expect(payload.schema.id).toBe("number")
-    expect(Object.keys(payload.schema)[0]).toBe("id")
+    expect(payload.schema).toBeUndefined()
+    expect(payload.fields[0]).toEqual({
+      id: "system-id",
+      name: "id",
+      type: "number",
+      fakerMethod: "none",
+    })
   })
 
   it("생성된 json 각 행에 id가 1부터 순차 부여된다", () => {
@@ -209,10 +217,11 @@ describe("id 예약 필드와 정렬·검색 옵션 페이로드", () => {
     })
     expect(Array.isArray(payload.json)).toBe(false)
     expect(typeof payload.json).toBe("object")
-    expect(payload.schema).toEqual({
-      id: "string",
-      theme: "string",
-    })
+    expect(payload.schema).toBeUndefined()
+    expect(payload.fields).toEqual([
+      { id: "f1", name: "id", type: "string", fakerMethod: "none" },
+      { id: "f2", name: "theme", type: "string", fakerMethod: "none" },
+    ])
   })
 
   it("정렬·검색 비활성화 시 options는 sort/search false에 params가 없다", () => {
@@ -295,8 +304,8 @@ describe("필드명 중복 검증", () => {
     ).toBeEnabled()
   })
 
-  it("제출 페이로드의 fieldDefs 이름과 스키마 키에서 앞뒤 공백이 제거된다", () => {
-    // 판정만 trim하고 저장을 원문으로 하면 스키마 키에 공백이 남는다
+  it("제출 페이로드의 fields 이름에서 앞뒤 공백이 제거되고 시스템 id가 첫 번째 필드로 포함된다", () => {
+    // 판정만 trim하고 저장을 원문으로 하면 필드 키에 공백이 남는다
     setupStore({
       fields: [
         { id: "f1", name: "  title  ", type: "string", fakerMethod: "none" },
@@ -306,8 +315,30 @@ describe("필드명 중복 검증", () => {
     renderTab({ onCreate })
     fireEvent.click(screen.getByRole("button", { name: "엔드포인트 생성" }))
     const payload = onCreate.mock.calls[0][0]
-    expect(payload.fieldDefs[0].name).toBe("title")
-    expect(Object.keys(payload.schema)).toEqual(["id", "title"])
+    expect(payload.schema).toBeUndefined()
+    expect(payload.fields[0]).toEqual({
+      id: "system-id",
+      name: "id",
+      type: "number",
+      fakerMethod: "none",
+    })
+    expect(payload.fields[1].name).toBe("title")
+  })
+
+  it("단일 객체(resourceType: 'object') 제출 시 시스템 id가 강제 주입되지 않는다", () => {
+    setupStore({
+      resourceType: "object",
+      fields: [
+        { id: "f1", name: "theme", type: "string", fakerMethod: "none" },
+      ],
+    })
+    const onCreate = jest.fn()
+    renderTab({ onCreate })
+    fireEvent.click(screen.getByRole("button", { name: "엔드포인트 생성" }))
+    const payload = onCreate.mock.calls[0][0]
+    expect(payload.schema).toBeUndefined()
+    expect(payload.fields).toHaveLength(1)
+    expect(payload.fields[0].name).toBe("theme")
   })
 })
 

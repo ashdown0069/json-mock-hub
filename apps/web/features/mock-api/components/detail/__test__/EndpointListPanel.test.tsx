@@ -183,9 +183,9 @@ describe("PATCH 엔드포인트", () => {
 })
 
 describe("Request Body 미리보기", () => {
-  it("fieldDefs 기준으로 id를 제외한 필드를 빈 문자열 값으로 보여준다", () => {
+  it("fields 기준으로 id를 제외한 필드를 빈 문자열 값으로 보여준다", () => {
     renderPanel({
-      fieldDefs: [
+      fields: [
         { id: "f1", name: "id", type: "uuid" },
         { id: "f2", name: "title", type: "string" },
         { id: "f3", name: "price", type: "number" },
@@ -195,17 +195,20 @@ describe("Request Body 미리보기", () => {
     expect(JSON.parse(bodyCode.textContent!)).toEqual({ title: "", price: "" })
   })
 
-  it("fieldDefs가 없으면 schema에서 필드를 역변환해 사용한다 (레거시 아이템)", () => {
+  it("단일 객체(resourceType: 'object')에서는 사용자 id 필드도 Request Body에 포함된다", () => {
     renderPanel({
-      fieldDefs: undefined,
-      schema: { id: "uuid", name: "string" },
+      options: { resourceType: "object", pagination: false, sort: false, search: false },
+      fields: [
+        { id: "f1", name: "id", type: "string" },
+        { id: "f2", name: "title", type: "string" },
+      ],
     })
     const bodyCode = screen.getByTestId("request-body-code")
-    expect(JSON.parse(bodyCode.textContent!)).toEqual({ name: "" })
+    expect(JSON.parse(bodyCode.textContent!)).toEqual({ id: "", title: "" })
   })
 
   it("id 외 필드가 없으면 빈 객체를 보여준다", () => {
-    renderPanel({ fieldDefs: [], schema: undefined })
+    renderPanel({ fields: [] })
     const bodyCode = screen.getByTestId("request-body-code")
     expect(JSON.parse(bodyCode.textContent!)).toEqual({})
   })

@@ -62,10 +62,9 @@ describe("CreateMockApiDialog", () => {
       itemType: "File" as const,
       path: "/test-api",
       parentId: null,
-      schema: { id: "string" },
       json: { id: "1" },
       options: { pagination: false },
-      fieldDefs: [],
+      fields: [],
     }
 
     render(

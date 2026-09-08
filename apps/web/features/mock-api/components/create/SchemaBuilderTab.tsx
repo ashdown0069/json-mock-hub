@@ -10,7 +10,7 @@ import { ResourceTypeSelector } from "./ResourceTypeSelector"
 import { SchemaEditor } from "./SchemaEditor"
 import { GenerationOptions } from "./GenerationOptions"
 import { generateDummyData, generateSingleObjectData } from "@workspace/mockgen/generateData"
-import { fieldsToSchema, withIdField } from "@workspace/mockgen/convertSchema"
+import { ensureCollectionIdField } from "@/features/mock-api/lib/ensureCollectionIdField"
 import { findDuplicateFieldIds, normalizeFieldNames } from "@workspace/types"
 
 interface SchemaBuilderTabProps {
@@ -75,16 +75,17 @@ export function SchemaBuilderTab({
       return
     }
 
-    // 스키마 키·목데이터 키·fieldDefs 이름이 갈리지 않도록 한 번만 정규화한다.
+    // 목데이터 키·fields 이름이 갈리지 않도록 한 번만 정규화한다.
     const normalizedFields = normalizeFieldNames(fields)
 
     const json = isObject
       ? generateSingleObjectData(normalizedFields, locale)
       : generateDummyData(normalizedFields, itemCount[0] ?? 10, locale)
 
-    const schema = isObject
-      ? fieldsToSchema(normalizedFields)
-      : withIdField(fieldsToSchema(normalizedFields))
+    // 컬렉션 모드에서는 시스템 예약 필드 id("number")가 포함된 fields를 저장용으로 준비한다
+    const fieldsToSave = isObject
+      ? normalizedFields
+      : ensureCollectionIdField(normalizedFields)
 
     const options = isObject
       ? {
@@ -114,10 +115,9 @@ export function SchemaBuilderTab({
 
     onCreate({
       name,
-      schema,
       json,
       options,
-      fieldDefs: normalizedFields,
+      fields: fieldsToSave,
     })
   }
 

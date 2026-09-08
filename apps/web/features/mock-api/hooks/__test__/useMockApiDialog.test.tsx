@@ -154,7 +154,7 @@ describe("useMockApiDialog 및 parentPathOf 테스트", () => {
 
       const payload = {
         name: "new-api",
-        schema: {},
+        fields: [],
       } as any
 
       act(() => {
@@ -180,7 +180,7 @@ describe("useMockApiDialog 및 parentPathOf 테스트", () => {
 
       const payload = {
         name: "new-api",
-        schema: {},
+        fields: [],
       } as any
 
       act(() => {
@@ -227,7 +227,7 @@ describe("useMockApiDialog 및 parentPathOf 테스트", () => {
 
       const payload = {
         name: "updated-api",
-        schema: {},
+        fields: [],
       } as any
 
       act(() => {
@@ -261,7 +261,7 @@ describe("useMockApiDialog 및 parentPathOf 테스트", () => {
 
       const payload = {
         name: "updated-api",
-        schema: {},
+        fields: [],
       } as any
 
       act(() => {

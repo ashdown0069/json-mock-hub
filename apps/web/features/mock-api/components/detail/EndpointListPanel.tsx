@@ -12,7 +12,6 @@ import { getMockApiBaseUrl } from "@/lib/mockApiUrl"
 import { useWorkspaceBasePath } from "@/hooks/useWorkspaceBasePath"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { useResetMockState } from "@/features/mock-api/api/resetMockState"
-import { schemaToFields } from "@workspace/mockgen/convertSchema"
 import { CodeBlock } from "./CodeBlock"
 import { useSelectedFile } from "../../hooks/useSelectedFile"
 
@@ -72,7 +71,7 @@ export function EndpointListPanel() {
 
   // 컬렉션 모드에서는 id는 서버가 자동 관리하므로 바디 예시에서 제외하지만,
   // 단일 객체 모드에서는 사용자가 정의한 id 필드도 유효한 바디 속성이므로 포함한다
-  const rawFields = item.fieldDefs ?? schemaToFields(item.schema)
+  const rawFields = item.fields ?? []
   const bodyFields = isObject
     ? rawFields
     : rawFields.filter((f) => f.name !== "id")

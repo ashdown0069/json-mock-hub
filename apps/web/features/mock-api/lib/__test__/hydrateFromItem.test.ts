@@ -5,7 +5,7 @@ const baseItem = {
   id: "1",
   name: "users",
   itemType: "File",
-  schema: { name: "string" },
+  fields: [{ id: "f1", name: "name", type: "string" }],
 } as FileItem
 
 describe("buildHydrationState — 파라미터명 기본값", () => {
@@ -40,6 +40,19 @@ describe("buildHydrationState — 파라미터명 기본값", () => {
     expect(state.enableSearch).toBe(true)
   })
 
+  it("컬렉션 모드 아이템 복원 시 시스템 id 필드는 에디터 필드 목록에서 제외된다", () => {
+    const collectionItem = {
+      ...baseItem,
+      fields: [
+        { id: "system-id", name: "id", type: "number" },
+        { id: "f1", name: "name", type: "string" },
+      ],
+    } as unknown as FileItem
+
+    const state = buildHydrationState(collectionItem)
+    expect(state.fields).toEqual([{ id: "f1", name: "name", type: "string" }])
+  })
+
   it("단일 객체(resourceType: 'object') 아이템 복원 시 resourceType과 사용자 id 필드를 보존한다", () => {
     const objectItem = {
       ...baseItem,
@@ -50,7 +63,7 @@ describe("buildHydrationState — 파라미터명 기본값", () => {
         sort: false,
         search: false,
       },
-      fieldDefs: [
+      fields: [
         { id: "1", name: "id", type: "string" },
         { id: "2", name: "theme", type: "string" },
       ],

@@ -13,10 +13,9 @@ export interface CreateItemPayload {
   name: string
   itemType: "File" | "Folder"
   parentId: string | null
-  schema?: Record<string, unknown>
   json?: unknown
   options?: MockApiOptions
-  fieldDefs?: FieldSchema[]
+  fields?: FieldSchema[]
 }
 
 // @Serialize(FilebrowserItems)가 적용되어 id와 path를 포함한 CreatedItemResponse를 반환한다.

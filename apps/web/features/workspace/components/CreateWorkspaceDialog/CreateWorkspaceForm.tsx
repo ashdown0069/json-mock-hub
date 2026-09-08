@@ -84,7 +84,12 @@ export function CreateWorkspaceForm({
 
       <div className="flex w-full gap-3 pt-2">
         <DialogClose asChild>
-          <Button type="button" variant="outline" className="flex-1 cursor-pointer">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading}
+            className="flex-1 cursor-pointer"
+          >
             {t("cancel")}
           </Button>
         </DialogClose>
@@ -93,14 +98,7 @@ export function CreateWorkspaceForm({
           disabled={isLoading}
           className="flex-1 cursor-pointer"
         >
-          {isLoading ? (
-            <span className="flex items-center gap-2">
-              <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              {t("loading")}
-            </span>
-          ) : (
-            t("createWorkspace")
-          )}
+          {t("createWorkspace")}
         </Button>
       </div>
     </form>
