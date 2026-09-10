@@ -12,5 +12,7 @@ export function useGetBrowserItems(workspaceId: string) {
   return useQuery<FileItem[], customAxiosError>({
     queryKey: browserKeys.all(workspaceId),
     queryFn: () => getBrowserItems(workspaceId),
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   })
 }

@@ -23,5 +23,7 @@ export function useGetEffectiveJson(
     queryFn: () => getEffectiveJson(workspaceId, path),
     enabled: Boolean(workspaceId && path),
     placeholderData,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
   })
 }

@@ -1,5 +1,10 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { renderHook, waitFor, act } from '@testing-library/react'
+import {
+  QueryClient,
+  QueryClientProvider,
+  focusManager,
+  onlineManager,
+} from '@tanstack/react-query'
 import { useGetEffectiveJson, getEffectiveJson } from '../getEffectiveJson'
 import { axiosInstance } from '@/lib/axios'
 
@@ -20,6 +25,12 @@ function createWrapper() {
     )
   }
 }
+
+afterEach(() => {
+  focusManager.setFocused(undefined)
+  onlineManager.setOnline(true)
+  jest.resetAllMocks()
+})
 
 describe('getEffectiveJson', () => {
   it('workspaceId와 path로 effective 엔드포인트를 조회한다', async () => {
@@ -58,4 +69,50 @@ describe('useGetEffectiveJson', () => {
       expect(result.current.data).toEqual([{ id: 1 }, { id: 2 }])
     )
   })
+
+  it.each(['focus', 'online'] as const)(
+    'fresh 미리보기도 %s 복귀 시 재조회한다',
+    async (event) => {
+      onlineManager.setOnline(true)
+      focusManager.setFocused(true)
+      const client = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            staleTime: 1_800_000,
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
+          },
+        },
+      })
+      mockedAxios.get.mockReset()
+      mockedAxios.get
+        .mockResolvedValueOnce({ data: [{ id: 1, name: 'before' }] })
+        .mockResolvedValue({ data: [{ id: 1, name: 'after' }] })
+      const wrapper = ({ children }: { children: React.ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      )
+      const { result, unmount } = renderHook(
+        () => useGetEffectiveJson('ws1', '/users', []),
+        { wrapper }
+      )
+      await waitFor(() =>
+        expect(result.current.data).toEqual([{ id: 1, name: 'before' }])
+      )
+      act(() => {
+        if (event === 'focus') focusManager.setFocused(false)
+        else onlineManager.setOnline(false)
+      })
+      act(() => {
+        if (event === 'focus') focusManager.setFocused(true)
+        else onlineManager.setOnline(true)
+      })
+      await waitFor(() =>
+        expect(result.current.data).toEqual([{ id: 1, name: 'after' }])
+      )
+      expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+      unmount()
+      client.clear()
+    }
+  )
 })
