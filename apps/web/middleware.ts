@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
     (prefix) => rest === prefix || rest.startsWith(`${prefix}/`)
   )
 
-  // 토큰을 검증하지는 않는다 — HS256 대칭키를 웹앱에 두지 않기 위함이며,
+  // 토큰을 검증하지는 않는다
   // 실제 인가는 API가 수행한다. 여기서는 로그인하지 않은 사용자가 빈 대시보드를
   // 본 뒤 클라이언트에서 튕기는 깜빡임만 없앤다.
   if (isProtected && !request.cookies.get(REFRESH_TOKEN_COOKIE)) {

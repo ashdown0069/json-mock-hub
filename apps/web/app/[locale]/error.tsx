@@ -29,9 +29,6 @@ export default function ErrorBoundary({
         {t("description")}
       </p>
       <Button onClick={reset}>{t("retry")}</Button>
-      {error.digest ? (
-        <p className="text-xs text-muted-foreground">#{error.digest}</p>
-      ) : null}
     </div>
   )
 }

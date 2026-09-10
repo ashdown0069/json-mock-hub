@@ -35,7 +35,7 @@ export default function CreateWorkspaceDialog({
           <div className="text-sm md:hidden">New</div>
         </Button>
       </DialogTrigger>
-      <DialogContent className="duration-300 ease-out data-open:zoom-in-100 data-open:slide-in-from-top-16 data-closed:animate-none data-closed:duration-0">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-center" title="create workspace">
             {t("createWorkspace")}
