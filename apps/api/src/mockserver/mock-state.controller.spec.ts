@@ -1,3 +1,4 @@
+import { SseRequest } from '../sse/complete-at-auth-deadline';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MessageEvent } from '@nestjs/common';
 import { Subject } from 'rxjs';
@@ -44,13 +45,50 @@ describe('MockStateController', () => {
   });
 
   describe('subscribe (SSE)', () => {
+    const apiKeyRequest = {
+      user: {
+        sub: 'user-1',
+        viaApiKey: true,
+        apiKeyWorkspaceId: 'ws-1',
+      },
+    } as SseRequest;
+
+    it.each([
+      ['JWT', {
+        user: { sub: 'user-1', email: 'a@example.test', exp: 130 },
+      } as SseRequest, 30_000],
+      ['API key', apiKeyRequest, 900_000],
+    ])('%s deadline에서 event와 heartbeat를 함께 정리한다', (_label, request, delayMs) => {
+      jest.useFakeTimers();
+      jest.setSystemTime(100_000);
+      try {
+        const complete = jest.fn();
+        const next = jest.fn();
+        const subscription = controller
+          .subscribe('ws-1', request)
+          .subscribe({ complete, next });
+
+        jest.advanceTimersByTime(delayMs - 1);
+        expect(complete).not.toHaveBeenCalled();
+        jest.advanceTimersByTime(1);
+        expect(complete).toHaveBeenCalledTimes(1);
+        expect(subscription.closed).toBe(true);
+        expect(jest.getTimerCount()).toBe(0);
+        const countAtDeadline = next.mock.calls.length;
+        jest.advanceTimersByTime(25_000);
+        expect(next).toHaveBeenCalledTimes(countAtDeadline);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('이벤트를 MessageEvent 형태로 매핑하여 방출한다', () => {
       const events$ = new Subject<MockStateEvent>();
       mockMockStateEvent.subscribe.mockReturnValue(events$);
 
       const received: MessageEvent[] = [];
       const subscription = controller
-        .subscribe('ws-1')
+        .subscribe('ws-1', apiKeyRequest)
         .subscribe((event) => received.push(event));
 
       events$.next({ workspaceId: 'ws-1', path: '/users' });
@@ -66,7 +104,7 @@ describe('MockStateController', () => {
       try {
         const received: MessageEvent[] = [];
         const subscription = controller
-          .subscribe('ws-1')
+          .subscribe('ws-1', apiKeyRequest)
           .subscribe((event) => received.push(event));
 
         jest.advanceTimersByTime(25_000);

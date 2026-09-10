@@ -1,9 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { COOKIE_KEYS } from '../../constant/cookies';
+
+export interface JwtAccessPrincipal {
+  sub: string;
+  email: string;
+  exp: number;
+}
 
 /**
  * JWT 서명 키가 없는 채로 전략이 만들어지는 것을 막는다.
@@ -41,7 +47,18 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: any) {
-    return { sub: payload.sub, email: payload.email };
+  async validate(payload: {
+    sub: string;
+    email: string;
+    exp: unknown;
+  }): Promise<JwtAccessPrincipal> {
+    if (
+      typeof payload.exp !== 'number' ||
+      !Number.isSafeInteger(payload.exp) ||
+      payload.exp <= 0
+    ) {
+      throw new UnauthorizedException('Access Denied');
+    }
+    return { sub: payload.sub, email: payload.email, exp: payload.exp };
   }
 }

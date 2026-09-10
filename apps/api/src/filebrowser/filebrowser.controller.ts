@@ -10,6 +10,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   Sse,
   UseGuards,
 } from '@nestjs/common';
@@ -21,6 +22,10 @@ import { interval, merge, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { FilebrowserService } from './filebrowser.service';
 import { FilebrowserEventService } from './filebrowser-event.service';
+import {
+  completeAtAuthDeadline,
+  SseRequest,
+} from '../sse/complete-at-auth-deadline';
 import { MoveItemsDto } from './dto/req/move-items';
 import { CreateItemDto } from './dto/req/create-item';
 import { RenameItemDto } from './dto/req/rename-item';
@@ -51,6 +56,7 @@ export class FilebrowserController {
   @Header('X-Accel-Buffering', 'no') // nginx 계열 프록시의 SSE 응답 버퍼링 방지
   subscribe(
     @Param('workspaceId') workspaceId: string,
+    @Req() req: SseRequest,
   ): Observable<MessageEvent> {
     const events$ = this.filebrowserEvent.subscribe(workspaceId).pipe(
       map((event): MessageEvent => ({
@@ -64,7 +70,11 @@ export class FilebrowserController {
       map((): MessageEvent => ({ type: 'heartbeat', data: '' })),
     );
 
-    return merge(events$, heartbeat$);
+    const stream$ = merge(events$, heartbeat$);
+    const expiresAtSeconds = req.user && !('viaApiKey' in req.user)
+      ? req.user.exp
+      : undefined;
+    return completeAtAuthDeadline(stream$, expiresAtSeconds);
   }
 
   @Serialize(FilebrowserItems)
