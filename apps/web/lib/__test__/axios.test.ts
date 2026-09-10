@@ -1,5 +1,9 @@
 import { AxiosError, type InternalAxiosRequestConfig } from "axios"
-import { axiosInstance, authAxios } from "../axios"
+import {
+  axiosInstance,
+  authAxios,
+  requestAccessTokenRefresh,
+} from "../axios"
 
 /**
  * axiosInstance의 인터셉터 동작을 고정하는 특성화 테스트.
@@ -123,5 +127,38 @@ describe("axiosInstance 인터셉터", () => {
 
     await expect(axiosInstance.get("/workspaces")).rejects.toBeDefined()
     expect(window.location.href).toBe("/")
+  })
+
+  it("REST 401과 SSE 복구가 진행 중 refresh 하나를 공유한다", async () => {
+    installAdapter({ failUntilRefresh: true })
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const adapter = authAxios.defaults.adapter as import("axios").AxiosAdapter
+    authAxios.defaults.adapter = async (config) => {
+      await gate
+      return adapter(config)
+    }
+
+    const rest = axiosInstance.get("/a")
+    const sseA = requestAccessTokenRefresh()
+    const sseB = requestAccessTokenRefresh()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    release()
+
+    await Promise.all([rest, sseA, sseB])
+    expect(refreshCallCount()).toBe(1)
+  })
+
+  it("refresh 실패 원인을 보존하고 다음 호출은 새 요청을 시작한다", async () => {
+    installAdapter({ refreshFails: true })
+    await expect(requestAccessTokenRefresh()).rejects.toMatchObject({
+      response: { status: 401 },
+    })
+
+    installAdapter({})
+    await expect(requestAccessTokenRefresh()).resolves.toBeUndefined()
+    expect(refreshCallCount()).toBe(2)
   })
 })

@@ -4,8 +4,8 @@ import { nextJsConfig } from "@workspace/eslint-config/next-js"
  * axios 호출은 features/<도메인>/api/ 파일 안에서만 하고, 그 밖에서는
  * 거기서 export한 TanStack Query 훅을 조합해 쓴다는 규약을 강제한다.
  *
- * - `customAxiosError`(타입)와 `refreshAccessToken`(SSE 재연결용)은 어디서든
- *   써야 하므로 importNames로 axiosInstance와 default만 제한한다.
+ * - `customAxiosError`(타입)와 `requestAccessTokenRefresh`(SSE 인증 복구용)는
+ *   기능 코드에서도 사용하므로 importNames로 axiosInstance와 default만 제한한다.
  *
  * @type {import("eslint").Linter.Config[]}
  */

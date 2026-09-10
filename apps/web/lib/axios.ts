@@ -30,13 +30,26 @@ export const authAxios: AxiosInstance = axios.create({
 })
 authAxios.interceptors.request.use(attachCsrfHeader)
 
+let refreshInFlight: Promise<void> | null = null
+
+export function requestAccessTokenRefresh(): Promise<void> {
+  if (refreshInFlight) return refreshInFlight
+  refreshInFlight = authAxios
+    .post("/auth/refresh", undefined, { timeout: 10_000 })
+    .then(() => undefined)
+    .finally(() => {
+      refreshInFlight = null
+    })
+  return refreshInFlight
+}
+
 /**
  * 401 발생 시 axios-auth-refresh가 호출하는 갱신 로직.
  * 동시에 여러 요청이 401을 받아도 axios-auth-refresh가 큐를 관리하므로 1회만 실행된다.
  */
 const refreshAuthLogic = async () => {
   try {
-    await authAxios.post("/auth/refresh")
+    await requestAccessTokenRefresh()
   } catch (error) {
     if (typeof window !== "undefined") {
       window.location.href = "/"
@@ -50,17 +63,6 @@ createAuthRefresh(axiosInstance, refreshAuthLogic, {
   deduplicateRefresh: false,
 })
 
-/**
- * SSE 등 axios 인터셉터를 거치지 않는 통신에서 수동으로 토큰을 갱신할 때 쓰는 헬퍼
- */
-export const refreshAccessToken = async (): Promise<boolean> => {
-  try {
-    await authAxios.post("/auth/refresh")
-    return true
-  } catch {
-    return false
-  }
-}
 
 export type customAxiosError = AxiosError<{ code?: string }>
 
