@@ -59,6 +59,25 @@ describe('CreateWorkspaceDto', () => {
       }),
     ).toEqual([]);
   });
+
+  it('description이 없거나 빈 문자열이어도 허용한다', async () => {
+    expect(
+      await failedProperties(CreateWorkspaceDto, {
+        name: 'w',
+        password: 'secret1234',
+        passwordConfirm: 'secret1234',
+      }),
+    ).toEqual([]);
+
+    expect(
+      await failedProperties(CreateWorkspaceDto, {
+        name: 'w',
+        description: '',
+        password: 'secret1234',
+        passwordConfirm: 'secret1234',
+      }),
+    ).toEqual([]);
+  });
 });
 
 describe('UpdateWorkspaceDto', () => {

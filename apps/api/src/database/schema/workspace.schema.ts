@@ -10,7 +10,7 @@ export class Workspace {
   @Prop({ required: true, unique: true })
   name: string;
 
-  @Prop({ required: true })
+  @Prop({ required: false, default: '' })
   description: string;
 
   @Prop({ required: false })

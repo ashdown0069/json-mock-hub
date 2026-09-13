@@ -62,6 +62,7 @@ export class WorkspacesService {
         [
           {
             ...workspaceFields,
+            description: createWorkspaceDto.description ?? '',
             password: password,
             owner: userId,
           },

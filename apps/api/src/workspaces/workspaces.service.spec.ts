@@ -142,6 +142,28 @@ describe('WorkspacesService', () => {
       );
     });
   });
+
+  describe('description 선택 입력 처리', () => {
+    it('description이 전달되지 않으면 빈 문자열을 기본값으로 저장한다', async () => {
+      workspaceModel.create.mockResolvedValue([
+        { _id: new Types.ObjectId(), name: 'ws-no-desc' },
+      ]);
+      membershipModel.create.mockResolvedValue([{}]);
+      roleModel.create.mockResolvedValue([{}]);
+
+      await service.create(
+        {
+          name: 'ws-no-desc',
+          password: 'pw1234!!',
+          passwordConfirm: 'pw1234!!',
+        } as never,
+        new Types.ObjectId().toHexString(),
+      );
+
+      const createdWorkspace = workspaceModel.create.mock.calls[0][0][0];
+      expect(createdWorkspace.description).toBe('');
+    });
+  });
 });
 
 describe('WorkspacesService.update — 갱신 가능 필드 화이트리스트', () => {
