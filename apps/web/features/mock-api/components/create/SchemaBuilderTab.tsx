@@ -9,7 +9,10 @@ import { EndpointDetails } from "./EndpointDetails"
 import { ResourceTypeSelector } from "./ResourceTypeSelector"
 import { SchemaEditor } from "./SchemaEditor"
 import { GenerationOptions } from "./GenerationOptions"
-import { generateDummyData, generateSingleObjectData } from "@workspace/mockgen/generateData"
+import {
+  generateDummyData,
+  generateSingleObjectData,
+} from "@workspace/mockgen/generateData"
 import { ensureCollectionIdField } from "@/features/mock-api/lib/ensureCollectionIdField"
 import { findDuplicateFieldIds, normalizeFieldNames } from "@workspace/types"
 
@@ -126,7 +129,7 @@ export function SchemaBuilderTab({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-muted/10">
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 [scrollbar-gutter:stable] overflow-y-auto p-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="flex flex-col gap-6 lg:col-span-7">
             <EndpointDetails endpointPrefix={endpointPrefix} />

@@ -353,7 +353,7 @@
     "duplicateFieldName": "A field with this name already exists at this level.",
     "fakerMethodPlaceholder": "Faker Method",
     "fakerNone": "None (Default)",
-    "emptyFields": "No fields defined. Click \"Add Field\" to start building your schema.",
+    "emptyFields": "Click \"Add Field\" to start.",
     "idFieldAuto": "Auto-increment (1, 2, 3…)",
     "generationOptions": "Generation Options",
     "mockItems": "Mock Items",

@@ -353,7 +353,7 @@
     "duplicateFieldName": "같은 위치에 동일한 필드명이 있습니다.",
     "fakerMethodPlaceholder": "Faker 메서드",
     "fakerNone": "없음 (기본값)",
-    "emptyFields": "정의된 필드가 없습니다. \"필드 추가\"를 눌러 스키마 구성을 시작하세요.",
+    "emptyFields": "\"필드 추가\"를 눌러 시작하세요.",
     "idFieldAuto": "자동 증가 (1, 2, 3…)",
     "generationOptions": "생성 옵션",
     "mockItems": "Mock 아이템",

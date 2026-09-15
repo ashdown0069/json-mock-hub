@@ -217,7 +217,7 @@ export function SchemaEditor({
         )}
 
         {fields.length === 0 ? (
-          <div className="rounded-lg border-2 border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg border-2 border-dashed border-border px-3 py-1 text-center text-sm text-muted-foreground">
             {t("emptyFields")}
           </div>
         ) : (
