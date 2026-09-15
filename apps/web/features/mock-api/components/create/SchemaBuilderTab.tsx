@@ -129,7 +129,7 @@ export function SchemaBuilderTab({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-muted/10">
-      <div className="flex-1 [scrollbar-gutter:stable] overflow-y-auto p-6">
+      <div className="flex-1 scrollbar-gutter-stable overflow-y-auto p-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="flex flex-col gap-6 lg:col-span-7">
             <EndpointDetails endpointPrefix={endpointPrefix} />
